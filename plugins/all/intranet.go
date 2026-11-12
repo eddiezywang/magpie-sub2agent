@@ -9,5 +9,6 @@ import (
 	_ "github.com/yetone/magpie/plugins/redact"
 	_ "github.com/yetone/magpie/plugins/rotation"
 	_ "github.com/yetone/magpie/plugins/routing"
+	_ "github.com/yetone/magpie/plugins/sessions"
 	_ "github.com/yetone/magpie/plugins/usage"
 )

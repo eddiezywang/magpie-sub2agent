@@ -4,6 +4,10 @@ This fork's `intranet` build tag selects a separate internal distribution;
 ordinary upstream builds retain their original behavior. The executable keeps
 the upstream provider UI, local gateway, routing, accounts, agent wiring and
 local usage reporting. The portable package includes Bun, not WebView2.
+Sessions is retained, including its navigation, assets, history consent,
+read/search/resume/export interactions and gateway conversation projection.
+Library remains removed. Retaining Sessions does not enable reading private
+agent history until its existing consent setting permits it.
 
 `internal/distribution` is the source of truth for internal service addresses,
 removed built-in registrations and the resource download policy. The policy

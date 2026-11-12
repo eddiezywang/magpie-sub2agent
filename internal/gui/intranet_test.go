@@ -15,9 +15,21 @@ import (
 )
 
 func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
+	registeredSessions := false
 	for _, m := range pluginrt.Registered() {
+		if m.ID == "sessions" {
+			registeredSessions = true
+		}
 		if slices.Contains(distribution.Removed, m.ID) {
 			t.Fatalf("registered omitted module %s", m.ID)
+		}
+	}
+	if !registeredSessions {
+		t.Fatal("Sessions must remain registered")
+	}
+	for _, name := range []string{"i18n.js", "client.js", "sessions.css", "settings.js"} {
+		if _, err := assets.ReadFile("assets/plugins/sessions/" + name); err != nil {
+			t.Fatal(err)
 		}
 	}
 	if res, err := library.Sync(); err != nil || len(res.Changed) != 0 {

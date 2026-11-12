@@ -8,4 +8,4 @@ const Dist = Base + "/magpie/plugins/dist"
 
 // Removed are features absent from the internal distribution, even when an
 // imported configuration used to enable them.
-var Removed = []string{"library", "sessions", "middleware", "otel", "search", "tools", "warmups"}
+var Removed = []string{"library", "middleware", "otel", "search", "tools", "warmups"}

@@ -17,7 +17,7 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     const json = data => route.fulfill({ json: data });
-    if (url.pathname === '/boot.js') return route.fulfill({contentType: 'text/javascript', body: 'window.bootPrefs={lang:"en",theme:"light",web:true,intranet:true,featuresOff:["library","sessions","search","otel","tools","warmups"]};'});
+    if (url.pathname === '/boot.js') return route.fulfill({contentType: 'text/javascript', body: 'window.bootPrefs={lang:"en",theme:"light",web:true,intranet:true,featuresOff:["library","search","otel","tools","warmups"]};'});
     if (url.pathname === '/api/state') return json({agents:[agentRow('codex','Codex')],profiles:[],settings:{lang:'en',theme:'light'}});
     if (url.pathname === '/api/providers') return json({providers:[],presets:[],excluded:[],gateway:{running:true,window:true}});
     if (url.pathname === '/api/plugins') return json({plugins:[]});
@@ -32,5 +32,7 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.waitForTimeout(400); // the header's delayed animation used to assume a bird
   assert.equal(await page.title(), 'Sub2Agent');
   assert.equal(await page.locator('#view-library').count(), 0);
+  assert.equal(await page.locator('#view-sessions').count(), 1);
+  assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true);
   assert.deepEqual(errors, []);
 });
