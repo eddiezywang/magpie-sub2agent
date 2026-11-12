@@ -7,7 +7,7 @@
 - Develop the Sub2Agent distribution on `develop/intranet`; retain Magpie's
   provider management interactions while integrating Sub2Agent authentication.
 - Validate every retained page and capture milestone screenshots for the user's
-  review site at http://124.220.199.224:8804/. Never publish credentials, tokens,
+  review site at http://124.220.199.224:8805/. Never publish credentials, tokens,
   authentication callbacks or screenshots showing unmasked secrets.
 - Keep the original apps' credentials and data separate from this distribution.
 

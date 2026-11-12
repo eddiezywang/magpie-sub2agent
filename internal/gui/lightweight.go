@@ -4,6 +4,7 @@ package gui
 
 import (
 	"cmp"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"os"
 	"runtime"
@@ -43,7 +44,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 	winOpts, winBg := windowChrome(cmp.Or(os.Getenv("MAGPIE_THEME"), settings.Load().Theme))
 	w := h.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:             "main",
-		Title:            "magpie",
+		Title:            distribution.Name,
 		URL:              url,
 		Width:            width,
 		Height:           height,

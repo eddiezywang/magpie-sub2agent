@@ -1,6 +1,6 @@
 {
-  "name": "magpie",
-  "short_name": "magpie",
+  "name": "Sub2Agent",
+  "short_name": "Sub2Agent",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -11,3 +11,4 @@
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
+

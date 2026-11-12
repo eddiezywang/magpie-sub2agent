@@ -20719,10 +20719,14 @@ function dateFmt(opts) {
   return f;
 }
 
+function brandText(s) {
+  return window.bootPrefs?.intranet && typeof s === "string"
+    ? s.replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "Sub2Agent") : s;
+}
 function t(s, vars) {
   let out = I18N[locale]?.[s] ?? s;
   if (vars) for (const k in vars) out = out.split("{" + k + "}").join(vars[k]);
-  return out;
+  return brandText(out);
 }
 
 // tNotice is an agent's advice after a change (state.notice) in the

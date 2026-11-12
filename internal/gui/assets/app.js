@@ -257,7 +257,7 @@ function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (text instanceof Node) e.append(text);
-  else if (text !== undefined) e.textContent = text;
+  else if (text !== undefined) e.textContent = brandText(text);
   return e;
 }
 // replaceKeeping is parent.replaceChildren(...nodes) that leaves a node
@@ -1702,7 +1702,7 @@ function agentsLead(list) {
   lead.classList.toggle("welcome", first);
   if (!first) {
     const [pre, post] = t("Switch an agent on and the models you set up in magpie show up as the {magpie} provider in its own model list; or pick its model right here.").split("{magpie}");
-    lead.append(pre, el("b", "", "magpie"), post || "");
+    lead.append(pre, el("b", "", window.bootPrefs?.intranet ? "Sub2Agent" : "magpie"), post || "");
     return;
   }
   lead.append(el("b", "ag-lead-h", t("Let your agents use the models you set up in magpie")));
@@ -8545,7 +8545,7 @@ const IOS_EASE = "cubic-bezier(.32, .72, 0, 1)";
 // the system's Reduce Motion, or Settings' (#3813)
 function calm() { return document.documentElement.dataset.motion === "reduce" || matchMedia("(prefers-reduced-motion: reduce)").matches; }
 // Settings' Loading bird turned off: no bird on a skeleton or a README
-function birdOff() { return document.documentElement.dataset.bird === "off"; }
+function birdOff() { return window.bootPrefs?.intranet || document.documentElement.dataset.bird === "off"; }
 // magpie's bird in parts, its wing and tail free to move (the header's logo
 // holds the shapes)
 const BIRD = `<svg viewBox="0 0 44 44"><use href="#bird" clip-path="url(#bird-body)"/><g class="tail"><use href="#bird" clip-path="url(#bird-tail)"/></g><g class="wing"><use href="#bird" clip-path="url(#bird-wing)"/></g></svg>`;
@@ -23553,7 +23553,7 @@ if (mode !== "window" || !document.body.classList.contains("linux")) $("#winclos
 // when the pointer comes over it.
 function wag() {
   const logo = document.querySelector(".brand .logo");
-  if (!logo || logo.classList.contains("wag") || calm()) return;
+  if (!logo?.querySelector(".tail") || logo.classList.contains("wag") || calm()) return;
   logo.classList.add("wag");
   logo.querySelector(".tail").addEventListener("animationend", () => logo.classList.remove("wag"), { once: true });
 }

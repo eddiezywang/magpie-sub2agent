@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,13 +56,13 @@ func TestPortableSettings(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(data, "settings.json")); err != nil {
 		t.Fatalf("settings not saved in the data folder: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(r, "home", ".config", "magpie")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(r, "home", ".config", distribution.DataDir)); !os.IsNotExist(err) {
 		t.Fatalf("the profile's ~/.config/magpie was touched: %v", err)
 	}
 
 	// without the data folder it's the profile again
 	appdir.UseExecutable("")
-	if got, want := Path(), filepath.Join(r, "home", ".config", "magpie", "settings.json"); got != want {
+	if got, want := Path(), filepath.Join(r, "home", ".config", distribution.DataDir, "settings.json"); got != want {
 		t.Fatalf("installed Path() = %q, want %q", got, want)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"github.com/yetone/magpie/internal/distribution"
 	"io/fs"
 	"log"
 	"net/http"
@@ -209,7 +210,7 @@ func (h *host) ChooseFolder(title string) (string, error) {
 
 // panelTitle names the panel for Hyprland's rule, which places it, and
 // for niri, which finds it by it (the main window is "magpie")
-const panelTitle = "magpie panel"
+const panelTitle = distribution.Name + " panel"
 
 // FitPanel grows or shrinks the panel to its content and keeps it anchored
 // under the tray icon; a shown panel glides there when g says how. height
@@ -429,7 +430,7 @@ func Run(version string, showMain bool, link string) error {
 		// second launch); it hands its arguments to the running one and quits.
 		// The Mac sends the link to the running app itself.
 		SingleInstance: singleInstance(h),
-		Name:           "magpie",
+		Name:           distribution.Name,
 		Description:    "one place to pick every agent's model",
 		Icon:           appIconFor(),
 		Assets:         application.AssetOptions{Handler: ownWindow(handler)},
@@ -619,10 +620,10 @@ func Run(version string, showMain bool, link string) error {
 	if runtime.GOOS == "linux" {
 		// set before the tray starts, it is the item's id too, which
 		// Omarchy's bar pins it by (Wails calls it "Wails" otherwise)
-		h.tray.SetLabel("magpie")
+		h.tray.SetLabel(distribution.Name)
 		go dropTrayName()
 	}
-	h.tray.SetTooltip("magpie")
+	h.tray.SetTooltip(distribution.Name)
 	if icon, template := trayIconFor(runtime.GOOS, traySchemeLight()); template {
 		h.tray.SetTemplateIcon(icon)
 	} else {
@@ -782,7 +783,7 @@ func singleInstance(h *host) *application.SingleInstanceOptions {
 	}
 	sum := sha256.Sum256([]byte(settings.Dir()))
 	return &application.SingleInstanceOptions{
-		UniqueID: "ai.usemagpie.app.i" + hex.EncodeToString(sum[:6]),
+		UniqueID: distribution.AppID + ".i" + hex.EncodeToString(sum[:6]),
 		OnSecondInstanceLaunch: func(d application.SecondInstanceData) {
 			args := d.Args
 			if len(args) > 0 {
@@ -808,6 +809,9 @@ func singleInstance(h *host) *application.SingleInstanceOptions {
 // flap plays trayFlap on the tray icon, a frame every 30ms as they were
 // drawn — the .9s of the header logo's flap — and ends on the still bird.
 func (h *host) flap() {
+	if distribution.Internal {
+		return
+	}
 	if !h.flapping.CompareAndSwap(false, true) {
 		return
 	}
@@ -853,7 +857,7 @@ func (h *host) setBird(b []byte) {
 func panelOptions(goos, theme string) application.WebviewWindowOptions {
 	o := application.WebviewWindowOptions{
 		Name:            "panel",
-		Title:           "magpie",
+		Title:           distribution.Name,
 		URL:             "/?mode=panel" + theme,
 		Width:           panelWidth,
 		Height:          520,

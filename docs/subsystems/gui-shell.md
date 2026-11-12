@@ -6,6 +6,11 @@ The shell observes only plugin pages that are mounted. Settings also skips
 renderers belonging to omitted plugins, so removing Library, Sessions, Search
 or Observability does not abort Agents or Settings initialization. The packed
 asset browser regression is `tests/intranet-shell.test.cjs`.
+The intranet build is branded Sub2Agent. Its gateway defaults to 8989 and
+browser administration to 8990; installed data uses `sub2agent-magpie` and
+the native single-instance identity uses `local.sub2agent.magpie`. Portable
+bundles keep their own adjacent `data` directory. Its Windows URL handler
+and startup entry are independent of Magpie, allowing both apps to run.
 
 The desktop app has a tray (menu bar) icon whose click drops a compact
 panel, and a regular window. Both show one small web UI served from

@@ -1,6 +1,7 @@
 package appdir
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"path/filepath"
 	"testing"
 )
@@ -25,17 +26,17 @@ func TestFoldersJoinedOnce(t *testing.T) {
 			t.Errorf("%s with the folders unchanged: %.0f allocations", name, n)
 		}
 	}
-	if got, want := JoinFile(Join(Cache(), "models"), "openai", ".json"), filepath.Join(r, "cache", "magpie", "models", "openai.json"); got != want {
+	if got, want := JoinFile(Join(Cache(), "models"), "openai", ".json"), filepath.Join(r, "cache", distribution.DataDir, "models", "openai.json"); got != want {
 		t.Errorf("JoinFile = %q, want %q", got, want)
 	}
 
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(r, "other"))
-	if got, want := Cache(), filepath.Join(r, "other", "magpie"); got != want {
+	if got, want := Cache(), filepath.Join(r, "other", distribution.DataDir); got != want {
 		t.Errorf("a cache folder changed since: %q, want %q", got, want)
 	}
 	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv(homeVar(), filepath.Join(r, "home"))
-	if got, want := Config(), filepath.Join(r, "home", ".config", "magpie"); got != want {
+	if got, want := Config(), filepath.Join(r, "home", ".config", distribution.DataDir); got != want {
 		t.Errorf("under the home folder: %q, want %q", got, want)
 	}
 }
