@@ -1,0 +1,6 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sub2Agent 开发 Review</title>
+<style>body{margin:0;background:#f5f6f8;color:#20232a;font:15px/1.7 system-ui}main{max-width:1280px;margin:48px auto;padding:0 24px}h1{margin-bottom:4px}p,small{color:#646b78}article{margin:32px 0;background:white;border:1px solid #e0e3e8;border-radius:12px;padding:24px}img{width:100%;border:1px solid #eee;border-radius:8px}code{background:#eef1f5;padding:3px 7px}a{color:#5145cd}figcaption{margin:10px 0}figure{margin:16px 0}</style>
+<main><h1>Sub2Agent 开发 Review</h1><p>基于 Magpie 的内网版本 · 按步骤提交、验证和更新截图</p>
+<article><h2>01 · 修复 Agent 页面加载失败</h2><p>原因：删除资源库等插件后，侧栏仍监听不存在的 DOM 节点，抛错并中断应用初始化。已跳过缺席页面，并清理设置页对已删除模块的调用。</p><p>提交 <code>4e5edee</code> · Go 资产测试、Chromium 回归测试通过；真实本地页面可检测 9 个 Agent，无 JavaScript 错误。图中仍为本步骤的旧品牌。</p><figure><a href="01-agents-fixed.png"><img src="01-agents-fixed.png" alt="修复后 Agent 页面"></a><figcaption>真实本地页面，初始列表默认收起；未接入任何供应商或修改 Agent 配置。</figcaption></figure></article>
+<article><h2>进行中</h2><p>统一 Sub2Agent 品牌、图标、8989 网关及独立实例；接入 Sub2Agent 供应商认证；逐页验证和截图。</p></article>
+<small>仅发布已检查不含凭证的页面截图；登录令牌、回调和账户密钥不会发布。</small></main></html>
