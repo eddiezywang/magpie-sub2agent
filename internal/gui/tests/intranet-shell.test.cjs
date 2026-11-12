@@ -21,6 +21,16 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
     if (url.pathname === '/api/state') return json({agents:[agentRow('codex','Codex')],profiles:[],settings:{lang:'en',theme:'light'}});
     if (url.pathname === '/api/providers') return json({providers:[],presets:[],excluded:[],gateway:{running:true,window:true}});
     if (url.pathname === '/api/plugins') return json({plugins:[]});
+    if (url.pathname === '/api/gateway/trace') {
+      if (url.searchParams.has('wait')) return;
+      const now = new Date().toISOString();
+      return json({mine:true,now,seq:1,totals:{requests:1,rerouted:0,errors:0},routes:[{
+        id:1,seq:1,time:now,agent:'codex',model:'test-model',provider:'test',done:false,
+        order:[{id:'test#key',provider:'test',name:'Test vendor',kind:'key',model:'test-model'}],
+        tries:[{id:'test#key',model:'test-model',start:now,done:false}],
+      }]});
+    }
+    if (url.pathname === '/api/gateway/history') return json({days:[],routes:[]});
     if (url.pathname.startsWith('/api/')) return json({});
     try {
       const file = path.join(process.env.MAGPIE_ASSETS, url.pathname === '/' ? 'index.html' : url.pathname);
@@ -37,4 +47,24 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.evaluate(() => applyFeatures([{id:'sessions',on:true}]));
   assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true, 'feature refresh retains Sessions');
   assert.deepEqual(errors, []);
+  await page.evaluate(() => show('routing'));
+  await page.locator('.rt-sky .pkt').waitFor({state:'attached'});
+  await t.test('routing has a visible Sub2Agent mark', async () => {
+    assert.equal(await page.locator('.rt-hub svg image').count(), 1);
+    assert.equal(await page.locator('.rt-hub svg image').getAttribute('href'), 'icons/magpie.svg');
+    assert.equal(await page.locator('.rt-hub svg use[href="#bird"]').count(), 0);
+  });
+  await t.test('routing animates packets without magpie carriers', async () => {
+    assert.equal(await page.locator('.rt-flier').count(), 0);
+  });
+  await t.test('loading uses neutral skeletons without a bird', async () => {
+    await page.evaluate(async () => {
+      const s = document.createElement('div');
+      s.className = 'skeleton'; s.style.cssText = 'position:fixed;top:100px;left:300px;width:200px;height:20px';
+      document.body.append(s);
+      skelBird();
+    });
+    assert.equal(await page.locator('.sk-bird').count(), 0);
+    assert.equal(await page.locator('.skeleton').last().evaluate(e => getComputedStyle(e).animationName), 'skeleton-shift');
+  });
 });

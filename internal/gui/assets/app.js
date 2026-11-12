@@ -260,6 +260,9 @@ function el(tag, cls, text) {
   else if (text !== undefined) e.textContent = brandText(text);
   return e;
 }
+// The intranet header has no upstream bird symbol. Shared diagram hubs use
+// the distribution's mark directly instead of depending on header markup.
+function appMark() { return window.bootPrefs?.intranet ? '<image class="app-mark" href="icons/magpie.svg" width="44" height="44"/>' : '<use href="#bird"/>'; }
 // replaceKeeping is parent.replaceChildren(...nodes) that leaves a node
 // already in parent where it is, rather than taking it out and putting it
 // back. A filter redrawn from its own input event is one: taken out of the
@@ -8601,6 +8604,7 @@ function skelWatch() {
 }
 skelWatch();
 async function skelBird() {
+  if (birdOff()) return;
   skelFlying = true;
   let release;
   const gate = skelGate = new Promise((ok) => { release = () => { if (skelGate === gate) skelGate = null; ok(); }; });

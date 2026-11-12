@@ -11,6 +11,10 @@ browser administration to 8990; installed data uses `sub2agent-magpie` and
 the native single-instance identity uses `local.sub2agent.magpie`. Portable
 bundles keep their own adjacent `data` directory. Its Windows URL handler
 and startup entry are independent of Magpie, allowing both apps to run.
+Diagram hubs use `appMark()` rather than the upstream header's bird symbol.
+Intranet routing animates unbranded packets without flying bird carriers;
+loading keeps the skeleton shimmer and ordinary progress spinners. The bird
+loader also guards its entry point, including direct calls.
 
 The desktop app has a tray (menu bar) icon whose click drops a compact
 panel, and a regular window. Both show one small web UI served from

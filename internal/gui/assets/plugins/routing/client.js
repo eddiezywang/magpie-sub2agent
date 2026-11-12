@@ -93,7 +93,7 @@ function routingPage(part) {
   const logo = document.createElementNS(NS, "svg");
   logo.setAttribute("viewBox", "0 0 44 44");
   logo.setAttribute("class", "rt-bird");
-  logo.innerHTML = '<use href="#bird"/>';
+  logo.innerHTML = appMark();
   const hubSub = el("small"), chip = el("i");
   hub.append(logo, el("b", "", "magpie"), hubSub, chip);
   const list = el("ol", "rt-accts");
@@ -5179,7 +5179,7 @@ function routingPage(part) {
     + "</g></g>";
 
   function bird(kind) {
-    if (still() || !shown()) return null;
+    if (window.bootPrefs?.intranet || still() || !shown()) return null;
     const g = document.createElementNS(NS, "g");
     g.setAttribute("class", "rt-flier " + kind);
     g.innerHTML = FLIER;
@@ -8981,7 +8981,7 @@ function routingPage(part) {
   pWires.setAttribute("class", "ps-wires");
   pSky.setAttribute("class", "ps-sky");
   const pFrom = el("div", "ps-col ps-from"), pTo = el("div", "ps-col ps-to"), pHub = el("div", "ps-hub");
-  pHub.innerHTML = '<svg viewBox="0 0 44 44" aria-hidden="true"><use href="#bird"/></svg>';
+  pHub.innerHTML = `<svg viewBox="0 0 44 44" aria-hidden="true">${appMark()}</svg>`;
   pStage.append(pWires, pFrom, pHub, pTo, pSky);
   pStage.setAttribute("aria-hidden", "true");
   let pAg = [], pDst = [];          // the keys on the stage, in their places

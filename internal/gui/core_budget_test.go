@@ -18,7 +18,7 @@ import (
 // `git log -L` of this file.
 const (
 	appScriptBudget  = 1_086_267 // app.js: 1,080,614 at 8016205e3, with the 5,653 of room it had
-	coreScriptBudget = 1_265_622 // +1,200 for the intranet brand adapter, omitted-page guards and private subscriptions in the shared picker; provider authentication remains in local plugins.
+	coreScriptBudget = 1_266_022 // +1,600 for intranet branding, the shared diagram mark, omitted-page guards and private subscriptions in the shared picker; provider authentication remains in local plugins.
 )
 
 // codeBytes is how many bytes of b are code: its blank lines, its lines

@@ -329,8 +329,8 @@ function maskFlow(sum, move) {
   const rowH = 34, H = Math.max(fromRows.length, toRows.length, 3) * rowH;
   const max = Math.max(...fromRows.map((r) => r.n), ...toRows.map((r) => r.n), 1);
   const hub = el("span", "msk-hub");
-  hub.title = "magpie";
-  hub.innerHTML = '<svg viewBox="0 0 44 44" aria-hidden="true"><use href="#bird"/></svg>';
+  hub.title = brandText("magpie");
+  hub.innerHTML = `<svg viewBox="0 0 44 44" aria-hidden="true">${appMark()}</svg>`;
   // drawn in the middle's own pixels on each resize: a stretched viewBox
   // would bend the hairlines
   const s = sv("svg", { "aria-hidden": "true" });

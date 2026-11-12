@@ -232,6 +232,7 @@ body:not(.window.linux) #winclose { display: none; }
 .logo .parts, .logo.wag .whole { display: none; }
 .logo.wag .parts { display: inline; }
 .logo .tail { transform-box: view-box; transform-origin: 14px 22px; }
+html[data-theme=dark] image.app-mark { filter: invert(1); }
 .logo .wing { transform-box: view-box; transform-origin: 30px 19.8px; }
 .logo .bird { transform-box: view-box; transform-origin: 26px 38px; }
 .logo.wag .tail { animation: tail-flick .9s cubic-bezier(.3, 0, .3, 1); }
