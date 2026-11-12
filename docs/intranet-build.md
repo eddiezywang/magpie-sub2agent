@@ -24,6 +24,8 @@ and Library init callbacks and the linked-file watcher do not start. Existing
 agent files are not cleaned up or rewritten by this experimental distribution.
 Shared library types remain where the upstream backup/profile dependencies
 require them; this is not yet a complete source-level separation.
+Shared switch styling belongs to app.css, because accounts, usage and built-in
+plugin settings use these controls even when Library is absent.
 
 ## Plugin distribution
 

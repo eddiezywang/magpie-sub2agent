@@ -4,12 +4,14 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { chromium } = require('playwright');
+const { chromium, webkit } = require('playwright');
 const { agentRow } = require('./reader.cjs');
 
 test('intranet Agents initializes without removed plugin pages', async (t) => {
   assert.ok(process.env.MAGPIE_ASSETS, 'extract the intranet assets.zip first');
-  const browser = await chromium.launch({ channel: process.env.MAGPIE_TEST_BROWSER || 'chrome' });
+  const browser = process.env.BROWSER === 'webkit'
+    ? await webkit.launch()
+    : await chromium.launch({ channel: process.env.MAGPIE_TEST_BROWSER || 'chrome' });
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1360, height: 900 } });
   const errors = [];
@@ -47,6 +49,29 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.evaluate(() => applyFeatures([{id:'sessions',on:true}]));
   assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true, 'feature refresh retains Sessions');
   assert.deepEqual(errors, []);
+  await t.test('shared switches stay visible and operable without Library CSS', async () => {
+    await page.evaluate(() => {
+      const sw = magpie.ui.toggle(false, 'Reporting test switch', () => {});
+      Object.assign(sw.style, {position:'fixed',top:'100px',left:'300px',zIndex:9999});
+      document.body.append(sw);
+    });
+    const toggle = page.getByRole('switch', {name:'Reporting test switch'});
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+      const state = await toggle.evaluate(e => {
+        const style = getComputedStyle(e), thumb = getComputedStyle(e.firstElementChild);
+        return {background:style.backgroundColor,position:thumb.position,radius:parseFloat(style.borderRadius),width:e.getBoundingClientRect().width};
+      });
+      assert.notEqual(state.background, 'rgba(0, 0, 0, 0)', theme + ': switch track is invisible');
+      assert.equal(state.position, 'absolute', theme + ': switch thumb is missing its layout');
+      assert.ok(state.radius >= 8 && state.width >= 28, theme + ': switch track has no shape');
+    }
+    await toggle.click();
+    assert.equal(await toggle.getAttribute('aria-checked'), 'true');
+    await toggle.click();
+    assert.equal(await toggle.getAttribute('aria-checked'), 'false');
+    await toggle.evaluate(e => e.remove());
+  });
   await page.evaluate(() => show('routing'));
   await page.locator('.rt-sky .pkt').waitFor({state:'attached'});
   await t.test('routing has a visible Sub2Agent mark', async () => {
