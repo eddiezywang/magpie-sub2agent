@@ -54,6 +54,12 @@ The `MAGPIE_BUN` override may point at an existing absolute local executable for
 tests. Otherwise the internal build uses `runtime/bun.exe` beside itself and
 reports an error if it is missing; it never downloads a replacement.
 
-Limitations: private providers are not migrated yet; WebView2 must be installed;
+Private CodeBuddy, WorkBuddy enterprise and Trae enterprise providers are built
+from the authorized sibling Sub2Agent checkout (override with
+`-Sub2AgentSource`). Its pinned Node dependencies must already be installed.
+Generated implementations are excluded from Git; see
+[provider ownership](subsystems/provider-plugins.md).
+
+Limitations: real provider accounts remain unverified; WebView2 must be installed;
 shared backend dependencies are not all pruned; production account and full
 desktop UI validation are not covered by the package-size experiment.

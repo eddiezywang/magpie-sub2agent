@@ -1,6 +1,20 @@
 <!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sub2Agent 开发 Review</title>
-<style>body{margin:0;background:#f5f6f8;color:#20232a;font:15px/1.7 system-ui}main{max-width:1280px;margin:48px auto;padding:0 24px}h1{margin-bottom:4px}p,small{color:#646b78}article{margin:32px 0;background:white;border:1px solid #e0e3e8;border-radius:12px;padding:24px}img{width:100%;border:1px solid #eee;border-radius:8px}code{background:#eef1f5;padding:3px 7px}a{color:#5145cd}figcaption{margin:10px 0}figure{margin:16px 0}</style>
-<main><h1>Sub2Agent 开发 Review</h1><p>基于 Magpie 的内网版本 · 按步骤提交、验证和更新截图</p>
-<article><h2>01 · 修复 Agent 页面加载失败</h2><p>原因：删除资源库等插件后，侧栏仍监听不存在的 DOM 节点，抛错并中断应用初始化。已跳过缺席页面，并清理设置页对已删除模块的调用。</p><p>提交 <code>4e5edee</code> · Go 资产测试、Chromium 回归测试通过；真实本地页面可检测 9 个 Agent，无 JavaScript 错误。图中仍为本步骤的旧品牌。</p><figure><a href="01-agents-fixed.png"><img src="01-agents-fixed.png" alt="修复后 Agent 页面"></a><figcaption>真实本地页面，初始列表默认收起；未接入任何供应商或修改 Agent 配置。</figcaption></figure></article>
-<article><h2>进行中</h2><p>统一 Sub2Agent 品牌、图标、8989 网关及独立实例；接入 Sub2Agent 供应商认证；逐页验证和截图。</p></article>
-<small>仅发布已检查不含凭证的页面截图；登录令牌、回调和账户密钥不会发布。</small></main></html>
+<style>body{margin:0;background:#f5f6f8;color:#20232a;font:15px/1.7 system-ui}main{max-width:1280px;margin:48px auto;padding:0 24px}h1{margin-bottom:4px}p,small,figcaption{color:#646b78}article{margin:28px 0;background:white;border:1px solid #e0e3e8;border-radius:12px;padding:24px}img{display:block;width:100%;border:1px solid #eee;border-radius:8px}code{background:#eef1f5;padding:3px 7px}a{color:#5145cd}figure{margin:16px 0}figcaption{margin-top:8px}.gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}@media(max-width:760px){.gallery{grid-template-columns:1fr}main{margin:24px auto;padding:0 16px}article{padding:16px}}</style>
+<main><h1>Sub2Agent 开发 Review</h1><p>基于 Magpie 的内网版本 · develop/intranet · 2026-11-13 更新</p>
+<article><h2>当前运行版本</h2><p>Sub2Agent 0.1.3913-sub2agent.3 已启动，网关 <code>8989</code>；原版 Magpie 同时运行于 <code>3425</code>。两者使用独立数据目录。离线 ZIP 约 69.7 MiB，包含 Bun 与三个本地供应商插件。</p><p>会话页已保留，未授权读取任何 Agent 历史。供应商尚未登录真实账户，因此真实账户授权及模型调用仍待验证。下面均为 Playwright 页面截图；授权链接和临时代码已遮盖。</p></article>
+<article><h2>03 · Sub2Agent 供应商接入</h2><p>提交 <a href="https://github.com/eddiezywang/magpie-sub2agent/commit/cde29d8"><code>cde29d8</code></a>：CodeBuddy、WorkBuddy 企业、Trae 企业进入 Magpie 原生订阅选择器和登录交互。保留 Codex、Claude 与自定义端点，删除上游供应商预设目录。私有认证实现由本地源码构建，不提交到公开仓库。</p><p>六项认证与刷新测试、打包 Go 测试、Playwright 会话保留回归通过；真实 Bun 插件宿主已识别三个供应商。CodeBuddy 企业授权服务当前返回 HTTP 503，尚无法生成登录链接。保留企业 SSO、租户信息、模型映射、凭据刷新及本机回调校验。</p><figure><a href="providers.png"><img src="providers.png" alt="Sub2Agent 供应商选择器"></a></figure><div class="gallery">
+<figure><a href="codebuddy-add.png"><img loading="lazy" src="codebuddy-add.png" alt="CodeBuddy 登录交互"></a><figcaption>CodeBuddy · 当前业务端返回 HTTP 503，显示可重试错误</figcaption></figure>
+<figure><a href="workbuddy-add.png"><img loading="lazy" src="workbuddy-add.png" alt="WorkBuddy 企业登录交互"></a><figcaption>WorkBuddy 企业 SSO</figcaption></figure>
+<figure><a href="trae-add.png"><img loading="lazy" src="trae-add.png" alt="Trae 企业登录交互"></a><figcaption>Trae 企业登录与本机回调</figcaption></figure></div></article>
+<article><h2>02 · 品牌、实例隔离和会话</h2><p><code>885b5c9</code> 统一 Sub2Agent 图标、标题和 8989 默认端口，隔离应用数据及实例标识。<code>3fc0d82</code> 恢复会话模块；<code>cde29d8</code> 同时修复功能状态刷新后隐藏会话入口的问题。</p><div class="gallery">
+<figure><a href="agents.png"><img loading="lazy" src="agents.png" alt="Agent 页面"></a><figcaption>Agent · 识别本机 Agent</figcaption></figure>
+<figure><a href="sessions.png"><img loading="lazy" src="sessions.png" alt="保留的会话页面"></a><figcaption>会话 · 读取历史前征求许可</figcaption></figure>
+<figure><a href="routing.png"><img loading="lazy" src="routing.png" alt="路由页面"></a><figcaption>路由</figcaption></figure>
+<figure><a href="groups.png"><img loading="lazy" src="groups.png" alt="路由组页面"></a><figcaption>路由组</figcaption></figure>
+<figure><a href="gateway.png"><img loading="lazy" src="gateway.png" alt="8989 网关页面"></a><figcaption>网关</figcaption></figure>
+<figure><a href="usage.png"><img loading="lazy" src="usage.png" alt="用量页面"></a><figcaption>用量</figcaption></figure>
+<figure><a href="masking.png"><img loading="lazy" src="masking.png" alt="脱敏页面"></a><figcaption>脱敏</figcaption></figure>
+<figure><a href="plugins.png"><img loading="lazy" src="plugins.png" alt="插件页面"></a><figcaption>插件 · 固定内网源；172.21.0.177 尚需部署插件目录</figcaption></figure>
+<figure><a href="settings.png"><img loading="lazy" src="settings.png" alt="设置页面"></a><figcaption>设置</figcaption></figure></div></article>
+<article><h2>01 · 修复 Agent 页面加载失败</h2><p><code>4e5edee</code>：删除资源库等插件后，侧栏监听不存在的 DOM 节点，抛错并中断初始化。已跳过缺席页面，清理设置页对已删除模块的调用。下图记录本步骤，仍为旧品牌。</p><figure><a href="01-agents-fixed.png"><img loading="lazy" src="01-agents-fixed.png" alt="最初修复后的 Agent 页面"></a></figure></article>
+<small>截图不含真实账户、凭据或会话内容。空状态表示当前隔离实例尚未添加账户和请求。</small></main></html>

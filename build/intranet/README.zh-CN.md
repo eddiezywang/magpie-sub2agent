@@ -1,6 +1,6 @@
-# Magpie 内网精简版：离线体积验证包
+# Sub2Agent 内网版：离线试用包
 
-解压后运行 magpie.exe。请保留 runtime/bun.exe 和 .portable。
+解压后运行 Sub2Agent.exe。请保留 runtime/bun.exe、providers 和 .portable。
 这是源码构建的试验版，不会替换已经运行的官方 Magpie。
 配置保存在程序旁的 data 目录。本包不含真实账号、密钥或用户配置。
 
@@ -30,12 +30,15 @@ Agent 自动升级及安装下载。使用内置模型目录及离线汇率回�
 不会切换到公共社区目录。公网发现与资源下载的公网回退已阻断。
 
 本试验暂时关闭网络插件安装，只支持已打包完整依赖的本地插件目录：
-  magpie.exe plugin add D:\path\to\bundled-plugin
+  Sub2Agent.exe plugin add D:\path\to\bundled-plugin
 原因：只改 npm 默认 registry 仍会被包内的远程依赖和下载地址绕过。
 内部制品的完整依赖、版本及校验协议接好后才能启用一键安装。
 供应商插件自身具有网络能力，仍须在发布到内网前审查其业务地址。
 
-尚未完成：Sub2Agent 私有供应商迁移、内网服务器部署及完整真实账号验证。
+已接入 CodeBuddy、WorkBuddy 企业及 Trae 企业的私有认证与请求适配，
+沿用 Magpie 供应商及账户交互。保留 Codex、Claude 和自定义供应商。
+默认网关端口 8989，与原版 Magpie 的数据和实例隔离。
+尚未完成：内网插件服务器部署及完整真实账号验证。
 本包用于检查精简后的程序和含 Bun 的完整离线包大小，不作为正式版。
 
 源码、构建入口及模块说明位于 magpie-intranet 工作树：
