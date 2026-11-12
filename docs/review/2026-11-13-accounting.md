@@ -47,8 +47,9 @@ plugin、provider、sessions、settings、shortcut、sqlitedb、update、usage�
 新用量默认关闭，需服务端声明 v2 能力并逐事件确认后才可投递。
 
 应用启动按进程记录，网关停用记录 stop 和末段时长；不会把插件重载
-误报为 app_quit。尚未接入独立的应用退出埋点；强制终止进程无法生成
-最后的时长事件。真实供应商推理、服务端价格计算与计费一致性未验收。
+误报为 app_quit。后续补齐原生应用 OnShutdown 的退出事件，持久化一次
+desktop_app_quit，下一次启动重试。强制终止进程无法生成最后的退出事件。
+真实供应商推理、服务端价格计算与计费一致性未验收。
 
 离线 ZIP：73,124,291 字节（约 69.7 MiB），不含用户 data。
 SHA-256：`1acf64a67dcfd9737a53e73b7cdf50a5c1ee08d50765e47fbeb9162e200e3e89`。

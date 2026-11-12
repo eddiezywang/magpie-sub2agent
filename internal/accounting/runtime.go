@@ -63,6 +63,9 @@ type Runtime struct {
 	mu           sync.Mutex
 	runID        string
 	running      bool
+	started      time.Time
+	uptime       time.Duration
+	quitOnce     sync.Once
 	cancel       context.CancelFunc
 	done         chan struct{}
 	flushMu      sync.Mutex
@@ -200,6 +203,7 @@ func (r *Runtime) Serve() func() {
 		return func() {}
 	}
 	r.running = true
+	r.started = time.Now()
 	r.tokens.Store(0)
 	r.runID = NewID()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -238,6 +242,7 @@ func (r *Runtime) Serve() func() {
 		once.Do(func() {
 			r.mu.Lock()
 			r.running = false
+			r.uptime = time.Since(r.started)
 			r.mu.Unlock()
 			cancel()
 			<-done
@@ -248,6 +253,24 @@ func (r *Runtime) Serve() func() {
 			r.writeStatus()
 		})
 	}
+}
+
+// AppQuit is called only by the native application's shutdown lifecycle,
+// independently of gateway restarts and reporting settings changes.
+func (r *Runtime) AppQuit() {
+	r.quitOnce.Do(func() {
+		r.mu.Lock()
+		started, duration := r.started, r.uptime
+		if r.running {
+			duration = time.Since(started)
+		}
+		r.mu.Unlock()
+		if started.IsZero() {
+			return
+		}
+		r.legacy("desktop_app_quit", "--proxy-uptime-ms="+strconv.FormatInt(duration.Milliseconds(), 10), "--proxy-total-tokens="+strconv.FormatUint(r.tokens.Load(), 10))
+		r.writeStatus()
+	})
 }
 
 // Each plane gets a bounded batch independently; a failed usage collector

@@ -28,6 +28,9 @@ config change, reconciliation disposes it (and dependent services) before
 applying the replacement. Equal settings do not restart it. Other manifests
 retain their existing behavior. The intranet accounting observer uses this to
 apply collection switches and endpoints immediately.
+The native app's shutdown calls `usage.NotifyAppQuit` for observers implementing
+`AppQuit`; this notification is separate from gateway stops or plugin disposal.
+An implementation may persist local events here but must not wait for HTTP.
 
 | Part | What it does | Source |
 | --- | --- | --- |

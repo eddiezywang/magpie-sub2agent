@@ -39,8 +39,11 @@ It queues gateway records synchronously to local disk; HTTP runs separately,
 every 30 seconds. Shutdown cancels HTTP and persists final lifecycle events
 for the next run. The old endpoint has its original 300 ms request timeout.
 Start/stop and ten-minute duration flushes retain the old event names. A proxy
-restart is not reported as an application quit; abrupt exits cannot produce a
-final duration event. App start is emitted once per process and data directory.
+restart is not reported as an application quit. The native app's OnShutdown
+notifies registered interested observers; accounting persists one
+`desktop_app_quit` with its uptime/token summary, without HTTP. It retries on
+the next launch. Abrupt exits cannot produce a final duration event. App start
+is emitted once per process and data directory.
 
 Plugins > Built-in > 用量上报 exposes two independent switches and endpoints.
 Old telemetry is enabled by default, with `CB_PROXY_TELEMETRY` and

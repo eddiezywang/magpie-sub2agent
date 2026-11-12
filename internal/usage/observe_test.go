@@ -26,6 +26,31 @@ type fakeObserver struct {
 	rows          []Record
 }
 
+type quittingObserver struct {
+	fakeObserver
+	quits int
+}
+
+func (q *quittingObserver) AppQuit() { q.quits++ }
+
+func TestApplicationQuitReachesOnlyRegisteredInterestedObservers(t *testing.T) {
+	quit := &quittingObserver{}
+	ordinary := &fakeObserver{}
+	removeQuit := Observe(quit)
+	defer removeQuit()
+	removeOrdinary := Observe(ordinary)
+	defer removeOrdinary()
+	NotifyAppQuit()
+	if quit.quits != 1 {
+		t.Fatal("native application quit was not delivered")
+	}
+	removeQuit()
+	NotifyAppQuit()
+	if quit.quits != 1 {
+		t.Fatal("disabled observer still received quit events")
+	}
+}
+
 func (f *fakeObserver) Serve() func() {
 	f.mu.Lock()
 	f.serves++

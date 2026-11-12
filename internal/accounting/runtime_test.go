@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -138,5 +139,49 @@ func TestRejectedEventsAreArchivedBeforeLeavingPending(t *testing.T) {
 	}
 	if _, err = os.Stat(filepath.Join(dir, "rejected", "a.json")); err != nil {
 		t.Fatal("rejected event was lost instead of archived")
+	}
+}
+
+func TestAppQuitIsSeparateFromGatewayStopAndPersistedOnce(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+	dir := t.TempDir()
+	r, err := New(dir, Options{LegacyEnabled: true, LegacyURL: srv.URL + "/events"}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stop := r.Serve()
+	r.Ledger(usage.Record{Time: time.Now(), Model: "test", Input: 5, Output: 2, Status: 200})
+	stop()
+	quitEvents := func(queue *Queue) []LegacyEvent {
+		var out []LegacyEvent
+		for _, item := range queue.Pending("legacy", 200) {
+			var event LegacyEvent
+			if err := json.Unmarshal(item.Payload, &event); err != nil {
+				t.Fatal(err)
+			}
+			if event.Event == "desktop_app_quit" {
+				out = append(out, event)
+			}
+		}
+		return out
+	}
+	if len(quitEvents(r.queue)) != 0 {
+		t.Fatal("gateway stop was reported as application quit")
+	}
+	r.AppQuit()
+	r.AppQuit()
+	events := quitEvents(r.queue)
+	if len(events) != 1 || !slices.Contains(events[0].Argv, "--proxy-total-tokens=7") {
+		t.Fatalf("application quit not persisted once with token summary: %+v", events)
+	}
+	q, err := OpenQueue(filepath.Join(dir, "accounting-outbox"), 20<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disk := quitEvents(q); len(disk) != 1 || disk[0].ID != events[0].ID {
+		t.Fatal("application quit lost across reopen")
 	}
 }
