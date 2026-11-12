@@ -20024,7 +20024,7 @@ function renderSettings() {
   $("#wslAgentsRow").hidden = !s.wsl;
   $("#wslAgentsSegs").replaceChildren(segs([["off", t("Off")], ["on", t("On")]], s.noWSLAgents ? "off" : "on",
     (v) => savePrefs({ ...keep, noWSLAgents: v === "off" })));
-  renderSessionTerminal(s, keep);
+  if (typeof renderSessionTerminal === "function") renderSessionTerminal(s, keep);
   renderBarIcon();
   // what it does in its tooltip (#2120), and where the Mac lists it
   $("#loginRow .who").title = t(document.body.classList.contains("mac")
@@ -20077,14 +20077,14 @@ function renderSettings() {
   window.renderSavedProxies ? renderSavedProxies(s) : import("./proxies.js").then(() => renderSavedProxies(s), () => {});
   renderGitHubToken(s);
   renderImages(s, keep);
-  renderSearch(s, keep);
+  if (typeof renderSearch === "function") renderSearch(s, keep);
   window.pipeCheckFill ? pipeCheckFill() : import("./pipecheck.js").then(() => pipeCheckFill(), () => {});
   renderReplies(s, keep);
   renderDisabledModels(s);
   renderRedact(s, keep);
   renderDiscovery(s, keep);
-  renderSessionReads(s);
-  renderOTel(s, keep);
+  if (typeof renderSessionReads === "function") renderSessionReads(s);
+  if (typeof renderOTel === "function") renderOTel(s, keep);
   renderPort(s);
   renderBareIds(s);
   renderLAN(s);
@@ -24115,7 +24115,10 @@ if (mode === "window") {
   let queued = false;
   const again = () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; navSubs(); }); };
   const mo = new MutationObserver(() => { again(); if (document.body.classList.contains("side-nav")) tools(); });
-  for (const v of Object.keys(NAV_SUBS)) mo.observe($("#view-" + v), { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
+  for (const v of Object.keys(NAV_SUBS)) {
+    const page = $("#view-" + v);
+    if (page) mo.observe(page, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
+  }
   // a page whose head is only its tools (Library, Plugins, Settings) has them
   // in the title bar beside the sidebar (app.css): between where the reader
   // is and the window's own buttons, so no row of its own stands empty

@@ -2,6 +2,10 @@
 
 The `intranet` distribution changes boot feature visibility and embedded assets;
 its exclusions and validation are in [internal build contracts](../intranet-build.md).
+The shell observes only plugin pages that are mounted. Settings also skips
+renderers belonging to omitted plugins, so removing Library, Sessions, Search
+or Observability does not abort Agents or Settings initialization. The packed
+asset browser regression is `tests/intranet-shell.test.cjs`.
 
 The desktop app has a tray (menu bar) icon whose click drops a compact
 panel, and a regular window. Both show one small web UI served from
