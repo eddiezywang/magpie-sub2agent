@@ -15,6 +15,7 @@ import (
 type Sender struct {
 	LegacyURL, UsageURL, Token string
 	Client                     *http.Client
+	Reject                     func([]string) error
 }
 
 func endpoint(raw string) (*url.URL, error) {
@@ -74,13 +75,15 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 		}
 	}
 	if first.Kind == "legacy" {
+		legacyCtx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)
+		defer cancel()
 		if len(items) != 1 {
 			return nil, fmt.Errorf("legacy telemetry requires a single event")
 		}
 		var ack struct {
 			OK bool `json:"ok"`
 		}
-		if err := s.request(ctx, "POST", s.LegacyURL, first.Payload, &ack); err != nil {
+		if err := s.request(legacyCtx, "POST", s.LegacyURL, first.Payload, &ack); err != nil {
 			return nil, err
 		}
 		if !ack.OK {
@@ -124,6 +127,7 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 		Schema    string   `json:"schema"`
 		Accepted  []string `json:"accepted_ids"`
 		Duplicate []string `json:"duplicate_ids"`
+		Rejected  []string `json:"rejected_ids"`
 	}
 	if err = s.request(ctx, "POST", s.UsageURL, body, &ack); err != nil {
 		return nil, err
@@ -133,11 +137,19 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 	}
 	ids := append(ack.Accepted, ack.Duplicate...)
 	seen := map[string]bool{}
-	for _, id := range ids {
+	for _, id := range append(slices.Clone(ids), ack.Rejected...) {
 		if !sent[id] || seen[id] {
 			return nil, fmt.Errorf("collector acknowledged an invalid event ID")
 		}
 		seen[id] = true
+	}
+	if len(ack.Rejected) > 0 {
+		if s.Reject == nil {
+			return nil, fmt.Errorf("rejected events require local archival")
+		}
+		if err := s.Reject(ack.Rejected); err != nil {
+			return nil, err
+		}
 	}
 	return ids, nil
 }

@@ -23,6 +23,12 @@ the plugin host) are a different thing; see
 
 ## Responsibilities and boundaries
 
+In this fork, a manifest may opt into `RestartOnConfig`. On a composed backend
+config change, reconciliation disposes it (and dependent services) before
+applying the replacement. Equal settings do not restart it. Other manifests
+retain their existing behavior. The intranet accounting observer uses this to
+apply collection switches and endpoints immediately.
+
 | Part | What it does | Source |
 | --- | --- | --- |
 | Registry | A plugin calls `pluginrt.Register(Manifest)` from `init`. `Registered` lists them by id; two with one id panic. `plugins/all` imports every plugin, and only `main.go` imports `plugins/all`, so core code and its tests run without any. | [`pluginrt.go`](../../internal/pluginrt/pluginrt.go), [`plugins/all/all.go`](../../plugins/all/all.go) |

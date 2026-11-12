@@ -29,10 +29,34 @@ queued. Usage delivery first requires `/healthz` to advertise
 `usage_schemas: ["sub2agent-usage/2"]`; successful posts must return
 `{ok:true,schema:"sub2agent-usage/2",accepted_ids:[],duplicate_ids:[]}`.
 Count-only v1 responses and foreign/duplicate acknowledgement IDs are refused.
-Server-side rejections remain queued until a rejection archival path is added.
+`rejected_ids` are validated against the sent batch and moved to the bounded
+local `accounting-outbox/rejected` archive before leaving pending. If archival
+fails, pending events remain available for retry. Neither pending nor rejected
+events are silently evicted when their respective 20 MiB limits are reached.
 
-Current implementation stage: protocol, outbox and sender fixtures; not yet
-registered with the runtime. Observer, lifecycle and activation follow.
+The intranet-only `accounting` built-in registers a no-body usage observer.
+It queues gateway records synchronously to local disk; HTTP runs separately,
+every 30 seconds. Shutdown cancels HTTP and persists final lifecycle events
+for the next run. The old endpoint has its original 300 ms request timeout.
+Start/stop and ten-minute duration flushes retain the old event names. A proxy
+restart is not reported as an application quit; abrupt exits cannot produce a
+final duration event. App start is emitted once per process and data directory.
+
+Plugins > Built-in > 用量上报 exposes two independent switches and endpoints.
+Old telemetry is enabled by default, with `CB_PROXY_TELEMETRY` and
+`CB_PROXY_TELEMETRY_URL` overrides retained. New request reporting defaults off
+until the existing server implements the negotiated v2 contract. Settings
+changes dispose the old sender before opening its replacement, without an
+application restart. Turning a plane off clears that plane's pending queue;
+turning the whole built-in off pauses collection and delivery, retaining the
+queue for re-enabling. The rejected archive remains available for diagnosis.
+`telemetry.json` preserves this distribution's install identity; it never reads
+another application's data. `accounting-status.json` records local queue counts,
+last delivery and failure information, without credentials or event bodies.
+
+Current implementation stage: client protocol, durable delivery and runtime
+integration. Server pricing, ingestion adapters and report endpoints still need
+the existing usage-server source; this client does not calculate server bills.
 Run `go test ./internal/accounting`. No tests reach a real telemetry endpoint.
 
 Migration design: [server billing proposal](../proposals/server-billing.md).

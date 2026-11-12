@@ -13,6 +13,35 @@ import (
 	"testing"
 )
 
+func TestConfigRestartIsOptInAndDisposesBeforeApplying(t *testing.T) {
+	var live, starts int
+	var configured string
+	rt := New([]Manifest{
+		{ID: "reporting", RestartOnConfig: true, Apply: func(c *Ctx) error {
+			if live != 0 {
+				t.Fatal("old sender still active while replacing configuration")
+			}
+			live++
+			starts++
+			configured, _ = c.Config["url"].(string)
+			c.OnDispose(func() { live-- })
+			return nil
+		}},
+		{ID: "ordinary", Apply: func(c *Ctx) error { starts += 100; return nil }},
+	})
+	defer rt.Stop()
+	on := map[string]bool{"reporting": true, "ordinary": true}
+	config := func(url string) map[string]map[string]any {
+		return map[string]map[string]any{"reporting": {"url": url}, "ordinary": {"url": url}}
+	}
+	rt.Reconcile(on, config("old"))
+	rt.Reconcile(on, config("new"))
+	rt.Reconcile(on, config("new"))
+	if configured != "new" || starts != 102 || live != 1 {
+		t.Fatalf("config not applied once with opt-in: url=%s starts=%d live=%d", configured, starts, live)
+	}
+}
+
 // A plugin is applied once what it requires is provided, whatever the
 // order; one that fails or panics is FAILED, what it registered undone,
 // and the rest run on; turned off, what it registered is undone newest
@@ -94,6 +123,7 @@ func TestCompatible(t *testing.T) {
 func TestPluginsImportOnlyCore(t *testing.T) {
 	root := filepath.Join("..", "..")
 	const mod = "github.com/yetone/magpie/plugins/"
+	gathered := map[string]bool{}
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -121,6 +151,7 @@ func TestPluginsImportOnlyCore(t *testing.T) {
 			switch {
 			case rel == "main.go" && p == mod+"all":
 			case strings.HasPrefix(rel, "plugins/all/"):
+				gathered[p] = true
 			case strings.HasPrefix(rel, "plugins/"):
 				t.Errorf("%s imports %s: a plugin never imports another", rel, p)
 			default:
@@ -137,12 +168,13 @@ func TestPluginsImportOnlyCore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	all, err := os.ReadFile(filepath.Join(root, "plugins", "all", "all.go"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	for _, d := range dirs {
-		if d.IsDir() && d.Name() != "all" && !strings.Contains(string(all), `"`+mod+d.Name()+`"`) {
+		// Gather all build profiles; non-Go adapter assets are not built-ins.
+		files, err := filepath.Glob(filepath.Join(root, "plugins", d.Name(), "*.go"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d.IsDir() && d.Name() != "all" && len(files) > 0 && !gathered[mod+d.Name()] {
 			t.Errorf("plugins/all doesn't import plugins/%s", d.Name())
 		}
 	}

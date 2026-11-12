@@ -202,3 +202,42 @@ func (q *Queue) Clear(kind string) error {
 }
 
 func (q *Queue) Count() (int, int64) { q.mu.Lock(); defer q.mu.Unlock(); return len(q.items), q.bytes }
+
+// Reject archives the original numeric event before removing it from pending.
+// Only IDs explicitly rejected by a negotiated v2 collector reach this method.
+func (q *Queue) Reject(ids []string) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	dir := filepath.Join(q.dir, "rejected")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	var size int64
+	for _, file := range files {
+		info, err := file.Info()
+		if err != nil {
+			return err
+		}
+		size += info.Size()
+	}
+	for _, id := range ids {
+		it, ok := q.items[id]
+		if !ok {
+			continue
+		}
+		if size+it.bytes > q.limit {
+			return fmt.Errorf("rejected accounting archive is full")
+		}
+		if err := os.Rename(filepath.Join(q.dir, id+".json"), filepath.Join(dir, id+".json")); err != nil {
+			return err
+		}
+		size += it.bytes
+		q.bytes -= it.bytes
+		delete(q.items, id)
+	}
+	return nil
+}

@@ -20,7 +20,11 @@ func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
 		t.Fatal("upstream vendor presets must not appear in the internal distribution")
 	}
 	registeredSessions := false
+	registeredAccounting := false
 	for _, m := range pluginrt.Registered() {
+		if m.ID == "accounting" {
+			registeredAccounting = m.RestartOnConfig && m.Essential && m.Schema() != nil
+		}
 		if m.ID == "sessions" {
 			registeredSessions = true
 		}
@@ -30,6 +34,9 @@ func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
 	}
 	if !registeredSessions {
 		t.Fatal("Sessions must remain registered")
+	}
+	if !registeredAccounting {
+		t.Fatal("intranet accounting must expose settings and apply changes immediately")
 	}
 	for _, name := range []string{"i18n.js", "client.js", "sessions.css", "settings.js"} {
 		if _, err := assets.ReadFile("assets/plugins/sessions/" + name); err != nil {
