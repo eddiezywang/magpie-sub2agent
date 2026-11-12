@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"io/fs"
 	"maps"
@@ -1147,6 +1148,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		// once another answers in its place (visamzh on X), as after its
 		// own restart to update (backAsNew)
 		boot["version"] = Version
+		if distribution.Internal {
+			boot["intranet"] = true
+			boot["noVideo"] = true
+		}
 		// and the clock the system shows, 12 or 24 hours, which no webview
 		// tells the page (iXerol on X); a browser tab keeps its own
 		if !isWeb(w) {
@@ -1576,7 +1581,9 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	httpsRoutes(mux, w)
 	uninstallRoutes(mux, w)
 	archiveRoutes(mux)
-	libraryRoutes(mux, w)
+	if !distribution.Internal {
+		libraryRoutes(mux, w)
+	}
 	updateRoutes(mux, w)
 	whatsNewRoutes(mux)
 	cliBehindRoutes(mux)

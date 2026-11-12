@@ -3,6 +3,7 @@ package library
 import (
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"os"
 	"slices"
@@ -156,6 +157,10 @@ func syncSteps(all, gone []*Target, b *backups, res *Result) []func(*Library) {
 // first operations after opening magpie took seconds (#1624, Hipple).
 // It lets go after each agent's part, for whatever waits to go first.
 func Sync() (*Result, error) {
+	if distribution.Internal {
+		return &Result{Changed: []string{}, Problems: []Problem{}}, nil
+	}
+
 	// a plugin's tools, a server of their own (plugin_tools.go)
 	if _, err := adoptPluginTools(); err != nil {
 		log.Printf("library: giving plugin tools a server: %v", err)

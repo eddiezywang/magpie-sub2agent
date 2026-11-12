@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"os"
@@ -192,6 +193,10 @@ type erAPI struct {
 }
 
 func fetchLive(ctx context.Context) (Rate, error) {
+	if distribution.Internal {
+		return Rate{}, fmt.Errorf("online exchange rates are disabled")
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rateURL, nil)
 	if err != nil {
 		return Rate{}, err

@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"maps"
 	"os"
 	"os/exec"
@@ -411,6 +412,12 @@ func AddExact(ctx context.Context, spec string) (Entry, error) { return add(ctx,
 // add is Add, an npm package installed at the version given when there is
 // one (installAt), its spec kept as given.
 func add(ctx context.Context, spec, version string) (Entry, error) {
+	if distribution.Internal {
+		if IsGit(spec) || (!IsPath(spec) && !pkgName.MatchString(Name(spec))) {
+			return Entry{}, fmt.Errorf("only local plugins and internal registry packages are supported")
+		}
+	}
+
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
 		return Entry{}, errors.New("no plugin given")
@@ -735,6 +742,10 @@ func Called(pkg, name string) bool {
 // install puts an npm package into plugins/ with bun add, its scripts
 // left unrun as OpenCode leaves them.
 func install(ctx context.Context, spec string) error {
+	if distribution.Internal {
+		return fmt.Errorf("network plugin installation is unavailable in this offline trial; use a local bundled plugin folder")
+	}
+
 	bun, err := Bun(ctx)
 	if err != nil {
 		return err
@@ -812,6 +823,10 @@ func bunAdd(ctx context.Context, bun, spec string) error {
 // through restarts and the hourly updates). Asked for the version, bun
 // says why it can't install it.
 func installAt(ctx context.Context, pkg, version string) error {
+	if distribution.Internal {
+		return fmt.Errorf("network plugin installation is unavailable in this offline trial; use a local bundled plugin folder")
+	}
+
 	if err := install(ctx, pkg+"@"+version); err != nil {
 		// what bun said comes first: the page's status line shows the
 		// start of a long message

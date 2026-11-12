@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"maps"
 	"net/http"
@@ -848,6 +849,10 @@ func SyncIfMissing(ctx context.Context) error {
 }
 
 func syncLock(ctx context.Context, onlyIfMissing bool) error {
+	if distribution.Internal {
+		return nil
+	}
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

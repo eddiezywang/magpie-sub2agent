@@ -37,6 +37,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"net/url"
@@ -52,7 +53,12 @@ import (
 	"github.com/yetone/magpie/internal/mcpauth"
 )
 
-func init() { gateway.MCPHub = theHub{} }
+func init() {
+	if distribution.Internal {
+		return
+	}
+	gateway.MCPHub = theHub{}
+}
 
 // HubEntry is the name of the one entry the hub is given to an agent by.
 const HubEntry = "magpie"

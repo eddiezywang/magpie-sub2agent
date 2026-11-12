@@ -1,5 +1,8 @@
 # GUI app shell
 
+The `intranet` distribution changes boot feature visibility and embedded assets;
+its exclusions and validation are in [internal build contracts](../intranet-build.md).
+
 The desktop app has a tray (menu bar) icon whose click drops a compact
 panel, and a regular window. Both show one small web UI served from
 embedded assets. The page talks to Go over a JSON API on the same handler,

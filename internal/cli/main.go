@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"os"
 	"slices"
 	"strings"
@@ -630,6 +631,9 @@ func run(args []string) error {
 	case "update":
 		return updateCmd(args)
 	case "library", "lib":
+		if distribution.Internal {
+			return fmt.Errorf("the resource library is not included in this distribution")
+		}
 		return libraryCmd(args)
 	case "backup":
 		return backupCmd(args[1:])

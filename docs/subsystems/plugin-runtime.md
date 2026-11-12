@@ -1,5 +1,8 @@
 # Plugin runtime
 
+The internal `intranet` build registers a reduced module set and packs only its
+clients. See [internal build contracts](../intranet-build.md).
+
 magpie's built-in plugins are the parts of magpie not everyone needs, each
 one a package under `plugins/` that the user can switch off. The runtime in
 `internal/pluginrt` keeps their registry, applies the ones that are on in the

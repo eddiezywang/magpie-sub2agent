@@ -7,6 +7,7 @@ package main
 import (
 	"archive/zip"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io/fs"
 	"os"
 	"path"
@@ -42,6 +43,18 @@ func pack(dir, out string) error {
 			}
 			return nil
 		}
+		if distribution.Internal {
+			rel, _ := filepath.Rel(dir, p)
+			rel = filepath.ToSlash(rel)
+			for _, id := range distribution.Removed {
+				if rel == "plugins/"+id && d.IsDir() {
+					return filepath.SkipDir
+				}
+			}
+			if strings.EqualFold(filepath.Ext(p), ".webm") {
+				return nil
+			}
+		}
 		if d.Type().IsRegular() {
 			rel, err := filepath.Rel(dir, p)
 			if err != nil {
@@ -63,6 +76,9 @@ func pack(dir, out string) error {
 	zw := zip.NewWriter(f)
 	for _, n := range names {
 		b, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(n)))
+		if err == nil && distribution.Internal && n == "index.html" {
+			b = internalIndex(b)
+		}
 		if err != nil {
 			f.Close()
 			return err

@@ -7,6 +7,7 @@
 package iconproxy
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"net/url"
 	"os"
 )
@@ -17,6 +18,10 @@ const Base = "https://usemagpie.ai/api/icon"
 // URL is the address to fetch the picture at u through. One on usemagpie.ai
 // already is asked for as it is: the worker needn't fetch its own site.
 func URL(u string) string {
+	if distribution.Internal {
+		return distribution.Base + "/magpie/icons?url=" + url.QueryEscape(u)
+	}
+
 	if p, err := url.Parse(u); err == nil && p.Scheme == "https" && p.Host == "usemagpie.ai" {
 		return u
 	}

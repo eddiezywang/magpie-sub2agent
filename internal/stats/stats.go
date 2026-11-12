@@ -17,6 +17,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -44,6 +45,10 @@ func Host() string {
 
 // Off reports whether the user said not to send it.
 func Off() bool {
+	if distribution.Internal {
+		return true
+	}
+
 	for _, k := range []string{"DO_NOT_TRACK", "MAGPIE_NO_STATS"} {
 		if v := os.Getenv(k); v != "" && v != "0" && v != "false" {
 			return true

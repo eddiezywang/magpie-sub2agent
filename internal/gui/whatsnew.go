@@ -3,6 +3,7 @@ package gui
 import (
 	"context"
 	"encoding/json"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"net/http"
 	"os"
@@ -151,6 +152,10 @@ func setQuietToday(on bool) error {
 
 // start reads the version last run and puts this one in its place.
 func (n *whatsNew) start() {
+	if distribution.Internal {
+		return
+	}
+
 	dir := settings.Dir()
 	b, _ := os.ReadFile(filepath.Join(dir, lastRunFile))
 	last := strings.TrimSpace(string(b))
@@ -383,6 +388,10 @@ func (n *whatsNew) seen() {
 // total is how many releases have notes in that range, the ones past
 // MostNotes too, so a list cut short says how many it left out.
 func fetchNotes(ctx context.Context, after, upto, lang string) (notes []update.Note, total int, _ error) {
+	if distribution.Internal {
+		return nil, 0, nil
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	notes, total, failed := update.NotesBetweenTotal(ctx, after, upto, lang)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"net/url"
@@ -234,6 +235,9 @@ func market(ctx context.Context) ([]Listing, error) {
 		return marketList, marketErr
 	}
 	src := os.Getenv("MAGPIE_PLUGIN_MARKET")
+	if distribution.Internal {
+		src = distribution.Market
+	}
 	if src == "" {
 		src = MarketURL
 	}
@@ -262,6 +266,9 @@ func market(ctx context.Context) ([]Listing, error) {
 				return l, ferr
 			}
 		}
+	}
+	if distribution.Internal {
+		return []Listing{}, ferr
 	}
 	l, _ := parseMarket(builtinMarket)
 	marketList, marketAt, marketErr = l, time.Now().Add(-6*time.Hour+time.Minute), ferr

@@ -1,5 +1,7 @@
 // Package all registers every built-in plugin. Only magpie's main imports
 // it: core never imports a plugin, and a plugin never imports another.
+//go:build !intranet
+
 package all
 
 import (

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"net/url"
@@ -55,6 +56,10 @@ var loginEnv = proc.LoginEnvKnown
 // registry the user set is never put behind magpie's switch (timwangdev
 // on X: plugins from a custom npm registry).
 func Registry() RegistryInUse {
+	if distribution.Internal {
+		return RegistryInUse{URL: distribution.Registry, From: FromMagpie}
+	}
+
 	if u, err := CleanRegistry(settings.Load().NPMRegistry); err == nil && u != "" {
 		return RegistryInUse{URL: u, From: FromMagpie}
 	}
@@ -138,6 +143,10 @@ func CleanRegistry(u string) (string, error) {
 // SetRegistry keeps u as the registry plugins use, "" or "default" for
 // none of magpie's own; an address that isn't one is refused, not kept.
 func SetRegistry(u string) (RegistryInUse, error) {
+	if distribution.Internal {
+		return Registry(), fmt.Errorf("the internal plugin registry is managed by this distribution")
+	}
+
 	if strings.EqualFold(strings.TrimSpace(u), "default") {
 		u = ""
 	}
@@ -263,6 +272,10 @@ func npmrcs() []npmrc {
 // registry is); Registry's otherwise. official is whether it is npm's own (which the 「国内镜像」
 // switch may put npmmirror before, source.Do).
 func npmBase(name string) (base, token string, official bool) {
+	if distribution.Internal {
+		return distribution.Registry, "", false
+	}
+
 	r := Registry()
 	rcs := npmrcs()
 	if scope, _, ok := strings.Cut(name, "/"); ok && strings.HasPrefix(scope, "@") {

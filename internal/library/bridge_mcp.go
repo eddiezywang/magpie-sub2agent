@@ -35,6 +35,7 @@ package library
 //     (gateway.FromRouter).
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"net/url"
 	"slices"
@@ -49,6 +50,10 @@ import (
 var remoteHubs = provider.RemoteHubs
 
 func init() {
+	if distribution.Internal {
+		return
+	}
+
 	provider.RemoteHubAsk = bridgeWanted
 	provider.RemoteHubFound = func(id string) {
 		if changed, err := adoptBridge(id); err != nil {

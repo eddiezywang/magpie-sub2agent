@@ -8,6 +8,7 @@ package library
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -344,6 +345,10 @@ func set(list []string, id string, on bool) []string {
 // changed into the agents. The processes of a server taken out are ended
 // after, with the lock let go (mcp_reap.go).
 func change(f func(l *Library) error) (*Result, error) {
+	if distribution.Internal {
+		return nil, fmt.Errorf("the resource library is not included in this distribution")
+	}
+
 	res, err := changeLocked(f)
 	if res != nil && len(res.dropped) > 0 {
 		ending(res.dropped)

@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"html"
 	"io"
 	"io/fs"
@@ -131,12 +132,20 @@ func Latest(ctx context.Context) (*Release, error) { return LatestIn(ctx, "") }
 // InLang): the app's language, which What's new follows. On Settings'
 // Stable channel it is Stable's release (see Stable).
 func LatestIn(ctx context.Context, lang string) (*Release, error) {
+	if distribution.Internal {
+		return nil, fmt.Errorf("upstream updates are disabled in this distribution")
+	}
+
 	return latestAt(ctx, withChannel(withLang(Feed(), lang)), lang)
 }
 
 // LatestEvery is LatestIn on every version, whatever Settings' channel:
 // what Stable's "up to date" leaves out, the newest release out.
 func LatestEvery(ctx context.Context, lang string) (*Release, error) {
+	if distribution.Internal {
+		return nil, fmt.Errorf("upstream updates are disabled in this distribution")
+	}
+
 	return latestAt(ctx, withLang(Feed(), lang), lang)
 }
 

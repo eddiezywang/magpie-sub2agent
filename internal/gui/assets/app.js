@@ -23304,6 +23304,7 @@ function applyFeatures(list) {
   if (!Array.isArray(list)) return;
   for (const f of list) if (f.schema) magpie.configure(f.id, f.config);
   const off = new Set(list.filter((f) => !f.on).map((f) => f.id));
+  if (window.bootPrefs?.intranet) for (const id of ["library", "sessions", "middleware", "otel", "search", "tools", "warmups"]) off.add(id);
   if (off.size === featuresOff.size && [...off].every((id) => featuresOff.has(id))) return;
   featuresOff = off;
   featureStyle();

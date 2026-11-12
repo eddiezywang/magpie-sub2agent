@@ -1,5 +1,9 @@
 # Provider and plugin ownership
 
+The `intranet` build fixes plugin resources to the internal server and supports
+local complete plugin folders in its offline trial. Network installation is
+refused. See [internal distribution](../intranet-build.md#plugin-distribution).
+
 Some built-in subscriptions are deprecated and have community plugins that provide the same service. A subscription can still use its built-in implementation or move to its plugin. That ownership determines where sign-in, refresh, model discovery, requests, usage, and errors are handled.
 
 ## Responsibilities and sources of truth

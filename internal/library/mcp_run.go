@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"log"
 	"net/http"
@@ -101,6 +102,10 @@ var runWired = func(a *agent.Agent) bool { return a.Wired() && !a.Disconnected()
 var runOn = true
 
 func init() {
+	if distribution.Internal {
+		return
+	}
+
 	gateway.RunMCP = ServeRun
 	// a Codex connected or disconnected is given its servers the other
 	// way: through the gateway on magpie, by their commands off it

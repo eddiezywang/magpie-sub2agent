@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"io/fs"
 	"net/http"
@@ -244,6 +245,23 @@ func wontLoad(bun string, err error) *BunUnstartableError {
 // magpie downloaded and keeps up to date, downloading it now when there
 // is none yet.
 func Bun(ctx context.Context) (string, error) {
+	if distribution.Internal {
+		if b := os.Getenv("MAGPIE_BUN"); filepath.IsAbs(b) {
+			if fi, err := os.Stat(b); err == nil && !fi.IsDir() {
+				return b, nil
+			}
+		}
+		exe, err := os.Executable()
+		if err != nil {
+			return "", err
+		}
+		bundled := filepath.Join(filepath.Dir(exe), "runtime", bunExe())
+		if fi, err := os.Stat(bundled); err == nil && !fi.IsDir() {
+			return bundled, nil
+		}
+		return "", fmt.Errorf("bundled plugin runtime is missing: %s", bundled)
+	}
+
 	if b := os.Getenv("MAGPIE_BUN"); b != "" {
 		return b, nil
 	}
@@ -262,6 +280,20 @@ func Bun(ctx context.Context) (string, error) {
 
 // HasBun is whether a Bun is at hand without a download.
 func HasBun() bool {
+	if distribution.Internal {
+		if b := os.Getenv("MAGPIE_BUN"); filepath.IsAbs(b) {
+			if fi, err := os.Stat(b); err == nil && !fi.IsDir() {
+				return true
+			}
+		}
+		exe, err := os.Executable()
+		if err != nil {
+			return false
+		}
+		fi, err := os.Stat(filepath.Join(filepath.Dir(exe), "runtime", bunExe()))
+		return err == nil && !fi.IsDir()
+	}
+
 	if os.Getenv("MAGPIE_BUN") != "" {
 		return true
 	}

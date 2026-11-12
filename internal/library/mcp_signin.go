@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"net/url"
 	"slices"
 	"strings"
@@ -21,6 +22,10 @@ import (
 // given as it is, and the agent signs in itself as before.
 
 func init() {
+	if distribution.Internal {
+		return
+	}
+
 	mcpauth.Changed = func(string) { _, _ = Sync() }
 	// an agent beyond loopback is given a relayed server, or the MCP hub,
 	// with the LAN key (through, hubServerFor), which is the one there is
