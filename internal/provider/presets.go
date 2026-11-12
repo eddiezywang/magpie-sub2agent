@@ -2,6 +2,7 @@ package provider
 
 import (
 	"cmp"
+	"github.com/yetone/magpie/internal/distribution"
 	"slices"
 	"strings"
 )
@@ -827,6 +828,9 @@ func mantleRegions(ids ...string) []Region {
 
 // Presets lists every preset, sponsored ones first within their kind.
 func Presets() []PresetDef {
+	if distribution.Internal {
+		return []PresetDef{}
+	}
 	out := make([]PresetDef, 0, len(presets))
 	for _, p := range presets {
 		if p.Sponsored {

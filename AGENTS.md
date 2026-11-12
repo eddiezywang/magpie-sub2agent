@@ -10,6 +10,8 @@
   review site at http://124.220.199.224:8805/. Never publish credentials, tokens,
   authentication callbacks or screenshots showing unmasked secrets.
 - Keep the original apps' credentials and data separate from this distribution.
+- Use Playwright for page verification and screenshots; do not use computer-use
+  for screenshots. Retain the Sessions page in the intranet distribution.
 
 ## Subsystem design and review
 

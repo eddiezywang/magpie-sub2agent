@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$BunArchive,
     [string]$OutputRoot = '',
-    [string]$Version = '0.1.3913-sub2agent.1'
+    [string]$Version = '0.1.3913-sub2agent.1',
+    [string]$Sub2AgentSource = ''
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -17,6 +18,9 @@ New-Item -ItemType Directory -Path (Join-Path $bundle 'runtime') -Force | Out-Nu
 Push-Location $repoRoot
 try {
     $env:CGO_ENABLED = '0'
+    if (!$Sub2AgentSource) { $Sub2AgentSource = Join-Path (Split-Path -Parent $repoRoot) 'sub2agent' }
+    node build/sub2agent-providers.mjs $Sub2AgentSource
+    if ($LASTEXITCODE -ne 0) { throw 'Private Sub2Agent provider build failed' }
     go run -tags intranet ./build/assetpack internal/gui/assets internal/gui/assets.zip
     if ($LASTEXITCODE -ne 0) { throw 'Asset packing failed' }
     go build -trimpath -buildvcs=false -ldflags='-s -w' -o internal/update/launcher-amd64.com ./internal/update/launcher
@@ -26,6 +30,11 @@ try {
     go build -tags production,comlauncher,packedassets,intranet -trimpath -buildvcs=false "-ldflags=-s -w -H windowsgui -X main.version=$Version" -o (Join-Path $bundle 'Sub2Agent.exe') .
     if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
+    New-Item -ItemType Directory -Path (Join-Path $bundle 'providers') | Out-Null
+    foreach ($kind in 'codebuddy','workbuddy','trae') {
+        Copy-Item -LiteralPath (Join-Path $repoRoot "build/sub2agent-runtime/$kind") -Destination (Join-Path $bundle 'providers') -Recurse
+    }
+    Copy-Item -LiteralPath build/sub2agent-runtime/source.json -Destination (Join-Path $bundle 'providers/source.json')
     $zip = [IO.Compression.ZipFile]::OpenRead([IO.Path]::GetFullPath($BunArchive))
     try {
         $bunEntry = $zip.Entries | Where-Object FullName -eq 'bun-windows-x64-baseline/bun.exe'

@@ -9,3 +9,4 @@
 /internal/update/launcher-*.com
 /internal/gui/assets.zip
 /.overlay/
+/build/sub2agent-runtime/

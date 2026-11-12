@@ -7174,7 +7174,8 @@ function renderAdd() {
     // a deprecated one whose plugin is installed is that plugin's row alone
     // (ARNO on Discord: Qoder CN twice), and one with no account isn't
     const named = (x) => !f || x.name.toLowerCase().includes(f) || x.agent.includes(f) || "subscription".includes(f);
-    const subs = SUBS.filter((x) => !(replacedSub(x.agent) || unusedSub(x.agent)) || signing?.agent === x.agent).map((x) => subOf(x.agent)).filter(named);
+    const privateSubs = window.bootPrefs?.intranet ? pluginSubs().filter((x) => x.pid.startsWith("sub2agent-")) : [];
+    const subs = [...privateSubs, ...SUBS.filter((x) => !(replacedSub(x.agent) || unusedSub(x.agent)) || signing?.agent === x.agent).map((x) => subOf(x.agent))].filter(named);
     const inPlugins = f && SUBS.some((x) => unusedSub(x.agent) && signing?.agent !== x.agent && named(subOf(x.agent)));
     // partners pay to be listed first, under a heading that says so; who
     // they are comes from usemagpie.ai (internal/provider/partners.go), and
@@ -7200,11 +7201,11 @@ function renderAdd() {
       any = true;
       const grid = section("Subscriptions", "sign in, no key");
       for (const x of subs) grid.append(subTile(x));
-      if (!f || inPlugins) grid.append(morePluginsTile(f));
+      if (!window.bootPrefs?.intranet && (!f || inPlugins)) grid.append(morePluginsTile(f));
       const w = subs.find((x) => signing?.agent === x.agent);
       if (w) tiles.append(renderSigning(w));
     }
-    const plugged = pluginSubs().filter((x) => !(movedSub(x.agent) && SUBS.some((y) => y.agent === x.agent))).filter((x) => !f || x.name.toLowerCase().includes(f) || x.agent.includes(f) || "plugin".includes(f));
+    const plugged = pluginSubs().filter((x) => !privateSubs.some((p) => p.agent === x.agent) && !(movedSub(x.agent) && SUBS.some((y) => y.agent === x.agent))).filter((x) => !f || x.name.toLowerCase().includes(f) || x.agent.includes(f) || "plugin".includes(f));
     if (plugged.length) {
       any = true;
       const grid = section("From plugins", "signed in by an OpenCode plugin or a pi package");
@@ -12403,7 +12404,7 @@ const SUBS = [
   // Anthropic has banned accounts it saw used from other tools: said before one is added
   { agent: "claude", name: "Claude", icon: "claude-color", plans: "Pro · Max · Team", importable: true, risk: true,
     riskNote: "Anthropic may suspend or ban a Claude account it sees used outside its own apps. magpie sends requests through Claude Code, but Anthropic may still act on them; you use it at your own risk. Use an account you can afford to lose." },
-  { agent: "codex", name: "ChatGPT", icon: "openai", plans: "Plus · Pro · Business", importable: true },
+  { agent: "codex", name: window.bootPrefs?.intranet ? "Codex" : "ChatGPT", icon: "openai", plans: "Plus · Pro · Business", importable: true },
   // OpenAI's Sign in with ChatGPT: the plan asked on api.openai.com, with the agent's own instructions (#933)
   { agent: "chatgpt-api", name: "ChatGPT API", icon: "openai", plans: "Plus · Pro · Business", own: true,
     hint: "Sign in with ChatGPT: your plan on OpenAI's own API, with your agent's own instructions rather than Codex's." },
@@ -12438,6 +12439,9 @@ const SUBS = [
   // accounts can also come from another tool's export (Antigravity Cockpit, Antigravity Manager, CLIProxyAPI)
   { agent: "antigravity", name: "Antigravity", icon: "antigravity-color", plans: "Google AI Pro · Ultra · free", own: true, risk: true, importable: true },
 ];
+if (window.bootPrefs?.intranet) {
+  for (let i = SUBS.length - 1; i >= 0; i--) if (!["claude", "codex"].includes(SUBS[i].agent)) SUBS.splice(i, 1);
+}
 const subOf = (agent) => {
   const own = SUBS.find((x) => x.agent === agent);
   const pl = pluginSubs().find((x) => x.agent === agent);
@@ -12470,7 +12474,7 @@ function pluginMethod(sub, site) {
 function pluginSubs() {
   return ((providers || panelAccts)?.plugins || []).map((x) => ({
     agent: x.id, pid: x.pid, name: x.name, icon: x.icon, plugin: x, own: true, single: !!x.single,
-    get plans() { return t("from the plugin {spec}", { spec: x.spec }); },
+    get plans() { return window.bootPrefs?.intranet && x.pid.startsWith("sub2agent-") ? (x.pid.endsWith("workbuddy") ? "企业 SSO · 多账户" : "企业授权 · 多账户") : t("from the plugin {spec}", { spec: x.spec }); },
   }));
 }
 
@@ -23304,7 +23308,7 @@ function applyFeatures(list) {
   if (!Array.isArray(list)) return;
   for (const f of list) if (f.schema) magpie.configure(f.id, f.config);
   const off = new Set(list.filter((f) => !f.on).map((f) => f.id));
-  if (window.bootPrefs?.intranet) for (const id of ["library", "sessions", "middleware", "otel", "search", "tools", "warmups"]) off.add(id);
+  if (window.bootPrefs?.intranet) for (const id of ["library", "middleware", "otel", "search", "tools", "warmups"]) off.add(id);
   if (off.size === featuresOff.size && [...off].every((id) => featuresOff.has(id))) return;
   featuresOff = off;
   featureStyle();

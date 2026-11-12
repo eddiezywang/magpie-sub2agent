@@ -555,7 +555,7 @@ func keepUnloaded(ps, last []Provider) []Provider {
 		told[p.Spec], ids[p.ID] = true, true
 	}
 	installed := map[string]bool{}
-	for _, e := range list().Plugins {
+	for _, e := range effectiveList().Plugins {
 		installed[e.Spec] = true
 	}
 	for _, p := range last {
@@ -686,7 +686,7 @@ func Settle() {
 // provider's sign-in is read afresh from plugin-auth.json.
 func Cached() []Provider {
 	checkList()
-	l := list() // one read of plugins.json for the whole call
+	l := effectiveList() // the same effective entries the host loaded
 	provMu.Lock()
 	ps := provCache
 	good := provGood

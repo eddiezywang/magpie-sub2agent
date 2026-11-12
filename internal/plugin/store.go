@@ -51,6 +51,9 @@ type Entry struct {
 	// repository (github:owner/repo, git+https://…) or a path to a file
 	// or folder.
 	Spec string `json:"spec"`
+	// Bundled identifies an offline provider shipped with this distribution.
+	// Its path follows the current executable when the portable folder moves.
+	Bundled string `json:"bundled,omitempty"`
 	// Off is set on a plugin the user turned off.
 	Off bool `json:"off,omitempty"`
 	// Options are handed to the plugin as its second argument, as
@@ -195,7 +198,7 @@ func list() List {
 // level: the mutators (Add, Remove, SetOff, SetConfig) each get their own
 // copy, so nothing they change reaches what list keeps.
 func Load() List {
-	l := list()
+	l := effectiveList()
 	return List{Plugins: clonePlugins(l.Plugins), Config: cloneMap(l.Config), Prefer: maps.Clone(l.Prefer)}
 }
 

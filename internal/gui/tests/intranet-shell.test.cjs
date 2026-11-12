@@ -34,5 +34,7 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   assert.equal(await page.locator('#view-library').count(), 0);
   assert.equal(await page.locator('#view-sessions').count(), 1);
   assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true);
+  await page.evaluate(() => applyFeatures([{id:'sessions',on:true}]));
+  assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true, 'feature refresh retains Sessions');
   assert.deepEqual(errors, []);
 });

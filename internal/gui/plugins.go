@@ -57,6 +57,14 @@ var pluginOptionKey = lazyre.New(`^[a-z0-9_-]{1,40}$`)
 // else the one the plugin market gives the plugin or its provider, else
 // that of the providers OpenCode names, a plain one for the rest.
 func pluginIcon(pp plugin.Provider) string {
+	switch pp.ID {
+	case "sub2agent-codebuddy":
+		return "codebuddy-color"
+	case "sub2agent-workbuddy":
+		return "workbuddy-color"
+	case "sub2agent-trae":
+		return "trae"
+	}
 	if ic := provider.PluginIcon(pp); ic != "" {
 		return ic
 	}

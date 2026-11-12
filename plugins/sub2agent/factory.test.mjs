@@ -1,0 +1,77 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createSub2AgentPlugin,readBundle} from '../../build/sub2agent-runtime/factory-test.mjs';
+
+const client={auth:{set:async()=>{throw new Error('Unexpected credential write');}}};
+const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
+const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
+
+test('WorkBuddy enterprise login keeps tenant identity and discovered models',async()=>{
+ const adapter={requestLoginLink:async()=>({url:'https://login.example.invalid',state:'test-state'}),
+  pollToken:async state=>(assert.equal(state,'test-state'),{accessToken:'test-access'}),
+  resolveAccount:async(state,token)=>({...token,userId:'test-user',enterpriseId:'test-tenant'}),listModels:async()=>models};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:adapter});
+ const auth=await plugin.auth.methods[0].authorize();
+ assert.equal(auth.method,'auto');
+ const result=await auth.callback();
+ const bundle=readBundle(result);
+ assert.equal(bundle.enterpriseId,'test-tenant');
+ assert.deepEqual(bundle.modelMap,models.modelMap);
+ const listed=await plugin.provider.models({models:{}},{auth:result});
+ assert.deepEqual(Object.keys(listed),models.models);
+});
+
+test('WorkBuddy concurrent requests share refresh and retain private request headers',async()=>{
+ let auth={type:'oauth',access:JSON.stringify({...models,accessToken:'old',refreshToken:'refresh',expiresAt:1,userId:'u1',enterpriseId:'e1'})};
+ let renewals=0,writes=0;const sent=[];
+ const adapter={async refresh(bundle){renewals++;await new Promise(r=>setTimeout(r,10));return {...bundle,accessToken:'fresh',expiresAt:Date.now()+3600000};}};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client:{auth:{set:async({path,body})=>{assert.equal(path.id,'sub2agent-workbuddy');auth=body;writes++;}}}},
+  {workbuddyAdapter:adapter,fetchImpl:async(url,opts)=>{sent.push({url,headers:opts.headers,body:JSON.parse(opts.body)});return sse();}});
+ const loader=await plugin.auth.loader(async()=>auth);
+ const req={body:JSON.stringify({model:'Enterprise Model',messages:[{role:'user',content:'hello'}],stream:true})};
+ const responses=await Promise.all([loader.fetch('https://sub2agent.invalid/v1/chat/completions',req),loader.fetch('https://sub2agent.invalid/v1/chat/completions',req)]);
+ for(const response of responses)assert.match(await response.text(),/ok/);
+ assert.equal(renewals,1);assert.equal(writes,1);
+ for(const request of sent){assert.equal(request.body.model,'vendor-model');assert.equal(request.body.stream,true);
+  assert.equal(request.headers['X-User-Id'],'u1');assert.equal(request.headers['X-Enterprise-Id'],'e1');assert.equal(request.headers.Authorization,'Bearer fresh');}
+});
+
+test('cancelled browser login does not save an account',async()=>{
+ const adapter={requestLoginLink:async()=>({url:'https://login.example.invalid',state:'s'}),pollToken:async()=>null};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:adapter});
+ const flow=await plugin.auth.methods[0].authorize();
+ const controller=new AbortController();const done=flow.callback(undefined,{signal:controller.signal});controller.abort();
+ await assert.rejects(done,{name:'AbortError'});
+});
+
+test('CodeBuddy reuses adapter state and keeps credentials in the host account',async()=>{
+ const adapter={inspectLocalState:async()=>models,requestLoginLink:async()=>({state:'cb-state',url:'https://login.example.invalid'}),
+  completeLogin:async({state})=>(assert.equal(state,'cb-state'),models),
+  confirmLoginComplete:async()=>({accessToken:'cb-token',userId:'cb-user',enterpriseId:'cb-enterprise'})};
+ const plugin=await createSub2AgentPlugin('codebuddy',{client},{codebuddyAdapter:adapter});
+ const flow=await plugin.auth.methods[0].authorize();const result=await flow.callback();
+ assert.equal(readBundle(result).accessToken,'cb-token');assert.equal(readBundle(result).enterpriseId,'cb-enterprise');
+});
+
+test('Trae callback is nonce-scoped, validates login, and closes its listener',async()=>{
+ let callbackUrl,checked=false;
+ const adapter={requestLoginLink:async input=>(callbackUrl=input.callbackUrl,{loginUrl:'https://login.example.invalid'}),
+  parseAuthorizationCallback:url=>{assert.equal(new URL(url).searchParams.get('test'),'yes');return {token:'trae-token',refreshToken:'trae-refresh'};},
+  getUserInfo:async()=>({UserID:'trae-user'}),checkLogin:async()=>{checked=true;return {IsLogin:true,UserID:'trae-user'};},listModels:async()=>models};
+ const plugin=await createSub2AgentPlugin('trae',{client},{traeAdapter:adapter});
+ const flow=await plugin.auth.methods[0].authorize();
+ const wrong=new URL(callbackUrl);wrong.pathname='/wrong';assert.equal((await fetch(wrong)).status,404);
+ const done=flow.callback();
+ const response=await fetch(callbackUrl+'?test=yes');assert.equal(response.status,200);assert.doesNotMatch(await response.text(),/trae-token/);
+ const result=await done;assert.equal(checked,true);assert.equal(readBundle(result).userId,'trae-user');
+ await assert.rejects(fetch(callbackUrl));
+});
+
+test('Trae refuses a callback whose enterprise login is not confirmed',async()=>{
+ let callbackUrl;
+ const adapter={requestLoginLink:async input=>(callbackUrl=input.callbackUrl,{loginUrl:'https://login.example.invalid'}),
+  parseAuthorizationCallback:()=>({token:'t',refreshToken:'r'}),getUserInfo:async()=>({UserID:'u'}),checkLogin:async()=>({IsLogin:false})};
+ const plugin=await createSub2AgentPlugin('trae',{client},{traeAdapter:adapter});
+ const flow=await plugin.auth.methods[0].authorize();const rejected=assert.rejects(flow.callback(),/校验未通过/);
+ await fetch(callbackUrl);await rejected;
+});

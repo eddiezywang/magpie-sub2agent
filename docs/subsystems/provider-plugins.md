@@ -1,5 +1,27 @@
 # Provider and plugin ownership
 
+## Sub2Agent intranet distribution
+
+The intranet executable loads complete local CodeBuddy, WorkBuddy enterprise
+and Trae enterprise provider plugins from its adjacent `providers` directory.
+Magpie retains ownership of add/edit sheets, account selection and persistence,
+model selection, routing and client protocol handling. Each local plugin reuses
+the private Sub2Agent checkout's authentication adapters, credential services,
+source resolvers and protocol kernel to speak its enterprise wire protocol.
+No second HTTP gateway is started. These providers share the normal subscription
+picker with Codex and Claude; upstream API presets and other native subscription
+discovery are excluded. Custom direct endpoints retain Magpie's editor.
+
+`build/sub2agent-providers.mjs` requires an authorized Sub2Agent source checkout
+and its pinned dependencies. It generates the offline runtime locally (ignored
+by Git), recording the source commit, and the portable builder includes it.
+CodeBuddy's IDE auth-file writes are redirected to memory. Persistent credentials
+stay in Magpie's account-scoped plugin store; WorkBuddy keeps enterprise SSO,
+tenant headers, model discovery and coalesced refresh, and Trae validates its
+loopback callback and login state before retaining credentials. User cancellation
+must leave no account behind. Tests: `plugins/sub2agent/factory.test.mjs` after
+building with `SUB2AGENT_TEST_BUNDLE=1`.
+
 The `intranet` build fixes plugin resources to the internal server and supports
 local complete plugin folders in its offline trial. Network installation is
 refused. See [internal distribution](../intranet-build.md#plugin-distribution).

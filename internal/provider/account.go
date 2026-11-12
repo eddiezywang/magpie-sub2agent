@@ -35,6 +35,7 @@ import (
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/claudecode"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/filelock"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/plugin"
@@ -936,6 +937,9 @@ func Accounts() []Provider {
 	}
 	if p, ok := codexAccount(home); ok {
 		out = append(out, p)
+	}
+	if distribution.Internal {
+		return placeMoved(out, pluginAccounts())
 	}
 	if p, ok := copilotAccount(cfg); ok {
 		out = append(out, p)

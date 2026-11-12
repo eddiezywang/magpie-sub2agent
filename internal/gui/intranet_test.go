@@ -12,9 +12,13 @@ import (
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/library"
 	"github.com/yetone/magpie/internal/pluginrt"
+	"github.com/yetone/magpie/internal/provider"
 )
 
 func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
+	if len(provider.Presets()) != 0 {
+		t.Fatal("upstream vendor presets must not appear in the internal distribution")
+	}
 	registeredSessions := false
 	for _, m := range pluginrt.Registered() {
 		if m.ID == "sessions" {
