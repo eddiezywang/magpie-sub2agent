@@ -1,0 +1,46 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sub2Agent 服务端账单方案</title><style>body{margin:0;background:#f5f6f8;color:#252932;font:16px/1.85 system-ui}main{max-width:900px;margin:40px auto;background:white;padding:32px}h1{font-size:28px}h2{font-size:22px;margin-top:40px}a{color:#5145cd}code{font-size:.88em;background:#f1f3f7;padding:2px 4px}pre{overflow:auto;padding:20px;background:#f1f3f7;font-size:13px;line-height:1.6}li{margin:10px 0}@media(max-width:600px){main{margin:0;padding:20px}h1{font-size:24px}}</style><main><a href="./">← 开发 Review</a><h1>服务端统一定价与账单生成方案</h1>
+<p>状态：设计建议，尚未接入新 Magpie 发行版。依据：用户提供的 <a href="http://124.220.199.224:8801/usage-billing-exploration.html">账单探索记录</a>、 该站点的 usage-server README，以及当前 develop/intranet 的实际源码。 探索记录中的 172.21.0.177 部署状态是历史快照，本次未重新验证该主机。</p>
+<h2>结论与边界</h2>
+<p>继续复用已有 usage-server，而不是重新实现一套账单服务。客户端采集原始 用量，服务端维护价格、算金额、聚合日报/周报并生成图片。客户端的会话、 路由和请求详情仍在本地；模型请求不经过账单服务。</p>
+<p>数据链路：</p>
+<pre><code>Magpie 网关记录 ─┐
+                ├→ 标准化事件 → 本地持久队列 → POST /usage/events
+已许可的会话记录 ┘                                  ↓
+                                   原始事件 + 版本化模型定价表
+                                                  ↓
+                                   计价 → Totals → usage:day
+                                                  ↓
+                                   JSON / SVG / PNG → 客户端或机器人</code></pre>
+<p>按统一模型价格计算的是“估算用量成本”。企业订阅、额度抵扣、供应商自报金额 可能与它不同，应分别显示，不能把估算金额说成真实扣费。</p>
+<h2>已有设计中可以直接复用的部分</h2>
+<ul><li><code>/usage/events</code> 的批量上报、事件去重、按天原始事件存储。</li><li><code>pricing.js → magpie-day.js → card.js → png.js</code> 的服务端流水线。</li><li><code>day.agents[].models[]</code>、<code>day.days[]</code> 和 Magpie 收据渲染的数据形状。</li><li>定价后台修改、未定价模型提示、日报/周报和机器人拉图接口。</li><li>先保留现有 JSONL 和历史埋点，避免迁移时影响旧客户端。</li></ul>
+<p>本次没有取得该服务的实现源码，因此不能仅凭探索页的“完成”标记认定所有 细节都已满足新发行版；应在接入前核对代码和契约测试。</p>
+<h2>当前 Magpie 的真实边界</h2>
+<p>当前版本既有网关 <code>usage.Record</code>，又会在获得许可后读本地会话；不是只有 session 文件一种来源。<code>internal/usage/ledger.go</code> 负责统一账本和来源处理。</p>
+<ul><li>原始字段与记录入口：<code>internal/usage/usage.go</code> 的 <code>Record</code>、<code>Append</code>。</li><li>计数与成本口径：同文件 <code>Totals.count</code>、<code>Totals.addFrom</code>、<code>Record.CostAt</code>。</li><li>分档与缓存价格：<code>internal/catalog/catalog.go</code> 的 <code>Price.CostSplit</code>；   峰谷时间价格另在 <code>internal/catalog/peak.go</code> 的 <code>Price.In</code>。</li><li>报告契约：<code>internal/usageapi/day.go</code> 的 <code>Day</code>、<code>SpanOf</code>。</li></ul>
+<p>不能直接上传客户端的 Totals 或卡片数据作为账单事实：它们已经使用本地价格， 而且 day feed 对 Agent/模型进行了截断，无法恢复每次调用的分档和价格依据。</p>
+<h2>必须补齐的数据契约</h2>
+<p>兼容已有 <code>sub2agent-usage/1</code>，新增字段先声明语义和能力；如果旧服务会忽略 决定计费的字段，升级 schema，并由客户端明确协商后使用。</p>
+<ul><li>每条上游尝试一个稳定 <code>event_id</code>，在首次写队列时生成，补传时不变。   同时保留 <code>logical_request_id</code>、<code>attempt_index</code>、<code>handed_on</code>。   原有 trace UUID 若是整个逻辑请求共用，不能直接用于不同尝试的去重。   Magpie 的递增 RouteID 也不能单独作为跨重启的全局事件 ID。</li><li>保留 UTC 事件时间、安装 ID、采集来源和 Agent ID。服务器通过安装身份映射   用户；username 只用于展示，不能让客户端自由填写后就决定归属。</li><li>保留 provider 的稳定产品标识、请求模型、实际返回模型、真实上游模型 ID。   定价匹配使用实际模型及供应商/价格方案，不使用可重命名的供应商展示名称。</li><li>token 统一为未缓存输入、输出、缓存读、缓存写总数、其中 1h 写入、推理、   cache_unknown。明确缓存写总数包含 1h，推理通常已包含在输出，禁止再加一次。</li><li>保留状态码、取消、失败类型、重试及 handed_on。中间失败尝试的成本仍累计，   handed_on 不增加逻辑请求数；只有最后一次尝试决定成功/失败/取消。</li><li><code>credits</code> 和供应商自报 <code>own_cost_usd</code> 是原始观测，可以存储；不要存客户端   按本地价格计算出的 cost 作为权威金额。</li></ul>
+<p>探索页的公开字段清单未列出 handed_on，它的 <code>tries</code> 不能替代该语义。这是 接新网关前必须核对的差异，否则会把一次重试算成多次请求。</p>
+<h2>定价表和历史重算</h2>
+<p>服务端提供唯一可编辑的价格表，按 provider/plan + canonical_model 匹配， 有显式别名映射。至少支持 USD/百万 token 的输入、输出、缓存读、5m 缓存写、 1h 缓存写，以及长上下文分档；需要时支持峰谷时间规则。</p>
+<p>计价需对齐 Magpie：分档依据为 input + cache_read + cache_write；整条调用 使用选中的档位，不是只给超出部分加价。1h 缓存写先从写入总数中拆出， cache_unknown 不作为缓存未命中参与命中率分母。未知价格为 unpriced，不能 偷偷当成免费；合法的零价格与缺失价格必须区分。</p>
+<p>推荐每次更新价格都创建不可变 revision，再切换 active_revision。默认报告 按最新 revision 重算全部历史，符合“维护中央定价表、改价即时生效”的目标。 每份报告返回 pricing_revision、calculation_version、generated_at、数据水位和 缺价模型清单。缓存键包括这些版本和用户/时间范围/时区，不能只按日期缓存。</p>
+<p>需要追溯时，允许指定旧 revision 重现旧报表。未来如果变成实际结算单，再增加 按生效时间固定价或关账快照；这不应妨碍当前默认的最新价重估模式。</p>
+<p>原版 <code>Record.CostAt</code> 优先使用 OwnCost，直接照搬会让这些记录绕过统一模型价。 这里建议同时返回 estimated_cost（中央表）与 reported_cost（供应商自报）， 报告明确 cost_basis，避免一列金额混合两种口径。</p>
+<h2>可靠上传与重复记账</h2>
+<p>网关成功记录到本地后，由独立 worker 上报持久 outbox；不在模型流式返回路径 同步等待服务器。支持批次、退避、重启恢复、限额、队列状态和停止上报开关。 只对服务器已确认持久化或已存在的事件删队列。部分无效事件要能按 ID 定位， 不能因为 HTTP 200 就丢整批，也不能让一条坏事件永久卡住后续数据。</p>
+<p>网关日志与 Agent 会话不能分别全量相加。第一阶段先只上报 gateway 来源； 第二阶段复用 Magpie 的来源/关联去重规则，补上确实绕过网关的会话调用。 不能仅按时间+模型+token 做模糊去重，正常的相同调用可能被误删。</p>
+<p>服务器按事件发生时间和报表时区归日，而非接收时间或文件名。迟到/补传事件 更新对应历史日的水位，并使缓存失效。安装身份与逻辑事件去重是两层事情： 重装或多台机器不能把正常不同请求当成重传。</p>
+<h2>服务端存储与接口</h2>
+<p>先复用现有 JSONL 数据，不先做大迁移。增加 SQLite 的事件唯一索引、安装身份 映射、价格 revisions 和聚合缓存后，再随规模决定是否迁入 PostgreSQL。 如果双写 JSONL 与索引，需要规定恢复重放和成功确认点；不能把两个独立写入 当成天然原子。报表索引可从原始事件重建。</p>
+<p>建议增量接口：</p>
+<ul><li><code>POST /usage/events</code>：原始事件、幂等、逐项确认、服务端身份校验。</li><li><code>GET /pricing</code>：只读活动版本、ETag；写权限只给后台管理员。</li><li><code>GET/PUT /admin/pricing</code>：版本、校验、原子切换、别名与缺价覆盖率。</li><li><code>GET /reports/me/daily.json</code> 和 weekly：返回 day feed 及版本、水位和成本口径。</li><li><code>GET /reports/:user/daily.svg|png</code>：机器人授权后读取指定用户报告。</li></ul>
+<p>原有接口能表达上述语义时直接扩展，不必为了名字相同再建第二套服务。 用户报表不能仅凭可猜的 username 公开；安装 ID 关联属于假名化，也不等于匿名。 只上传必要数值与短标识，不上传 prompt、完整请求、会话正文或供应商凭据。</p>
+<h2>客户端页面如何过渡</h2>
+<p>用量/账单页的金额和卡片读取服务端结果。页面显示最近同步时间、待传数量、 pricing revision 和缺价状态；离线显示上次成功的报告并明确其时间，不显示假零值。</p>
+<p>路由、请求详情和会话仍使用本地数据。若最便宜优先、预算限制等本地功能需要 价格，从服务端同步只读定价快照，使用最后一个有效版本；模型请求本身不能依赖 账单服务器在线。中央服务器是价格编辑和报告计算的权威，客户端快照不另行编辑。</p>
+<h2>建议实施顺序与验收</h2>
+<ol><li>核对已有 usage-server 源码和活动端口，建立相同 fixtures：缓存、1h 写入、    推理、长上下文、handed_on、失败、取消、OwnCost、缺价和别名。</li><li>新客户端只接 gateway 事件到持久队列；验证重启/断网重传不丢不重，且不拖慢流式。</li><li>加价格 revisions 和统一 day feed；验证改价后 token/请求数不变，只有估算金额变化，    缺价计数正确，指定旧版本可复现。</li><li>接客户端用量页和服务端图片，再接机器人；确认数字与图片来自同一份 day feed。</li><li>最后补已许可的直连会话记录及跨来源去重、历史回填与迟到事件。</li></ol>
+<p>本次只形成设计和迁移边界，没有启用上报、改变会话读取许可或修改 172.21.0.177 服务。正式接入时不必等待会话回填完成，先把网关链路做准即可。 </p></main></html>
