@@ -1,6 +1,6 @@
 # 用量采集与旧埋点兼容：客户端验收记录
 
-构建：`0.1.3913-sub2agent.6`，源码 `e0f38e4`，2026-11-13。
+构建：`0.1.3913-sub2agent.7`，源码 `c73ea9b`，2026-11-13。
 运行目录保留原有 data，只替换程序；网关 8989，浏览器页面 8990。
 原版 Magpie 仍在 3425，未替换原版程序或凭据。
 
@@ -26,6 +26,7 @@
 | 开关样式测试撤回修复 | 按预期失败：透明轨道；恢复修复后通过 |
 | Windows 原生生产构建与启动 | 通过；运行文件 SHA-256 与新构建一致 |
 | 运行实例 Playwright 只读检查 | 通过；4 行配置、开关可见、会话入口保留、无脚本异常 |
+| 原生应用真正退出 | 通过；经应用自带 API 正常退出，磁盘恰有一条 .7 的 desktop_app_quit，随后重新启动 |
 | Windows `go test -tags nogui ./... -timeout 90s` | 未通过，存在失败与超时，不能声称全套通过 |
 
 全量运行中失败的包为：build/darwin、internal/agent、appdir、backup、
@@ -47,11 +48,15 @@ plugin、provider、sessions、settings、shortcut、sqlitedb、update、usage�
 新用量默认关闭，需服务端声明 v2 能力并逐事件确认后才可投递。
 
 应用启动按进程记录，网关停用记录 stop 和末段时长；不会把插件重载
-误报为 app_quit。后续补齐原生应用 OnShutdown 的退出事件，持久化一次
+误报为 app_quit。`c73ea9b` 补齐原生应用 OnShutdown 的退出事件，持久化一次
 desktop_app_quit，下一次启动重试。强制终止进程无法生成最后的退出事件。
 真实供应商推理、服务端价格计算与计费一致性未验收。
 
-离线 ZIP：73,124,291 字节（约 69.7 MiB），不含用户 data。
-SHA-256：`1acf64a67dcfd9737a53e73b7cdf50a5c1ee08d50765e47fbeb9162e200e3e89`。
+退出增量验证：accounting 包、usage 的 Observer/ApplicationQuit 测试和
+Linux 对应 `-race -tags nogui` 检查通过；再次运行内网全仓库 vet 通过。
+撤去退出通知时测试明确失败“native application quit was not delivered”。
+
+离线 ZIP：73,126,271 字节（约 69.7 MiB），不含用户 data。
+SHA-256：`cbb67d0ca098237ae2d94bcf56f81c238454389567fa0d2a311795991d497b75`。
 
 截图使用 Playwright，仅含设置，不包含账户、密钥或对话。
