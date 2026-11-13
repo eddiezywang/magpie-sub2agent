@@ -9,7 +9,7 @@ export function intranetMarket({status: s, loading: marketLoading, listings, que
     retry.disabled = marketLoading;
     retry.onclick = retryConnection;
     heading.append(retry);
-    box.append(heading, el("code", "pm-server", "172.21.0.177"));
+    box.append(heading);
     if (s && s.state !== "online") {
       const reasons = {
         timeout: "Connection timed out. The server did not respond within 6 seconds. Check your intranet or VPN connection, then retry.",

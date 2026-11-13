@@ -93,6 +93,16 @@ func Load() (File, bool, error) {
 	if err := yaml.Unmarshal(b, &f); err != nil {
 		return File{}, true, fmt.Errorf("%s doesn't parse: %w", Path(), err)
 	}
+	for _, m := range Registered() {
+		if m.MigrateRow == nil {
+			continue
+		}
+		for i, r := range f.Plugins {
+			if r.ID == m.ID {
+				f.Plugins[i] = m.MigrateRow(r)
+			}
+		}
+	}
 	switch f.Preset {
 	case "", PresetAll, PresetEssentials:
 	default:
@@ -138,6 +148,9 @@ func Compose(ms []Manifest, f File) []Composed {
 			c.Enabled, c.Source = false, FromPreset
 		}
 		if r, ok := rows[m.ID]; ok {
+			if m.MigrateRow != nil {
+				r = m.MigrateRow(r)
+			}
 			if r.Enabled != nil {
 				c.Enabled, c.Source = *r.Enabled, FromUser
 			}

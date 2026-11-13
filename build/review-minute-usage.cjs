@@ -11,15 +11,8 @@ const {chromium, webkit} = require('playwright');
   assert.ok(output, 'provide a screenshot directory');
   await fs.mkdir(output, {recursive:true});
   const assets = path.resolve(process.env.INTRANET_ASSETS || 'internal/gui/assets');
-  const source = await fs.readFile('internal/accounting/runtime.go', 'utf8');
-  const properties = {}, order = [];
-  for (const [, type, tags] of source.slice(source.indexOf('type Options struct'),source.indexOf('func Defaults')).matchAll(/\w+\s+(bool|string)\s+`([^`]+)`/g)) {
-    const tag = key => tags.match(new RegExp(key + ':"([^"]*)"'))?.[1];
-    const key = tag('json');
-    properties[key] = {type:type==='bool'?'boolean':'string',title:tag('title'),description:tag('description')};
-    order.push(key);
-  }
-  assert.equal(order.length, 4);
+  const source = await fs.readFile('plugins/accounting/accounting.go','utf8');
+  const manifestName=source.match(/Name: "([^"]+)"/)[1], sub=source.match(/Sub: "([^"]+)"/)[1];
   const report = [];
   for (const engine of ['chromium','webkit']) {
     const browser = await (engine==='webkit'?webkit.launch():chromium.launch({channel:'chrome'}));
@@ -30,7 +23,7 @@ const {chromium, webkit} = require('playwright');
         const errors=[];
         page.on('pageerror', e=>errors.push(e.message));
         await page.addInitScript(()=>localStorage.setItem('magpie.pluginTab','builtin'));
-        const builtin = {id:'accounting',name:'Usage reporting',sub:'Keep legacy telemetry and send numeric usage to the intranet billing service without conversation content',on:true,chosen:true,state:'active',schema:{type:'object',properties,'x-order':order},config:{legacyEnabled:true,usageEnabled:false,legacyURL:'http://172.21.0.177:17890/events',usageURL:'http://172.21.0.177:17890/usage/events'}};
+        const builtin = {id:'accounting',name:manifestName,sub,on:true,chosen:true,state:'active',schema:{type:'object',properties:{},'x-order':[]}};
         await page.route('**/*',async route=>{
           const u=new URL(route.request().url()), json=data=>route.fulfill({json:data});
           if(u.pathname==='/boot.js') return route.fulfill({contentType:'text/javascript',body:`window.bootPrefs=${JSON.stringify({lang,theme,web:true,intranet:true,featuresOff:['library','middleware','otel','redact','search','tools','warmups']})};`});
@@ -47,14 +40,17 @@ const {chromium, webkit} = require('playwright');
           try { return route.fulfill({body:await fs.readFile(file),contentType}); } catch { return route.fulfill({status:404,body:''}); }
         });
         await page.goto('http://magpie.test/?view=plugins');
-        const form=page.locator('.feat-set[data-of="accounting"]');
-        await form.getByRole('switch',{name:lang==='zh'?'按分钟汇总用量':'Minute usage summaries',exact:true}).waitFor();
-        assert.equal(await form.count(),4);
-        assert.match(await form.allInnerTexts().then(a=>a.join(' ')),lang==='zh'?/按用户名、模型和上下文档位每分钟汇总/:/Aggregate by username/);
+        const row=page.locator('.feat-row[data-id="accounting"]');
+        await row.getByRole('switch',{name:lang==='zh'?'埋点上报':'Telemetry reporting',exact:true}).waitFor();
+        assert.equal(await row.getByRole('switch').count(),1);
+        assert.equal(await page.locator('.feat-set[data-of="accounting"]').count(),0);
+        const text=await page.locator('body').innerText();
+        assert.doesNotMatch(text,/172\.21\.0\.177|server v3|服务端支持|按分钟汇总|兼容旧版埋点/);
+        assert.equal(await row.locator('input').count(),0);
         if(width>=1024) assert.equal(await page.locator('#side button[data-view="sessions"]').count(),1);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'horizontal overflow');
         assert.deepEqual(errors,[]);
-        const name=`07-minute-${engine}-${lang}-${width}.png`;
+        const name=`08-reporting-${engine}-${lang}-${width}.png`;
         await page.screenshot({path:path.join(output,name),fullPage:true});
         report.push({engine,lang,width,theme,screenshot:name,pageErrors:errors});
         await page.close();

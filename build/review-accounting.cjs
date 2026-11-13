@@ -19,15 +19,9 @@ const assert = require('node:assert/strict');
     await page.getByRole('tab', {name:'内置',exact:true}).click();
     const row = page.locator('.feat-row[data-id="accounting"]');
     await row.waitFor();
-    const form = page.locator('.feat-set[data-of="accounting"]');
-    assert.equal(await form.count(), 4);
-    for (const name of ['兼容旧版埋点','按分钟汇总用量']) {
-      const toggle = form.getByRole('switch', {name,exact:true});
-      assert.equal(await toggle.isVisible(), true, name);
-      const style = await toggle.evaluate(e => ({background:getComputedStyle(e).backgroundColor,thumb:getComputedStyle(e.firstElementChild).position}));
-      assert.notEqual(style.background, 'rgba(0, 0, 0, 0)', name);
-      assert.equal(style.thumb, 'absolute', name);
-    }
+    assert.equal(await page.locator('.feat-set[data-of="accounting"]').count(), 0);
+    assert.equal(await row.getByRole('switch', {name:'埋点上报',exact:true}).isVisible(), true);
+    assert.doesNotMatch(await row.innerText(), /172\.21\.|v3|按分钟|旧版/);
     assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true);
     for (const theme of ['light','dark']) {
       // Local visual preview only: no settings writes and no reporting toggles.

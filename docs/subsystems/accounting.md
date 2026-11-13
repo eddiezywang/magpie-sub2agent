@@ -63,17 +63,28 @@ A proxy restart is not an application quit. The native OnShutdown observer emits
 one desktop_app_quit with uptime/token counters. Abrupt exits cannot emit it.
 App start is once per process and data directory.
 
-Plugins > Built-in > 用量上报 exposes two independent switches and endpoints.
-Old telemetry is enabled by default, with `CB_PROXY_TELEMETRY` and
-`CB_PROXY_TELEMETRY_URL` overrides retained. New minute reporting defaults off
-until the existing server implements the negotiated v3 contract. Settings
-changes dispose the old sender before opening its replacement, without an
-application restart. Turning a plane off clears that plane's pending queue;
-turning the whole built-in off pauses collection and delivery, retaining the
-queue for re-enabling. The rejected archive remains available for diagnosis.
-`telemetry.json` preserves this distribution's install identity; it never reads
-another application's data. `accounting-status.json` records local queue counts,
-last delivery, cached rule revision, memory groups and dropped-call counts, without credentials or event bodies.
+Plugins > Built-in exposes exactly one **Telemetry reporting / 埋点上报** plugin
+switch. There is no settings form: aggregation intervals, protocol versions and
+collector addresses are distribution internals. Enabling reporting collects both
+application activity and minute usage summaries; disabling the plugin unregisters
+both observers and pauses delivery while retaining sealed pending data. Minute
+aggregation cannot be independently switched off or replaced with request events.
+Transport capability negotiation remains internal and never selects a fallback
+wire format for new records. Backend health/capability failure keeps data queued.
+
+The accounting manifest's pure MigrateRow removes retired per-plane flags and
+URLs from composed configuration and frontend metadata. An old legacyEnabled:false
+becomes an explicit disabled plugin, preserving opt-out. A later explicit toggle
+wins and persists the clean row. Old usageEnabled:false was a rollout setting and
+no longer selects another reporting mode. CB_PROXY_TELEMETRY remains a whole-report
+process opt-out; CB_PROXY_TELEMETRY_URL is ignored. Neither user configuration nor
+environment variables replace the managed destinations. The empty schema rejects
+retired keys submitted through the settings API. No collector URL, internal IP,
+minute interval or protocol requirements are rendered in the reporting controls.
+
+telemetry.json preserves installation identity, independently of other apps.
+accounting-status.json keeps internal queue counts, delivery failures, cached rule
+revision, memory groups and dropped-call counts without credentials or event bodies.
 
 Current implementation stage: client protocol, durable delivery and runtime
 integration. Server pricing, ingestion adapters and report endpoints still need

@@ -42,6 +42,11 @@ type Manifest struct {
 	// Essential plugins are on in the Essentials preset, when the user
 	// picks it; every built-in is on otherwise, a new install's too
 	Essential bool
+	// MigrateRow projects retired settings onto the current row without I/O.
+	// It must not mutate the input's maps. Load and Compose both apply it, so
+	// clients cannot receive obsolete settings and the next user write keeps
+	// the migrated choice rather than resurrecting retired configuration.
+	MigrateRow func(Row) Row
 	// Name and Sub say what it is, in English; the window translates them
 	Name, Sub string
 	// One and Many say what of it is in use, of 1 or of {n}

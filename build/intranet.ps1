@@ -51,7 +51,7 @@ try {
     $fileRecords = @(Get-ChildItem -LiteralPath $bundle -Recurse -File | ForEach-Object {
         [ordered]@{ path = $_.FullName.Substring($bundle.Length + 1).Replace('\', '/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
     })
-    [ordered]@{ version = $Version; sourceCommit = $sourceCommit; workingTreeChanges = ($sourceChanges.Count -gt 0); profile = 'intranet'; market = 'http://172.21.0.177/magpie/plugins/registry.json'; registry = 'http://172.21.0.177/npm'; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $bundle 'manifest.json') -Encoding utf8
+    [ordered]@{ version = $Version; sourceCommit = $sourceCommit; workingTreeChanges = ($sourceChanges.Count -gt 0); profile = 'intranet'; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $bundle 'manifest.json') -Encoding utf8
     $archive = $bundle + '.zip'
     [IO.Compression.ZipFile]::CreateFromDirectory($bundle, $archive, [IO.Compression.CompressionLevel]::Optimal, $true)
     $exe = Get-Item -LiteralPath (Join-Path $bundle 'Sub2Agent.exe')

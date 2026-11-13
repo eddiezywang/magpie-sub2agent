@@ -99,12 +99,13 @@ func TestRuntimeDisableClearsOnlyItsOwnPlaneAndRetainsIdentity(t *testing.T) {
 	t.Setenv("CB_PROXY_TELEMETRY", "0")
 	t.Setenv("CB_PROXY_TELEMETRY_URL", "http://127.0.0.1/custom-events")
 	options = Defaults().WithEnv()
-	if options.LegacyEnabled || options.UsageEnabled || options.LegacyURL != "http://127.0.0.1/custom-events" {
-		t.Fatal("old environment override changed meaning")
+	if options.LegacyEnabled || options.UsageEnabled || options.LegacyURL != Defaults().LegacyURL || options.UsageURL != Defaults().UsageURL {
+		t.Fatal("reporting opt-out or fixed destinations were overridden")
 	}
 	for _, value := range []string{"", "0", " FALSE ", "No", "off"} {
 		t.Setenv("CB_PROXY_TELEMETRY", value)
-		if Defaults().WithEnv().LegacyEnabled {
+		opts := Defaults().WithEnv()
+		if opts.LegacyEnabled || opts.UsageEnabled {
 			t.Fatalf("legacy opt-out %q ignored", value)
 		}
 	}

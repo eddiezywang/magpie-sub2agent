@@ -18,18 +18,18 @@ import (
 )
 
 type Options struct {
-	LegacyEnabled bool   `json:"legacyEnabled" title:"Legacy telemetry" description:"Keep startup and gateway uptime events. Turning off clears pending legacy events."`
-	UsageEnabled  bool   `json:"usageEnabled" title:"Minute usage summaries" description:"Aggregate by username, model and context tier each minute. Current minute may be lost on a crash. Requires server v3. Turning off clears pending usage."`
-	LegacyURL     string `json:"legacyURL" title:"Legacy telemetry endpoint"`
-	UsageURL      string `json:"usageURL" title:"Usage collector endpoint"`
+	LegacyEnabled bool   `json:"-"`
+	UsageEnabled  bool   `json:"-"`
+	LegacyURL     string `json:"-"`
+	UsageURL      string `json:"-"`
 }
 
 func Defaults() Options {
-	return Options{LegacyEnabled: true, UsageEnabled: false, LegacyURL: "http://172.21.0.177:17890/events", UsageURL: "http://172.21.0.177:17890/usage/events"}
+	return Options{LegacyEnabled: true, UsageEnabled: true, LegacyURL: "http://172.21.0.177:17890/events", UsageURL: "http://172.21.0.177:17890/usage/events"}
 }
 
-// Legacy environment overrides retain their existing meaning. They do not
-// silently enable the new usage data plane.
+// The historical opt-out now controls reporting as a whole. Distribution-owned
+// destinations cannot be replaced by user config or environment variables.
 func (o Options) WithEnv() Options {
 	if v, ok := os.LookupEnv("CB_PROXY_TELEMETRY"); ok {
 		switch strings.ToLower(strings.TrimSpace(v)) {
@@ -38,9 +38,7 @@ func (o Options) WithEnv() Options {
 		default:
 			o.LegacyEnabled = true
 		}
-	}
-	if v := os.Getenv("CB_PROXY_TELEMETRY_URL"); v != "" {
-		o.LegacyURL = v
+		o.UsageEnabled = o.LegacyEnabled
 	}
 	return o
 }

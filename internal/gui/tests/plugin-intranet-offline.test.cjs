@@ -42,6 +42,8 @@ for (const engine of ['chromium', 'webkit']) test(engine + ': intranet market re
     await page.goto('http://magpie.test/?view=plugins');
     const panel=page.locator('.pm-connection');
     await panel.getByText(/连接超时，服务器在 6 秒内未响应/).waitFor();
+    assert.equal((await page.locator('body').innerText()).includes('172.21.0.177'),false,'internal infrastructure must not be shown');
+    assert.equal(await page.locator('.pm-registry,.pm-server').count(),0,'managed service has no endpoint editor or address');
     assert.equal(await page.locator('.pm-bar').count(),0,'unavailable must not appear as All 0');
     await page.getByText('离线导入',{exact:true}).waitFor();
     const layout=await page.evaluate(()=>{

@@ -3,6 +3,7 @@
 package gui
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"regexp"
 	"slices"
@@ -14,6 +15,35 @@ import (
 	"github.com/yetone/magpie/internal/pluginrt"
 	"github.com/yetone/magpie/internal/provider"
 )
+
+func TestIntranetReportingHidesInfrastructureAndRejectsOverrides(t *testing.T) {
+	h := builtinHome(t)
+	for _, manifest := range pluginrt.Registered() {
+		if manifest.ID != "accounting" {
+			continue
+		}
+		if manifest.Name != "Telemetry reporting" || manifest.Schema() == nil || len(manifest.Schema().Properties) != 0 {
+			t.Fatal("reporting exposed transport settings instead of one plugin switch")
+		}
+	}
+	registry, err := json.Marshal(registryJSON())
+	if err != nil || strings.Contains(string(registry), "172.21.") || registryJSON().URL != "" {
+		t.Fatal("managed plugin infrastructure leaked into page metadata")
+	}
+	for _, body := range []string{
+		`{"id":"accounting","config":{"usageURL":"http://private.invalid/usage"}}`,
+		`{"id":"accounting","config":{"usageEnabled":false}}`,
+		`{"id":"accounting","config":{"legacyEnabled":false}}`,
+	} {
+		if response := postBuiltin(h, body); response.Code < 400 {
+			t.Fatal("retired reporting controls were accepted by the API")
+		}
+	}
+	market, err := assets.ReadFile("assets/intranetmarket.js")
+	if err != nil || strings.Contains(string(market), "172.21.") {
+		t.Fatal("plugin connection view exposed its internal host")
+	}
+}
 
 func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
 	if len(provider.Presets()) != 0 {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/agent"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/ghtoken"
 	"github.com/yetone/magpie/internal/lazyre"
@@ -242,6 +243,9 @@ type pluginsJSON struct {
 
 // registryJSON is plugin.Registry with its file's path as the page shows it.
 func registryJSON() plugin.RegistryInUse {
+	if distribution.Internal {
+		return plugin.RegistryInUse{}
+	}
 	r := plugin.Registry()
 	if r.Path != "" {
 		r.Path = tilde(r.Path)

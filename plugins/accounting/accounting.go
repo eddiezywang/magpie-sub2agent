@@ -3,8 +3,6 @@
 package accounting
 
 import (
-	"encoding/json"
-
 	"github.com/yetone/magpie/internal/accounting"
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/gateway"
@@ -14,18 +12,12 @@ import (
 
 func init() {
 	pluginrt.Register(pluginrt.Manifest{
-		ID: "accounting", API: "^1", Name: "Usage reporting", Sub: "Keep legacy telemetry and send numeric usage to the intranet billing service without conversation content",
-		Requires: []string{"gateway"}, Essential: true, Settings: accounting.Defaults(), RestartOnConfig: true,
+		ID: "accounting", API: "^1", Name: "Telemetry reporting", Sub: "Report application activity and usage statistics without conversation content",
+		// An empty schema rejects retired per-plane switches and endpoint
+		// overrides, including stale plugins.yml values, before composing UI config.
+		Requires: []string{"gateway"}, Essential: true, Settings: struct{}{}, RestartOnConfig: true, MigrateRow: migrateRow,
 		Apply: func(c *pluginrt.Ctx) error {
-			options := accounting.Defaults()
-			data, err := json.Marshal(c.Config)
-			if err != nil {
-				return err
-			}
-			if err = json.Unmarshal(data, &options); err != nil {
-				return err
-			}
-			r, err := accounting.New(appdir.Config(), options.WithEnv(), gateway.Version)
+			r, err := accounting.New(appdir.Config(), accounting.Defaults().WithEnv(), gateway.Version)
 			if err != nil {
 				return err
 			}
@@ -33,4 +25,15 @@ func init() {
 			return nil
 		},
 	})
+}
+
+func migrateRow(r pluginrt.Row) pluginrt.Row {
+	// Preserve the old global opt-out. The per-request reporting switch was a
+	// rollout detail; it no longer selects a different reporting mode.
+	if enabled, ok := r.Config["legacyEnabled"].(bool); ok && !enabled {
+		off := false
+		r.Enabled = &off
+	}
+	r.Config = nil
+	return r
 }

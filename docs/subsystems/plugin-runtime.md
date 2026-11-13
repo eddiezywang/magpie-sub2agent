@@ -26,8 +26,11 @@ the plugin host) are a different thing; see
 In this fork, a manifest may opt into `RestartOnConfig`. On a composed backend
 config change, reconciliation disposes it (and dependent services) before
 applying the replacement. Equal settings do not restart it. Other manifests
-retain their existing behavior. The intranet accounting observer uses this to
-apply collection switches and endpoints immediately.
+retain their existing behavior. Reporting uses its one plugin switch; transport settings are private. A manifest
+may supply a pure MigrateRow projection for retired settings. Load and Compose both
+apply it without rewriting the file; the next explicit settings write persists
+the cleaned row. The migration must not mutate input maps or perform I/O. Accounting
+uses it to retain old opt-outs while removing obsolete endpoint/config fields.
 The native app's shutdown calls `usage.NotifyAppQuit` for observers implementing
 `AppQuit`; this notification is separate from gateway stops or plugin disposal.
 An implementation may persist local events here but must not wait for HTTP.
