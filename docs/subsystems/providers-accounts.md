@@ -528,3 +528,15 @@ key aliases and actual keys are never shipped in source or review fixtures.
 `TestCodingPlanDefaultsAndSavedAuthentication` covers defaults and persistence;
 `TestCodingPlanRequestAndModelDiscovery` records local HTTP requests for the
 model list and inference, checking the exact messages path and Bearer alone.
+
+### Old Sub2Agent TIG imports
+
+Startup recognizes the managed TIG host with either `/public` or `/public/v1`
+(including pasted protocol endpoints), retaining the saved protocol and key.
+New imports use `sub2agent-tigcodingplan` (a numbered suffix for a distinct
+provider). `repairImportedCodingPlans` also revisits already imported `legacy-*`
+records before reading the old application's file or import marker. It uses the
+shared provider Rename path: groups/settings follow, Was keeps old model refs
+working, and saved keys, enabled state and model selections remain intact.
+Only imported records at the exact managed host are reclassified; arbitrary
+custom gateways and explicitly assigned other presets are left alone.

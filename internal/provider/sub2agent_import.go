@@ -63,6 +63,10 @@ func ImportSub2AgentAuth() (int, error) {
 }
 
 func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (int, error) {
+	repaired, err := repairImportedCodingPlans()
+	if err != nil {
+		return repaired, err
+	}
 	var old struct {
 		Version int `json:"version"`
 		Desktop struct {
@@ -71,9 +75,9 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	}
 	if err := readLegacyJSON(filepath.Join(root, "proxy.json"), &old); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return 0, nil
+			return repaired, nil
 		}
-		return 0, errors.New("旧版 Sub2Agent 认证文件无法读取，已保留原文件")
+		return repaired, errors.New("旧版 Sub2Agent 认证文件无法读取，已保留原文件")
 	}
 	if old.Version != 1 {
 		return 0, errors.New("旧版 Sub2Agent 配置版本无法识别，已保留原文件")
@@ -86,7 +90,7 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	if imported == nil {
 		return 0, errors.New("旧认证迁移记录无效，未覆盖现有认证")
 	}
-	count, failed := 0, false
+	count, failed := repaired, false
 	for _, source := range old.Desktop.Sources {
 		if source.ID == "" || source.Status != "ready" {
 			continue
@@ -205,6 +209,9 @@ func importLegacyEndpoint(s legacySub2AgentSource, identity, key string) (bool, 
 			return false, nil
 		}
 	}
+	if knownCodingPlanEndpoint(s.Endpoint.Base) {
+		id = FreeID("sub2agent-tigcodingplan")
+	}
 	p := Provider{ID: id, Name: s.Name, Key: key, Models: s.Models, Off: s.Enabled != nil && !*s.Enabled}
 	if p.Name == "" {
 		p.Name = "Sub2Agent 来源"
@@ -223,9 +230,10 @@ func importLegacyEndpoint(s legacySub2AgentSource, identity, key string) (bool, 
 	default:
 		return false, errors.New("unsupported legacy endpoint protocol")
 	}
-	if p.Anthropic == codingPlanPreset.Anthropic {
+	if knownCodingPlanEndpoint(s.Endpoint.Base) {
 		p.Preset = codingPlanPreset.ID
 		p.Name = "TIG Coding Plan"
+		p.Icon = codingPlanPreset.Icon
 		p.AuthHeader = AuthBearer
 	}
 	// Do not duplicate an endpoint already configured in the new app, nor

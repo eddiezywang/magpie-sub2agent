@@ -110,3 +110,65 @@ func TestSub2AgentImportKeepsCurrentCredentialsAndRejectsCorruption(t *testing.T
 		t.Fatal("corrupt source accepted")
 	}
 }
+
+func TestSub2AgentImportRecognizesOpenAITIG(t *testing.T) {
+	azureHome(t)
+	root := legacyImportFixture(t)
+	path := filepath.Join(root, "proxy.json")
+	raw, _ := os.ReadFile(path)
+	raw = bytes.ReplaceAll(raw, []byte("anthropic_messages"), []byte("openai_chat"))
+	raw = bytes.ReplaceAll(raw, []byte("http://172.21.11.82/public"), []byte("http://172.21.11.82/public/v1"))
+	os.WriteFile(path, raw, 0600)
+	if _, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil {
+		t.Fatal(err)
+	}
+	p, err := Find("sub2agent-tigcodingplan")
+	if err != nil || p.Preset != "aiep-coding-plan" || p.Name != "TIG Coding Plan" || p.Chat != "http://172.21.11.82/public/v1" || p.Key != "fixture-plan-key" {
+		t.Fatal("OpenAI TIG imported as a generic endpoint")
+	}
+}
+
+func TestSub2AgentImportRepairsAlreadyImportedTIG(t *testing.T) {
+	azureHome(t)
+	p := Provider{ID: "legacy-fixture", Name: "我的 API", Chat: "http://172.21.11.82/public/v1", Key: "newer-key", Models: []string{"glm-5.3-flash-zp"}, Off: true}
+	if err := Save(p); err != nil {
+		t.Fatal(err)
+	}
+	f, _ := read()
+	f.Groups = []Group{{ID: "fixture", Members: []string{"legacy-fixture/glm-5.3-flash-zp"}}}
+	if err := store(f); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(t.TempDir(), "missing-old-config")
+	if _, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil {
+		t.Fatal(err)
+	}
+	fixed, err := Find("sub2agent-tigcodingplan")
+	if err != nil || fixed.Preset != "aiep-coding-plan" || fixed.Key != "newer-key" || !fixed.Off || len(fixed.Models) != 1 {
+		t.Fatal("already imported TIG was not repaired with preferences intact")
+	}
+	old, err := Find("legacy-fixture")
+	if err != nil || old.ID != fixed.ID {
+		t.Fatal("old model references no longer resolve")
+	}
+	f, _ = read()
+	if f.Groups[0].Members[0] != "sub2agent-tigcodingplan/glm-5.3-flash-zp" {
+		t.Fatal("group reference not moved")
+	}
+	if n, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil || n != 0 {
+		t.Fatal("repair is not idempotent")
+	}
+}
+
+func TestCodingPlanEndpointRecognitionIsExact(t *testing.T) {
+	for _, s := range []string{"http://172.21.11.82/public", "http://172.21.11.82/public/v1/", "https://172.21.11.82/public/v1/messages"} {
+		if !knownCodingPlanEndpoint(s) {
+			t.Errorf("missed %s", s)
+		}
+	}
+	for _, s := range []string{"http://172.21.11.82.evil/public/v1", "http://172.21.11.82/other", "http://user@172.21.11.82/public", "http://172.21.11.82/public?redirect=1", "http://172.21.11.82:9999/public"} {
+		if knownCodingPlanEndpoint(s) {
+			t.Errorf("misclassified %s", s)
+		}
+	}
+}
