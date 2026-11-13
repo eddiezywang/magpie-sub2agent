@@ -99,7 +99,10 @@ def publish(root, plugin, version, summary):
     try:
         catalog = json.loads(catalog_path.read_text('utf-8')) if catalog_path.exists() else {'version': 1, 'plugins': []}
         artifact = {'version': version, 'url': f'http://172.21.0.177/magpie/plugins/dist/{digest}.zip', 'sha256': digest, 'bytes': len(data)}
-        entry = {'package': name, 'name': manifest.get('magpie', {}).get('name', name), 'summary': {'zh': summary, 'en': manifest.get('description', summary)}, 'bundle': artifact}
+        presentation = manifest.get('magpie', {})
+        entry = {'package': name, 'name': presentation.get('name') or presentation.get('page', {}).get('title') or name, 'summary': {'zh': summary, 'en': manifest.get('description', summary)}, 'bundle': artifact}
+        if presentation.get('hooks'):
+            entry['kind'] = 'hooks'
         same = next((item for item in catalog['plugins'] if item['package'] == name), None)
         published_version = root / 'npm' / name / version
         if published_version.exists() and json.loads(published_version.read_text('utf-8'))['dist']['sha256'] != digest:

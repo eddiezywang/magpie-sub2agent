@@ -21,7 +21,7 @@ class MarketTests(unittest.TestCase):
             (plugin / 'page').mkdir(parents=True)
             manifest = {'name': '@internal/notify', 'type': 'module', 'sub2agentBundle': 2,
                         'files': ['notify.mjs', 'page/index.html', 'page/app.js'],
-                        'magpie': {'hooks': './notify.mjs', 'page': {'file': 'page/index.html'}}}
+                        'magpie': {'hooks': './notify.mjs', 'page': {'file': 'page/index.html', 'title': 'Notify'}}}
             for name in manifest['files']:
                 (plugin / name).write_text('fixture', encoding='utf-8')
             (plugin / 'credentials.json').write_text('must stay private')
@@ -29,6 +29,8 @@ class MarketTests(unittest.TestCase):
                 (plugin / 'package.json').write_text(json.dumps(manifest), encoding='utf-8')
             save()
             entry = publish(base / 'www', plugin, '1.0.0', 'Notify')
+            self.assertEqual(entry['name'], 'Notify')
+            self.assertEqual(entry['kind'], 'hooks')
             archive = base / 'www/magpie/plugins/dist' / (entry['bundle']['sha256'] + '.zip')
             with zipfile.ZipFile(archive) as bundle:
                 self.assertEqual(set(bundle.namelist()), {'package.json', *manifest['files']})
