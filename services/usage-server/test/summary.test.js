@@ -1,5 +1,8 @@
  'use strict';
-const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');
+const {test:nodeTest}=require('node:test');
+// Node 18's early test runner has no TestContext.after. Keep explicit cleanup.
+const test=(name,run)=>nodeTest(name,async()=>{const cleanup=[];try{await run({after:f=>cleanup.push(f)});}finally{for(const f of cleanup.reverse())await f();}});
+const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');
 const {createSummaryStore,SCHEMA,counters}=require('../src/summary-store');
 const {createBillingPolicy}=require('../src/billing-policy');
 const {createUsageServer}=require('../src/server');

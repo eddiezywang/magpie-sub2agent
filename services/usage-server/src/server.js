@@ -456,7 +456,7 @@ function createUsageServer(options = {}) {
       if (!server) return Promise.resolve();
       const closing = server;
       server = null;
-      return Promise.all([closing,...aliases.splice(0)].map(s=>new Promise(resolve=>s.close(()=>resolve()))));
+      return Promise.all([closing,...aliases.splice(0)].map(s=>new Promise(resolve=>{s.close(()=>resolve());s.closeIdleConnections?.();})));
     },
     // Exposed for tests/admin tooling.
     _store: store,_summaries:summaries,_billing:billing,
