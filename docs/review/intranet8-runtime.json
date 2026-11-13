@@ -1,0 +1,27 @@
+{
+  "views": [
+    "agents",
+    "sessions",
+    "providers",
+    "routing",
+    "groups",
+    "gateway",
+    "usage",
+    "plugins",
+    "settings"
+  ],
+  "auth": [
+    {
+      "provider": "trae",
+      "localListener": true,
+      "manualCallback": true
+    },
+    {
+      "provider": "codebuddy",
+      "link": 0,
+      "error": 1
+    }
+  ],
+  "version": "0.1.3913-sub2agent.8",
+  "pageErrors": []
+}
