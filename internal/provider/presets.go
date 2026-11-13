@@ -941,6 +941,9 @@ func builtinPreset(id string) *PresetDef {
 		pr := codingPlanDefinition()
 		return &pr
 	}
+	if distribution.Internal {
+		return nil
+	}
 	if a, ok := presetAliases[id]; ok {
 		id = a.preset
 	}

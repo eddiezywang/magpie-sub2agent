@@ -922,6 +922,9 @@ func refreshFailed(status int, agent, msg string) error {
 
 // Accounts lists the signed-in agents as providers.
 func Accounts() []Provider {
+	if distribution.Internal {
+		return pluginAccounts()
+	}
 	if settings.AccountDiscoveryOff() {
 		return pluginAccounts() // the public plugins' alone (publicPlugin)
 	}
@@ -937,9 +940,6 @@ func Accounts() []Provider {
 	}
 	if p, ok := codexAccount(home); ok {
 		out = append(out, p)
-	}
-	if distribution.Internal {
-		return placeMoved(out, pluginAccounts())
 	}
 	if p, ok := copilotAccount(cfg); ok {
 		out = append(out, p)

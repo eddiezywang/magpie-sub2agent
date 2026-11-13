@@ -12451,7 +12451,7 @@ const SUBS = [
   { agent: "antigravity", name: "Antigravity", icon: "antigravity-color", plans: "Google AI Pro · Ultra · free", own: true, risk: true, importable: true },
 ];
 if (window.bootPrefs?.intranet) {
-  for (let i = SUBS.length - 1; i >= 0; i--) if (!["claude", "codex"].includes(SUBS[i].agent)) SUBS.splice(i, 1);
+  SUBS.length = 0;
 }
 const subOf = (agent) => {
   const own = SUBS.find((x) => x.agent === agent);

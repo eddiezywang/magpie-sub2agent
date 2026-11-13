@@ -80,6 +80,12 @@ func effectiveList() List {
 		l.Plugins = slices.Clone(l.Plugins)
 		l.Prefer = cloneStringMap(l.Prefer)
 		l = shipped(l)
+		for i := range l.Plugins {
+			switch Name(l.Plugins[i].Spec) {
+			case "@sub2agent/codebuddy", "@sub2agent/trae":
+				l.Plugins[i].Off = true
+			}
+		}
 	}
 	return l
 }

@@ -36,8 +36,8 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 		ps = append(ps, Provider{ID: "sub2agent-" + e.Bundled, Spec: e.Spec})
 	}
 	UseCached(ps)
-	if got := len(Cached()); got != 4 {
-		t.Fatalf("host loaded 4 providers but picker sees %d", got)
+	if got := len(Cached()); got != 1 {
+		t.Fatalf("picker must expose only WorkBuddy enterprise, got %d", got)
 	}
 	// A moved portable bundle follows its current executable, retaining Off.
 	l := shipped(List{Plugins: []Entry{{Spec: "old/path", Bundled: "workbuddy", Off: true}}})
@@ -55,11 +55,11 @@ func TestIntranetLightRuntimeAdmission(t *testing.T) {
 	if HasBun() {
 		t.Fatal("fixture unexpectedly has a runtime")
 	}
-	writeList(t, `{"plugins":[{"spec":"@sub2agent/codebuddy"}]}`)
+	writeList(t, `{"plugins":[{"spec":"@sub2agent/workbuddy"}]}`)
 	if !CanStart() {
 		t.Fatal("first-run runtime download was skipped for an enabled provider")
 	}
-	writeList(t, `{"plugins":[{"spec":"@sub2agent/codebuddy","off":true}]}`)
+	writeList(t, `{"plugins":[{"spec":"@sub2agent/workbuddy","off":true}]}`)
 	if CanStart() {
 		t.Fatal("disabled providers requested a runtime")
 	}

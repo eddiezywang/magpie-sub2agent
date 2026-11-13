@@ -242,6 +242,9 @@ func StartSignInAt(agent, site string) (SignInState, error) {
 // StartSignInWith is StartSignIn with the sign-in's choices: its site and
 // the proxy it goes through.
 func StartSignInWith(agent string, o SignInOptions) (SignInState, error) {
+	if !intranetSourceAllowed(Provider{ID: agent}) {
+		return SignInState{}, errors.New("此供应商在当前版本中已禁用")
+	}
 	site := o.Site
 	if settings.AccountDiscoveryOff() {
 		return SignInState{}, errAccountDiscoveryOff

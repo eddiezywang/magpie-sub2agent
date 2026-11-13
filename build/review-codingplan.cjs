@@ -5,7 +5,7 @@ const {chromium,webkit}=require('playwright');
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});
  const assets=path.resolve(process.env.INTRANET_ASSETS||'internal/gui/assets');
- const preset={id:'aiep-coding-plan',name:'行内 Coding Plan',icon:'generic',kind:'relay',anthropic:'http://172.21.11.82/public',endpoint:'http://172.21.11.82/public',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV',keysUrl:'https://aiep.weoa.com'};
+ const preset={id:'aiep-coding-plan',name:'TIG Coding Plan',icon:'generic',kind:'relay',anthropic:'http://172.21.11.82/public',endpoint:'http://172.21.11.82/public',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV',keysUrl:'https://aiep.weoa.com'};
  const report=[];
  for(const engine of ['chromium','webkit']) {
   const browser=await(engine==='webkit'?webkit.launch():chromium.launch({channel:'chrome'}));
@@ -27,7 +27,7 @@ const {chromium,webkit}=require('playwright');
     try{return route.fulfill({body:await fs.readFile(file),contentType:{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]});}catch{return route.fulfill({status:404,body:''});}
    });
    await page.goto('http://magpie.test/?view=providers');
-   await page.locator('#addSheet button').filter({hasText:'行内 Coding Plan'}).click();
+   await page.locator('#addSheet button').filter({hasText:'TIG Coding Plan'}).click();
    const editor=page.locator('.editor.new');await editor.locator('.coding-plan-notice').waitFor();
    assert.equal(await editor.locator('input.endpoint').inputValue(),preset.anthropic);
    assert.equal(await editor.locator('input[type=password]:visible').count(),1);

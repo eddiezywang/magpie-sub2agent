@@ -513,3 +513,15 @@ masked key field; several require selection; none produces an explicit error.
 Errors never contain CLI output. The original key remains until the user
 chooses a returned credential and saves the provider. Actual enterprise CLI
 login and gateway inference require internal-network verification.
+
+### Temporarily retained provider scope
+
+Intranet releases expose WorkBuddy enterprise, the existing Coding Plan,
+CIB ZHT, and the normal custom endpoint editor. Coding Plan is displayed as
+TIG Coding Plan; its existing `aiep-coding-plan` ID, gateway and keys are retained. Native subscription discovery
+returns before reading Claude/Codex credentials. Other preset definitions are
+unavailable and saved providers outside this scope are excluded from the
+routing catalog without deleting their records. Native and plugin sign-in
+entry points enforce the same policy. CodeBuddy and Trae bundled entries
+remain on disk for compatibility but the effective host list forces them off,
+regardless of saved switches; the provider cache exposes only WorkBuddy.

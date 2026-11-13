@@ -1054,6 +1054,7 @@ func allProviders() []Provider {
 		}
 		out = append(out, a)
 	}
+	out = slices.DeleteFunc(out, func(p Provider) bool { return !intranetSourceAllowed(p) })
 	return ordered(out, f.Order)
 }
 
@@ -1235,6 +1236,9 @@ func Slug(name string) string {
 
 // Save adds or replaces a provider.
 func Save(p Provider) error {
+	if !intranetSourceAllowed(p) {
+		return errors.New("此供应商在当前版本中已禁用，原配置和认证信息保留")
+	}
 	// a key given a Vertex AI provider is refused here, before normalize
 	// drops it: it would never be sent
 	if p.IsVertex() && len(p.Keys) > 0 {

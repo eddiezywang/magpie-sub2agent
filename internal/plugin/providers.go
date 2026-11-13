@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io/fs"
 	"math"
 	"os"
@@ -706,6 +707,9 @@ func Cached() []Provider {
 		}
 	}
 	for _, p := range ps {
+		if distribution.Internal && p.ID != "sub2agent-workbuddy" {
+			continue
+		}
 		p.Spec = canonicalShippedSpec(p.Spec)
 		if !on[p.Spec] {
 			continue
@@ -1004,6 +1008,9 @@ const NewAccount = "new"
 // A plugin that can't start one says why ({ type: "failed", error }), and
 // that is the error (plugins#658).
 func Authorize(ctx context.Context, provider string, method int, inputs map[string]string, account string) (Authorization, error) {
+	if distribution.Internal && provider != "sub2agent-workbuddy" {
+		return Authorization{}, errors.New("此供应商在当前版本中已禁用")
+	}
 	var r struct {
 		OK    bool   `json:"ok"`
 		Error string `json:"error"`
@@ -1057,6 +1064,9 @@ func Finish(ctx context.Context, session, code string) (Saved, error) {
 // APIKey signs in to account (a key, or NewAccount) with a key, as an
 // "api" method does, through the proxy ctx names.
 func APIKey(ctx context.Context, provider string, method int, inputs map[string]string, key, account string) (Saved, error) {
+	if distribution.Internal && provider != "sub2agent-workbuddy" {
+		return Saved{}, errors.New("此供应商在当前版本中已禁用")
+	}
 	var r struct {
 		OK    bool   `json:"ok"`
 		Error string `json:"error"`
