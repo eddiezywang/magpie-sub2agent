@@ -1,8 +1,12 @@
 # 内网插件广场
 
-固定地址：`http://172.21.0.177`。使用独立 systemd 服务和 Python 3.11
+部署到指定的内网服务器。使用独立 systemd 服务和 Python 3.11
 标准库，提供只读目录、npm 兼容版本元数据和完整 ZIP 包；不需要联网安装依赖。
 这不是公网 npm 的透明代理。
+
+当前发布集合为 WorkBuddy 企业、TIG Coding Plan 和 Notify。CodeBuddy/Trae
+保留兼容代码但不发布到新广场，避免提供已禁用来源。model-map 默认内置。
+默认 Python 太旧时设置 `PYTHON_BIN=/opt/python311/bin/python3.11`。
 
 ## 部署
 

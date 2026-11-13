@@ -19,7 +19,7 @@ def prepare(repo, community, output):
     output.mkdir(parents=True, exist_ok=True)
     www = output / 'www'
     staging = output / 'staging'
-    for kind in ['codebuddy', 'workbuddy', 'trae', 'aiep']:
+    for kind in ['workbuddy', 'aiep']:
         plugin = repo / 'build/sub2agent-runtime' / kind
         manifest = json.loads((plugin / 'package.json').read_text('utf-8'))
         module.publish(www, plugin, manifest['version'], manifest['magpie']['name'])
@@ -45,8 +45,8 @@ def prepare(repo, community, output):
     (target / 'package.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     module.publish(www, target, manifest['version'], '任务完成、失败和重新登录提醒；需配置内部通知渠道')
     shutil.copytree(repo / 'deploy/plugin-market', output / 'service', ignore=shutil.ignore_patterns('__pycache__'), dirs_exist_ok=True)
-    (output / 'provenance.json').write_text(json.dumps({'communityCommit': PIN, 'packages': 5, 'privateProviders': 'generated locally; do not publish this tree publicly'}, indent=2) + '\n', encoding='utf-8')
-    print(json.dumps({'output': str(output), 'packages': 5, 'notifyVersion': manifest['version']}))
+    (output / 'provenance.json').write_text(json.dumps({'communityCommit': PIN, 'packages': 3, 'privateProviders': 'generated locally; do not publish this tree publicly'}, indent=2) + '\n', encoding='utf-8')
+    print(json.dumps({'output': str(output), 'packages': 3, 'notifyVersion': manifest['version']}))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

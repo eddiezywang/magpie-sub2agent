@@ -2,7 +2,7 @@
 set -euo pipefail
 # Install only into the named directory; refuse to replace an existing listener.
 root=/opt/sub2agent-plugin-market
-python_bin=$(command -v python3)
+python_bin=${PYTHON_BIN:-$(command -v python3)}
 if [[ ! -f /etc/systemd/system/sub2agent-plugin-market.service ]] && ss -lnt | awk '{print $4}' | grep -Eq '(^|:)80$'; then
   echo 'Port 80 is occupied. Configure an existing reverse proxy before deploying.' >&2
   exit 1
