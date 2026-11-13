@@ -483,6 +483,7 @@ function renderAgentsLoading() {
 
 let agentArranging = false, agentRenderPending = false;
 function renderAgents() {
+  if (window.bootPrefs?.intranet) import("./agentconnections.js").then((m) => m.enter(), statusErr);
   renderCodexMemories(); // the Codex sheet's row is the same field
   renderCodexSubagentModel(); // and this one
   if (agentArranging) { agentRenderPending = true; return; }
@@ -23195,6 +23196,7 @@ async function show(v) {
     magpie.call(view, "leave");
   }
   if (v !== view && !jump) backTo = null;
+  if (v !== view && window.bootPrefs?.intranet) import("./agentconnections.js").then((m) => m.leave());
   view = v;
   renderBack();
   window.hideAccounts?.page();

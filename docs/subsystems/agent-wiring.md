@@ -426,3 +426,20 @@ are added), its model list came from the gateway, and a chat went through
 it, counted as Cherry Studio's. A link that arrives while its first-run
 welcome page is up shows no dialog; after "set up later" it does.
 `magpie cherrystudio add` opens the link; the TUI leaves the row out.
+
+## Internal connection snapshot
+
+The internal Agents page requests GET /api/agents/connections once per page
+visit. The endpoint expires only local discovery and inspects detected agents
+without calling Follow, Sync, or provider probes. Configured means the current
+configuration points at this gateway, not that inference has succeeded. Codex
+custom provider names are inspected through the selected model_providers table;
+unused tables, other ports, remote hosts and unrelated paths do not count.
+Managed state remains separate. The Adapt/Connect action uses the existing
+backed-up agent connection writer only after a click. No special OpenAI actor
+header is added by the internal Codex writer; existing user headers are kept.
+
+The internal browser page does not apply the server-only gateway-mode veto to
+local session discovery. The existing per-agent session-read permissions still
+apply. Codex session discovery is independent of whether its inference endpoint
+is configured for this gateway.

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/agent"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/sessions"
 	"github.com/yetone/magpie/internal/settings"
 )
@@ -99,6 +100,9 @@ func gatewayModeRoutes(mux *http.ServeMux) {
 // (agentsHereKept) rather than gatewayMode's own. When its answer turns,
 // what was read under the other answer is dropped (ownTurned).
 func ownSessionsOff() bool {
+	if distribution.Internal {
+		return false
+	}
 	on := false
 	if webPage.Load() {
 		switch settings.Shared().GatewayMode {

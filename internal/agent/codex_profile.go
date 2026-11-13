@@ -8,6 +8,7 @@ import (
 
 	"github.com/yetone/magpie/internal/access"
 	"github.com/yetone/magpie/internal/codexcat"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/lastgood"
 )
@@ -33,7 +34,7 @@ const codexProfileFile = magpieID + ".config.toml"
 // codexProviderTable is magpie's [model_providers.magpie], with token as
 // the bearer key.
 func codexProviderTable(v1, token string) []edit.KV {
-	return []edit.KV{
+	fields := []edit.KV{
 		{Path: "name", Value: "magpie"},
 		{Path: "base_url", Value: v1},
 		{Path: "wire_api", Value: "responses"},
@@ -50,8 +51,11 @@ func codexProviderTable(v1, token string) []edit.KV {
 		// gets the header set there, the user's others kept; written
 		// inline beside that table it defined http_headers twice and
 		// every model switch failed (wztlink1013 on Discord).
-		{Path: "http_headers", Value: edit.Inline{{Path: "x-openai-actor-authorization", Value: "magpie"}}},
 	}
+	if !distribution.Internal {
+		fields = append(fields, edit.KV{Path: "http_headers", Value: edit.Inline{{Path: "x-openai-actor-authorization", Value: "magpie"}}})
+	}
+	return fields
 }
 
 // codexKeptToken is table's bearer token in path when it is one the gateway

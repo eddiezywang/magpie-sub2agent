@@ -1311,6 +1311,14 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// pending says to ask again soon
 	// the Agents page's refresh: looks for the agents on this machine again,
 	// the answers kept a while because asking was slow forgotten (#844)
+	mux.HandleFunc("GET /api/agents/connections", func(rw http.ResponseWriter, r *http.Request) {
+		agent.RescanLocal()
+		out := map[string]agent.ConnectionCheck{}
+		for _, a := range agent.DetectedIn(heldAgents()) {
+			out[a.ID] = agent.CheckConnection(a, gateway.URL())
+		}
+		writeJSON(rw, out)
+	})
 	mux.HandleFunc("POST /api/agents/rescan", func(rw http.ResponseWriter, r *http.Request) {
 		agent.Rescan()
 		writeJSON(rw, state())
