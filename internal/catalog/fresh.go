@@ -6,6 +6,8 @@ import (
 	"os"
 	"sync/atomic"
 	"time"
+
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 // Keeping the catalog fresh. It is where a model's list price comes from,
@@ -45,6 +47,15 @@ func KeepFresh() {
 	keeping.Store(true)
 	var retry time.Duration
 	for {
+		if distribution.Internal {
+			// Routing remains independent of whether telemetry reporting is enabled.
+			if refreshManagedRouting(context.Background()) != nil {
+				// Re-evaluate expired cached promotions even during an outage.
+				Reset()
+			}
+			time.Sleep(5 * time.Minute)
+			continue
+		}
 		wait := freshEvery
 		if Stale() {
 			if err := fetch(); err != nil {

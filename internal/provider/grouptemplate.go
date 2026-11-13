@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/settings"
@@ -125,9 +126,10 @@ const (
 
 // rated is a model of the catalog with what a template weighs it by.
 type rated struct {
-	e      Entry
-	out    float64 // its output price, 0 when no price is known
-	priced bool    // distinguishes a real zero price from an unknown price
+	e       Entry
+	out     float64 // its output price, 0 when no price is known
+	managed bool    // scheduling score from the server, never a displayed USD price
+	priced  bool    // distinguishes a real zero price from an unknown price
 	// maker: a vendor among the presets makes it (MakerPrice), not one of
 	// the hundreds a router lists from labs nobody has heard of
 	maker bool
@@ -140,9 +142,12 @@ type rated struct {
 // model's maker's list price when there is one, so a subscription's or a
 // relay's copy weighs as the model does, else what the provider charges.
 func templateModels() []rated {
+	return templateModelsFrom(Served())
+}
+func templateModelsFrom(entries []Entry) []rated {
 	s := settings.Load()
 	var out []rated
-	for _, e := range Served() {
+	for _, e := range entries {
 		if e.Group != "" || nonChat.MatchString(strings.ToLower(e.Model)) {
 			continue
 		}
@@ -156,6 +161,9 @@ func templateModels() []rated {
 		}
 		if pr, ok := e.Provider.ListPrice(e.Model); ok && pr.Input == 0 && pr.Output == 0 {
 			r.out, r.priced = 0, true
+		}
+		if score, ok := catalog.RoutingScore(e.Provider.ID, e.Model); ok {
+			r.out, r.priced, r.managed = score, true, true
 		}
 		r.small, r.tiny = sizeOf(e.Model)
 		out = append(out, r)
@@ -176,6 +184,7 @@ func strongest(ms []rated) []rated {
 	}
 	slices.SortStableFunc(out, func(a, b rated) int {
 		return cmp.Or(
+			-cmp.Compare(btoi(a.managed), btoi(b.managed)),
 			-cmp.Compare(btoi(a.maker), btoi(b.maker)),
 			-cmp.Compare(btoi(a.out >= frontierOut), btoi(b.out >= frontierOut)),
 			cmp.Compare(btoi(a.small), btoi(b.small)),
@@ -271,6 +280,11 @@ var TemplateIDs = map[string]string{TemplateSmart: "smart-split", TemplateThrift
 // templateOf is the template kind made of ms, its classifier a decider of
 // ds when there is one.
 func templateOf(kind string, ms []rated, ds []Entry) Template {
+	if distribution.Internal && slices.ContainsFunc(ms, func(m rated) bool {
+		return m.e.Provider.isCodingPlan() || strings.HasPrefix(m.e.Provider.ID, "sub2agent-workbuddy")
+	}) {
+		return internalTemplate(kind, ms, ds)
+	}
 	t := Template{Kind: kind, Group: Group{Name: TemplateNames[kind], ID: TemplateIDs[kind], Routing: Ordered}}
 	strong := strongest(ms)
 	if len(strong) == 0 {
@@ -394,12 +408,29 @@ func AddTemplate(kind, name string) (Group, error) {
 		return Group{}, err
 	}
 	g := t.Group
+	if distribution.Internal {
+		g.TemplateKind = kind
+	}
 	if name = strings.TrimSpace(name); name == "" {
 		name = g.Name
 	}
 	g.Name, g.ID = freeGroupName(Groups(), name, g.ID)
 	if err := SaveGroup(g); err != nil {
 		return Group{}, err
+	}
+	if distribution.Internal {
+		f, err := read()
+		if err != nil {
+			return Group{}, err
+		}
+		for i := range f.Groups {
+			if f.Groups[i].ID == g.ID {
+				f.Groups[i].TemplateKind = kind
+			}
+		}
+		if err = store(f); err != nil {
+			return Group{}, err
+		}
 	}
 	for _, o := range Groups() {
 		if o.ID == g.ID {

@@ -3174,10 +3174,21 @@ while an explicit user billing value still wins.
 A known zero output price is distinct from unknown pricing. Zero-priced models
 are eligible as the cheap member and classifier; a changed price removes that
 eligibility when templates are regenerated through the same algorithm. Saved
-groups remain explicit user configuration, not live subscriptions to a template.
+groups created before managed templates remain explicit user configuration.
+New internal templates retain their kind and rebuild members when discovery or
+the managed catalog changes; saving an explicit group edit opts out. Plan-first
+chooses a non-tiny small Coding Plan model, then a low-cost alternate source.
+No model ID is hard-coded in a template. Server routing scores prioritize the
+enterprise MaaS deployments over unclassified WorkBuddy built-in deployments.
 A classifier still prefers a decision
 API, else the cheapest known-price non-reasoning/non-tiny model, else the cheap
 member. No promotion is permanently encoded by model name.
+
+The internal catalog refreshes server routing scores every five minutes,
+independent of telemetry opt-out. Bounded failures retain the last valid cache;
+the document expires after 24 hours and promotions can expire earlier. Expired
+scores become unknown even during an outage. Scores are relative scheduling
+weights, separate from USD prices and remaining allowance.
 
 Pricing multipliers and peak/off-peak billing rules belong on the accounting
 server. They must not change quota-rest/reset timestamps or imply remaining

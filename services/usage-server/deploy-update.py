@@ -13,8 +13,16 @@ root = pathlib.Path('/opt/usage-server')
 assert root.resolve() == root and root.is_dir()
 subprocess.run(['node', '--test', 'test/summary.test.js'], cwd=release, check=True)
 listeners = subprocess.check_output(['ss', '-lnt'], text=True)
+dropin = pathlib.Path('/etc/systemd/system/usage-server.service.d/sub2agent-alias.conf')
+expected = '[Service]\nEnvironment=USAGE_SERVER_ALIAS_PORT=17890\n'
+previous = dropin.read_text() if dropin.exists() else None
+if previous is not None and previous != expected:
+    raise SystemExit('Unexpected alias configuration; inspect it first.')
 if any(line.split()[3].endswith(':17890') for line in listeners.splitlines()[1:] if len(line.split()) > 3):
-    raise SystemExit('Legacy port already has a listener; inspect it first.')
+    pid = subprocess.check_output(['systemctl', 'show', 'usage-server', '--property=MainPID'], text=True).strip().partition('=')[2]
+    owners = subprocess.check_output(['ss', '-lntp', 'sport = :17890'], text=True)
+    if previous != expected or pid == '0' or ('pid=' + pid + ',') not in owners:
+        raise SystemExit('Legacy port belongs to an unverified listener; inspect it first.')
 backup = root / 'releases' / datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 backup.mkdir(parents=True)
 shutil.copytree(root / 'src', backup / 'src')
@@ -23,17 +31,20 @@ shutil.copytree(release / 'src', root / 'src.next')
 (root / 'src').replace(backup / 'active-src')
 (root / 'src.next').replace(root / 'src')
 shutil.copy2(release / 'package.json', root / 'package.json')
-dropin = pathlib.Path('/etc/systemd/system/usage-server.service.d/sub2agent-alias.conf')
 dropin.parent.mkdir(parents=True, exist_ok=True)
-assert not dropin.exists(), 'Existing alias configuration must be reviewed first'
-dropin.write_text('[Service]\nEnvironment=USAGE_SERVER_ALIAS_PORT=17890\n')
+if previous is not None:
+    (backup / 'alias.conf').write_text(previous)
+dropin.write_text(expected)
 subprocess.run(['systemctl', 'daemon-reload'], check=True)
-subprocess.run(['systemctl', 'restart', 'usage-server'], check=True)
+restarted = subprocess.run(['systemctl', 'restart', 'usage-server']).returncode == 0
 ok = False
-for _ in range(15):
+for _ in range(15 if restarted else 0):
     try:
-        with urllib.request.urlopen('http://127.0.0.1:17890/healthz', timeout=2) as response:
-            ok = 'sub2agent-usage/3' in json.load(response)['usage_schemas']
+        health = []
+        for port in (17890, 17891):
+            with urllib.request.urlopen('http://127.0.0.1:' + str(port) + '/healthz', timeout=2) as response:
+                health.append('sub2agent-usage/3' in json.load(response)['usage_schemas'])
+        ok = all(health)
         if ok:
             break
     except (OSError, ValueError, KeyError):
@@ -44,7 +55,10 @@ if not ok:
     (root / 'src').replace(backup / 'failed-src')
     (backup / 'active-src').replace(root / 'src')
     shutil.copy2(backup / 'package.json', root / 'package.json')
-    dropin.unlink()
+    if previous is None:
+        dropin.unlink()
+    else:
+        dropin.write_text(previous)
     subprocess.run(['systemctl', 'daemon-reload'], check=True)
     subprocess.run(['systemctl', 'start', 'usage-server'], check=True)
     raise SystemExit('Health verification failed; original application restored.')

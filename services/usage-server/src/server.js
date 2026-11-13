@@ -372,6 +372,7 @@ function createUsageServer(options = {}) {
       });
       return;
     }
+    if(pathname==='/usage/routing-catalog'&&req.method==='GET'){sendJson(res,200,billing.routing());return;}
     if(pathname==='/usage/aggregation-rules'&&req.method==='GET'){sendJson(res,200,billing.rules());return;}
     if(pathname==='/admin/billing-policy'){
       if(!authorizeAdmin(req)){sendJson(res,adminToken?401:403,{error:'unauthorized'});return;}

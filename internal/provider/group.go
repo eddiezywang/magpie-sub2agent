@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/catalog"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/settings"
 )
@@ -201,8 +202,11 @@ type Group struct {
 	// which key it is for, why it is ordered so): one line, shown under
 	// its name on the Routing page and by magpie group, never sent to an
 	// agent or a vendor. Empty shows nothing (CleanNote).
-	Note    string   `json:"note,omitempty"`
-	Members []string `json:"members"` // "provider/model[:effort]" or "group/<id>", in order (see MemberEffort)
+	// TemplateKind marks an internal template that follows current provider
+	// discovery and server routing scores. Manual groups have no marker.
+	TemplateKind string   `json:"templateKind,omitempty"`
+	Note         string   `json:"note,omitempty"`
+	Members      []string `json:"members"` // "provider/model[:effort]" or "group/<id>", in order (see MemberEffort)
 	// Former are the ids it had before a rename (RenameGroup), newest
 	// last: a request still asking group/<old> is routed to it, until a
 	// group takes that id for its own (xinvxueyuan on Discord).
@@ -588,6 +592,14 @@ func buildGroupsIn(entries []Entry) []Group {
 		found = foundGroups(entries)
 	}
 	for _, g := range f.Groups {
+		if distribution.Internal && g.TemplateKind != "" {
+			t := templateOf(g.TemplateKind, templateModelsFrom(entries), nil)
+			if t.Why == "" {
+				g.Members, g.Rules, g.Classifier, g.Routing = t.Group.Members, t.Group.Rules, t.Group.Classifier, t.Group.Routing
+				g.Placed = nil
+				g.Off = nil
+			}
+		}
 		if g.Hidden {
 			hidden[g.ID] = true
 			continue
@@ -1788,6 +1800,9 @@ func CleanNote(s string) string {
 // SaveGroup adds or replaces a group of the user's. Changing one magpie
 // found makes it the user's.
 func SaveGroup(g Group) error {
+	// An explicit edit takes ownership of a managed template. AddTemplate
+	// marks a fresh group after this shared save succeeds.
+	g.TemplateKind = ""
 	g = g.own() // cleaned below in place: the caller's lists stay as they were
 	g.canonicalRefs()
 	g.ID = strings.ToLower(strings.TrimSpace(g.ID))

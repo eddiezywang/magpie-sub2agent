@@ -18,6 +18,7 @@ function validate(raw){
   const k=JSON.stringify([r.provider,r.model,r.service_tier||'']);if(seen.has(k))throw new Error('Duplicate policy model');seen.add(k);
   if(r.above.some((n,i)=>!Number.isSafeInteger(n)||n<=0||(i>0&&n<=r.above[i-1])))throw new Error('Invalid context boundaries');
   if(r.coefficient!==undefined&&(!Number.isFinite(r.coefficient)||r.coefficient<0))throw new Error('Invalid coefficient');
+  if(r.routing_score!==undefined&&(!Number.isFinite(r.routing_score)||r.routing_score<0))throw new Error('Invalid routing score');
   if(r.currency&&!['POINTS','PLAN_TOKENS','USD'].includes(r.currency))throw new Error('Invalid currency');
   if(r.valid_until&&!Number.isFinite(Date.parse(r.valid_until)))throw new Error('Invalid promotion end');
   if(r.weekday_afternoon_factor!==undefined&&(!Number.isFinite(r.weekday_afternoon_factor)||r.weekday_afternoon_factor<0))throw new Error('Invalid afternoon factor');
@@ -59,6 +60,6 @@ function createBillingPolicy({dataDir}){
   if(r.coefficient!==undefined)return {priced:true,currency:r.currency,amount:total*r.coefficient*factor,revision:current.revision,factor};
   return {priced:false,reason:'missing_rate'};
  }
- return {snapshot,set,rules,charge};
+ return {snapshot,set,rules,charge,routing:()=>({revision:current.revision,expires_at:new Date(Date.now()+86400000).toISOString(),models:current.models.filter(r=>r.coefficient!==undefined).map(r=>({provider:r.provider,model:r.model,score:r.routing_score??r.coefficient,valid_until:r.valid_until||undefined}))})};
 }
 module.exports={createBillingPolicy,canonical,providerMatches,validate};

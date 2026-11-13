@@ -50,6 +50,11 @@ test('real HTTP accepts explicit IDs, preserves old telemetry and generates weig
  const post=async(body,url='/usage/events')=>{const r=await fetch(base+url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});return {status:r.status,body:await r.json()};};
  assert.deepEqual((await fetch(base+'/healthz').then(r=>r.json())).usage_schemas,[SCHEMA]);
  const rules=await fetch(base+'/usage/aggregation-rules').then(r=>r.json());assert.ok(rules.models.length);
+ const routing=await fetch(base+'/usage/routing-catalog').then(r=>r.json());
+ assert.ok(Date.parse(routing.expires_at)>Date.now());
+ assert.equal(routing.models.find(r=>r.model==='hy4free').score,0);
+ assert.equal(routing.models.find(r=>r.model==='deepseek-v4-pro-maas').score,8.5);
+ assert.ok(routing.models.every(r=>!('currency' in r)&&!('weekday_afternoon_factor' in r)));
  const payload={schema:SCHEMA,...identity,summaries:[summary()]};
  assert.deepEqual((await post(payload)).body.accepted_ids,['fixture-summary']);
  assert.deepEqual((await post(payload)).body.duplicate_ids,['fixture-summary']);

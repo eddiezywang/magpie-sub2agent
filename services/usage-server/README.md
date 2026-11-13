@@ -33,3 +33,9 @@ Unknown/unclassified models remain explicitly unpriced. Pricing is by completion
 minute. Per-request details/quantiles cannot be reconstructed from these sums.
 
 Run `node --test test/summary.test.js` with an isolated temporary directory.
+
+`GET /usage/routing-catalog` publishes only relative routing scores with a
+24-hour document lifetime and optional promotion expiry. Scores default to
+policy coefficients and may use `routing_score` to express a different relative
+selection weight. This is separate from billed currency and time-of-day billing.
+The client refreshes this cache without exposing the infrastructure address.
