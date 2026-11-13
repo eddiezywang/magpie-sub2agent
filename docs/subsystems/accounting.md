@@ -100,6 +100,9 @@ GLM plan accounting factors. POINTS, PLAN_TOKENS and USD are separate currencies
 no coefficient is presented as a dollar price. Unknown models, missing context
 classification and changed context boundaries remain unpriced. Normal reports
 include a billing breakdown as well as their existing JSON/SVG/PNG shape.
+Receipt images identify the username and show unpriced usage as pending pricing,
+never as zero dollars. Points and plan-token amounts retain their own units;
+mixed currencies are itemized, not summed. These usage reports are not settlement invoices.
 Admin policy edits require the existing admin Bearer token. Clients only receive
 classification boundaries, with exact/trailing-wildcard deployment matching;
 they contain no billing amounts or quota-multiplication rule.

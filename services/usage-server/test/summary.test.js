@@ -6,6 +6,17 @@ const assert=require('node:assert/strict');const fs=require('node:fs');const os=
 const http=require('node:http');
 const fetch=(url,options={})=>new Promise((resolve,reject)=>{const req=http.request(url,{method:options.method||'GET',headers:options.headers},res=>{let body='';res.setEncoding('utf8');res.on('data',s=>body+=s);res.on('end',()=>resolve({status:res.statusCode,text:async()=>body,json:async()=>JSON.parse(body)}));});req.on('error',reject);req.end(options.body);});
 const {createSummaryStore,SCHEMA,counters}=require('../src/summary-store');
+const {renderReportCardSvg}=require('../src/card');
+
+test('receipt distinguishes unpriced usage, plan tokens and points from zero USD',()=>{
+ const base={user:{name:'fixture-user'},period:{type:'daily',start:'2026-11-13',end:'2026-11-13',generated_at:'2026-11-13T12:00:00Z'},totals:{requests:2,input_tokens:100,output_tokens:10,cost_usd:0,unpriced_requests:2},stats:{},by_agent_model:[]};
+ const render=(amounts,pending)=>renderReportCardSvg({...base,billing:{amounts_by_currency:amounts,unpriced_attempts:pending}}).replace(/<[^>]*>/g,'');
+ const missing=render({},2);assert.match(missing,/fixture-user/);assert.match(missing,/待定价/);assert.match(missing,/未定价不代表免费/);assert.doesNotMatch(missing,/\$0/);
+ const plan=render({PLAN_TOKENS:110},0);assert.match(plan,/计划折算 token/);assert.doesNotMatch(plan,/\$0/);
+ const points=render({POINTS:220},0);assert.match(points,/积分/);assert.doesNotMatch(points,/\$0/);
+ const mixed=render({POINTS:220,PLAN_TOKENS:110},1);assert.match(mixed,/分项统计/);assert.match(mixed,/含待定价用量/);assert.doesNotMatch(mixed,/\$0/);
+ const free=render({USD:0},0);assert.match(free,/\$0/);assert.doesNotMatch(free,/待定价/);
+});
 const {createBillingPolicy}=require('../src/billing-policy');
 const {createUsageServer}=require('../src/server');
 const fixed=()=>new Date('2026-11-13T08:20:00Z');

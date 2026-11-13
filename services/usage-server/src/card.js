@@ -222,6 +222,12 @@ function receipt(report) {
   const errors = day ? day.errors : totals.error;
   const cost = day ? day.cost : totals.cost_usd;
   const unpriced = day ? day.unpriced : totals.unpriced_requests;
+  const billing = report.billing;
+  const amounts = Object.entries(billing?.amounts_by_currency || {});
+  const pending = billing?.unpriced_attempts ?? unpriced ?? 0;
+  const unitName = unit => unit === 'POINTS' ? '积分' : unit === 'PLAN_TOKENS' ? '计划折算 token' : 'USD';
+  const amountText = ([unit, n]) => unit === 'USD' ? money(n) : `${count(n)} ${unitName(unit)}`;
+  const noDollarBreakdown = !!billing && (amounts.length !== 1 || amounts[0][0] !== 'USD');
 
   const dateLabel = day
     ? (weekly && day.from && day.date ? `${cnDate(day.from)} – ${cnDate(day.date)}` : cnDate(day.date))
@@ -245,11 +251,11 @@ function receipt(report) {
     return {
       name: upper(agentId === '' || agentId === 'unknown' ? '未标明 AGENT' : (day ? g.name : agentId)),
       icon: day ? (g.icon === 'generic' ? '' : g.icon) : (g.icon || ''),
-      value: money(day ? g.cost : g.cost_usd),
+      value: noDollarBreakdown ? '—' : money(day ? g.cost : g.cost_usd),
       models: models.map((m) => ({
         name: upper(day ? m.model : m.model),
         icon: day ? (m.icon || '') : (m.icon || ''),
-        value: !day && m.priced === false ? '未配价' : money(day ? m.cost : m.cost_usd),
+        value: noDollarBreakdown ? '—' : !day && m.priced === false ? '未配价' : money(day ? m.cost : m.cost_usd),
       })),
       more: hidden ? `还有 ${hidden} 个` : '',
     };
@@ -274,7 +280,7 @@ function receipt(report) {
       ? day.days.filter((d) => d.date >= day.from && d.date <= day.date && d.calls > 0).length
       : (stats.active_days ?? 0);
     statRows.push({ label: '活跃天数', value: `${had} / 7` });
-    statRows.push({ label: '活跃日均', value: money(day ? (had ? cost / had : 0) : stats.avg_active_day) });
+    statRows.push({ label: '活跃日均', value: noDollarBreakdown ? '—' : money(day ? (had ? cost / had : 0) : stats.avg_active_day) });
   } else {
     statRows.push({ label: '对比日均', value: multiple(vsRatio) });
   }
@@ -285,12 +291,13 @@ function receipt(report) {
     title: weekly ? '每周 AI 账单' : '每日 AI 账单',
     tagline: '经 sub2agent 路由',
     head: [
+      { label: '用户', value: report.user?.name || report.user?.id || '未标明用户' },
       { label: weekly ? '区间' : '日期', value: dateLabel },
       { label: '开具', value: cnDateTime(period.generated_at) },
     ],
-    totalLabel: 'API 总费用',
-    total: money(cost),
-    totalNote: report.billing ? Object.entries(report.billing.amounts_by_currency).map(([unit,n])=>`${count(n)} ${unit==='POINTS'?'积分':unit==='PLAN_TOKENS'?'计划折算 token':'USD'}`).join(' · ') || '部分用量暂未定价' : '按 API 价格折算 · 非发票',
+    totalLabel: billing ? '用量折算' : 'API 总费用',
+    total: billing ? amounts.length === 1 ? amountText(amounts[0]) : amounts.length > 1 ? '分项统计' : pending > 0 ? '待定价' : '无已计价用量' : money(cost),
+    totalNote: billing ? (amounts.map(amountText).join(' · ') || '未定价不代表免费') + (pending > 0 ? ' · 含待定价用量' : '') : '按 API 价格折算 · 非发票',
     stats: statRows,
     agentHead: ['AGENT / 模型', '费用'],
     agents: shown,
@@ -301,13 +308,13 @@ function receipt(report) {
       { label: '输出', value: count(day ? day.output : totals.output_tokens) },
       { label: '缓存命中率', value: percent(hit) },
     ],
-    note: (unpriced ?? 0) > 0 ? `${unpriced} 次请求没有价格` : '',
+    note: pending > 0 ? `${pending} 次${billing ? '调用尝试待定价' : '请求没有价格'}` : '',
     empty: (calls ?? 0) === 0 ? (weekly ? '这段时间没有调用。' : '这一天没有调用。') : '',
     footer: [
       ['用量账单由 ', 'sub2agent', ' 生成'],
       ['仅采集 token 数值与模型名 · 不含对话内容'],
     ],
-    credit: '设计灵感来自 usemagpie.ai',
+    credit: '用量统计仅供参考 · 非结算凭证',
   };
 }
 
