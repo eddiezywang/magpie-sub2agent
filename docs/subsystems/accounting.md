@@ -97,12 +97,23 @@ unknown usernames never merge devices.
 `billing-policy.json` on the server owns immutable revisions, context rules,
 WorkBuddy MaaS point coefficients, promotion expiry and China weekday 14:00–18:00
 GLM plan accounting factors. POINTS, PLAN_TOKENS and USD are separate currencies;
-no coefficient is presented as a dollar price. Unknown models, missing context
-classification and changed context boundaries remain unpriced. Normal reports
+no coefficient is presented as a dollar price. Flat rates require no context
+classification; request-size tiered minute summaries without recoverable context
+remain unpriced. API-equivalent costs use a server-side snapshot exported through
+the desktop's `provider.MakerPrice`, independently of enterprise point accounting.
+Legacy provider IDs do not prevent model-name pricing. Exact model overrides take
+precedence over recognized deployment suffix aliases; arbitrary prefix matches
+are not accepted. Administrator prices take precedence over the catalog snapshot.
+Normal reports
 include a billing breakdown as well as their existing JSON/SVG/PNG shape.
 Receipt images identify the username and show unpriced usage as pending pricing,
 never as zero dollars. Points and plan-token amounts retain their own units;
-mixed currencies are itemized, not summed. These usage reports are not settlement invoices.
+mixed currencies are itemized, not summed. The primary receipt shows API-equivalent
+CNY at the dated server-maintained `report-currency.json` exchange rate. Its
+authenticated `/admin/report-currency` API updates that reference. Original USD
+cost fields and enterprise POINTS/PLAN_TOKENS remain separate. These usage reports
+are not settlement invoices. The original receipt fonts are JetBrains Mono and
+Noto Sans CJK SC; font files stay in server assets, outside the desktop binary.
 Admin policy edits require the existing admin Bearer token. Clients only receive
 classification boundaries, with exact/trailing-wildcard deployment matching;
 they contain no billing amounts or quota-multiplication rule.

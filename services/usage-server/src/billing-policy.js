@@ -26,7 +26,7 @@ function validate(raw){
  }
  return JSON.parse(JSON.stringify(raw));
 }
-function createBillingPolicy({dataDir}){
+function createBillingPolicy({dataDir,listPrice}){
  const dir=path.join(dataDir,'billing-policies');fs.mkdirSync(dir,{recursive:true,mode:0o700});
  const file=path.join(dataDir,'billing-policy.json');
  const revisionFile=revision=>path.join(dir,crypto.createHash('sha256').update(revision).digest('hex')+'.json');
@@ -43,19 +43,25 @@ function createBillingPolicy({dataDir}){
  function match(policy,provider,model,tier){return policy.models.find(r=>providerMatches(r.provider,provider)&&(r.model.endsWith('*')?canonical(model).startsWith(canonical(r.model.slice(0,-1))):canonical(r.model)===canonical(model))&&(r.service_tier||'')===(tier||''));}
  function charge(g,minute){
   const at=new Date(minute);const r=match(current,g.provider,g.model,g.service_tier);
-  if(!r||r.valid_until&&at>=new Date(r.valid_until))return {priced:false,reason:'no_active_price'};
+  if(!r||r.valid_until&&at>=new Date(r.valid_until)){
+   const price=listPrice?.(g,minute);
+   return price?.priced ? {priced:true,currency:'USD',amount:price.cost,revision:current.revision,basis:'model_list_price'} : {priced:false,reason:'no_active_price'};
+  }
+  // A flat per-token rate needs no per-request context classification.
+  if(r.above.length){
   if(g.context_tier==='unclassified'||!g.rules_revision)return {priced:false,reason:'unclassified'};
   const oldFile=revisionFile(g.rules_revision);if(!fs.existsSync(oldFile))return {priced:false,reason:'unknown_rules_revision'};
   const old=match(JSON.parse(fs.readFileSync(oldFile,'utf8')),g.provider,g.model,g.service_tier);
   if(!old||JSON.stringify(old.above)!==JSON.stringify(r.above))return {priced:false,reason:'context_rules_changed'};
   if(g.context_tier!=='base' && !r.above.includes(Number(g.context_tier.slice(6))))return {priced:false,reason:'unknown_context_tier'};
+  }
   let factor=1;
   // Billing rule only: Monday-Friday 14:00 <= China time <18:00. It
   // neither changes remaining quota nor invents a vendor reset response.
   const china=new Date(at.getTime()+8*3600000);const weekday=china.getUTCDay(),hour=china.getUTCHours();
   if(r.weekday_afternoon_factor!==undefined&&weekday>=1&&weekday<=5&&hour>=14&&hour<18)factor=r.weekday_afternoon_factor;
   const total=g.input_tokens+g.output_tokens+g.cache_read_tokens+g.cache_write_5m_tokens+g.cache_write_1h_tokens;
-  const selected=g.context_tier==='base'?r.usd_rates:r.tiers?.[g.context_tier];
+  const selected=!r.above.length||g.context_tier==='base'?r.usd_rates:r.tiers?.[g.context_tier];
   if(r.currency==='USD'&&selected){const amount=(g.input_tokens*selected.input+g.output_tokens*selected.output+g.cache_read_tokens*selected.cache_read+g.cache_write_5m_tokens*selected.cache_write_5m+g.cache_write_1h_tokens*selected.cache_write_1h)/1e6*factor;return {priced:true,currency:'USD',amount,revision:current.revision,factor};}
   if(r.coefficient!==undefined)return {priced:true,currency:r.currency,amount:total*r.coefficient*factor,revision:current.revision,factor};
   return {priced:false,reason:'missing_rate'};

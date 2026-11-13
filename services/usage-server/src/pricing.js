@@ -8,11 +8,12 @@
 // Seed prices below are Anthropic first-party list prices (verified against the
 // claude-api reference, 2026-11). cache_write seeds follow Anthropic's 1.25x
 // input convention; explicit cache_read prices are used where published.
-// Non-Claude models (e.g. glm-*) ship unpriced: aggregation marks them
-// `priced: false` until an admin sets prices via /admin/pricing.
+// The offline catalog snapshot is exported by the desktop's MakerPrice lookup.
+// Administrator prices override it, including explicit deployment variants.
 
 const fs = require('node:fs');
 const path = require('node:path');
+const catalog = require('./catalog-prices.json');
 
 const PRICING_FILE = 'pricing.json';
 const SCHEMA = 'sub2agent-pricing/1';
@@ -37,7 +38,11 @@ const SEED_PRICES = {
 
 function seedModels(nowIso) {
   const models = {};
+  for (const [name, price] of Object.entries(catalog.models)) {
+    models[name] = { ...price, updated_at: nowIso, source: 'catalog.MakerPrice' };
+  }
   for (const [name, [input, output, cacheRead, cacheWrite]] of Object.entries(SEED_PRICES)) {
+    if (models[name]) continue;
     models[name] = {
       input,
       output,
@@ -58,11 +63,25 @@ function normalizePriceEntry(entry) {
     if (!Number.isFinite(value) || value < 0) return null;
     price[key] = value;
   }
-  // Optional 1-hour cache-write rate (defaults to 1.6x the 5-minute rate).
+  // Optional 1-hour cache-write rate (Claude defaults to 2x input).
   if (entry.cache_write_1h !== undefined && entry.cache_write_1h !== null) {
     const value = Number(entry.cache_write_1h);
     if (!Number.isFinite(value) || value < 0) return null;
     price.cache_write_1h = value;
+  }
+  if (entry.tiers !== undefined) {
+    if (!Array.isArray(entry.tiers)) return null;
+    price.tiers = [];
+    for (const tier of entry.tiers) {
+      const normalized = normalizePriceEntry({...tier,tiers:undefined});
+      if (!normalized || !Number.isSafeInteger(tier.above) || tier.above <= 0) return null;
+      price.tiers.push({...normalized,above:tier.above});
+    }
+    price.tiers.sort((a,b)=>a.above-b.above);
+  }
+  if (entry.peak) {
+    if (!catalog.peak_days[entry.peak]) return null;
+    price.peak = entry.peak;
   }
   return price;
 }
@@ -73,6 +92,12 @@ function resolveModelKey(models, model) {
   if (models[model]) return model;
   const stripped = String(model).replace(/-\d{8}$/, '').replace(/-latest$/, '');
   if (stripped && stripped !== model && models[stripped]) return stripped;
+  const bare=String(model).trim().toLowerCase().split('/').pop();
+  const deployed=/^(glm-|deepseek-|minimax-|hy)/.test(bare)
+    ? bare.replace(/-maas(?:-[a-z0-9_.-]+)?$/,'').replace(/-zp(?:-openai)?$/,'') : bare;
+  for (const name of [bare,deployed,deployed.replace(/-\d{8}$/,'').replace(/-latest$/,'')]) {
+    if (models[name]) return name;
+  }
   return null;
 }
 
@@ -87,10 +112,6 @@ function resolveModelKey(models, model) {
  * and the remainder at `cache_write` (magpie usage.go CostSplit semantics).
  */
 function computeCost(table, model, tokens) {
-  if(tokens._summary){
-    const cost=table._summaryCharge?.(tokens._summary,tokens.ts);
-    return {priced:!!cost?.priced&&cost.currency==='USD',cost:cost?.currency==='USD'?cost.amount:0,virtual:cost?.currency==='USD'?cost.amount:0,pricing:null,modelKey:model};
-  }
   const input = Math.max(0, Number(tokens.input_tokens) || 0);
   const output = Math.max(0, Number(tokens.output_tokens) || 0);
   const cacheRead = Math.max(0, Number(tokens.cache_read_tokens) || 0);
@@ -99,7 +120,23 @@ function computeCost(table, model, tokens) {
   if (!key) {
     return { priced: false, cost: 0, virtual: 0, pricing: null, modelKey: null };
   }
-  const price = table.models[key];
+  let price = table.models[key];
+  const tiers = price.tiers || [];
+  if (tokens._summary && tiers.length) {
+    // A minute total cannot reveal the input size of its individual calls.
+    // Never apply a request-size tier to the sum of the minute's tokens.
+    return {priced:false,cost:0,virtual:0,pricing:null,modelKey:key,reason:'context_classification_required'};
+  }
+  if (!tokens._summary) {
+    for (const tier of tiers) if(input+cacheRead+cacheWrite>tier.above) price={...price,...tier};
+  }
+  let factor=1;
+  const at=new Date(tokens.ts);
+  if (price.peak && Number.isFinite(at.getTime())) {
+    const hour=at.getUTCHours();
+    const inHours=price.peak==='ollama' ? hour>=12&&hour<18 : hour>=1&&hour<4||hour>=6&&hour<10;
+    if(inHours && catalog.peak_days[price.peak].includes(at.toISOString().slice(0,10)))factor=2;
+  }
   const perMillion = (tokens, rate) => (tokens * rate) / 1_000_000;
   const write1h = Math.min(cacheWrite, Math.max(0, Number(tokens.cache_write_1h_tokens) || 0));
   const write5m = cacheWrite - write1h;
@@ -107,17 +144,17 @@ function computeCost(table, model, tokens) {
   const ownCost = tokens.own_cost_usd;
   const cost = Number.isFinite(Number(ownCost)) && ownCost !== null && ownCost !== undefined
     ? Math.max(0, Number(ownCost))
-    : perMillion(input, price.input) +
+    : factor * (perMillion(input, price.input) +
       perMillion(output, price.output) +
       perMillion(cacheRead, price.cache_read) +
       perMillion(write5m, price.cache_write) +
       perMillion(write1h, Number.isFinite(Number(price.cache_write_1h))
         ? Number(price.cache_write_1h)
-        : price.cache_write * 1.6); // 2x/1.25x = 1.6 when only one rate is given
+        : /claude/i.test(key) && price.cache_write>0 ? 2*price.input : price.cache_write));
   const virtual =
     perMillion(input + cacheRead + cacheWrite, price.input) +
     perMillion(output, price.output);
-  return { priced: true, cost, virtual, pricing: price, modelKey: key };
+  return { priced: true, cost, virtual:virtual*factor, pricing: price, modelKey: key };
 }
 
 function createPricingStore({ dataDir, now = () => new Date() } = {}) {
@@ -133,9 +170,10 @@ function createPricingStore({ dataDir, now = () => new Date() } = {}) {
           schema: raw.schema || SCHEMA,
           currency: raw.currency || 'USD',
           updated_at: raw.updated_at || now().toISOString(),
-          models: {},
+          models: seedModels(now().toISOString()),
         };
         for (const [name, entry] of Object.entries(raw.models)) {
+          if (catalog.models[name] && ['seed','catalog.MakerPrice'].includes(entry.source)) continue;
           const price = normalizePriceEntry(entry);
           if (price) {
             table.models[name] = {

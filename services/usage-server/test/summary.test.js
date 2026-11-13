@@ -8,6 +8,7 @@ const fetch=(url,options={})=>new Promise((resolve,reject)=>{const req=http.requ
 const {createSummaryStore,SCHEMA,counters}=require('../src/summary-store');
 const {renderReportCardSvg}=require('../src/card');
 const {hitRate}=require('../src/magpie-day');
+const {createPricingStore,computeCost}=require('../src/pricing');
 
 test('cache hit rate accepts the report view with an omitted zero unknown counter',()=>{
  const view={input:100,cacheRead:300,cacheWrite:0};
@@ -56,7 +57,7 @@ test('server pricing keeps points separate, applies China weekday time and promo
  assert.equal(billing.charge(plan,'2026-11-13T06:00:00Z').amount,910);
  assert.equal(billing.charge(plan,'2026-11-13T10:00:00Z').amount,1820);
  assert.equal(billing.charge(plan,'2026-11-14T06:00:00Z').amount,1820);
- assert.equal(billing.charge({...g,context_tier:'unclassified'},summary().minute).priced,false);
+ assert.equal(billing.charge({...g,context_tier:'unclassified',rules_revision:''},summary().minute).amount,1820);
  let next=billing.snapshot();next.models[0].valid_until='2026-11-14T00:00:00Z';assert.throws(()=>billing.set(next));next.revision='policy-2';billing.set(next);
  assert.equal(billing.charge({...g,model:'hy4free'},'2026-11-13T08:00:00Z').amount,0);
  assert.equal(billing.charge({...g,model:'hy4free'},'2026-11-14T00:00:00Z').priced,false);
@@ -81,13 +82,57 @@ test('real HTTP accepts explicit IDs, preserves old telemetry and generates weig
  assert.equal((await post({event:'desktop_app_start',...identity,timestamp:fixed().toISOString()},'/events')).status,200);
  const report=await fetch(base+'/reports/fixture-user/daily.json?date=2026-11-13').then(r=>r.json());
  assert.equal(report.totals.requests,196);assert.equal(report.totals.input_tokens,2000);assert.equal(report.day.calls,196);
- assert.equal(report.billing.amounts_by_currency.POINTS,3640);assert.equal(report.totals.cost_usd,0);
+ assert.equal(report.billing.amounts_by_currency.POINTS,3640);assert.ok(report.totals.cost_usd>0);
+ assert.equal(report.valuation.currency,'CNY');assert.equal(report.valuation.unpriced_attempts,0);
  assert.equal(report.by_model[0].requests,196);assert.equal(report.day.ttftMs,50000);assert.equal(report.day.timed,200);
  const svg=await fetch(base+'/reports/fixture-user/daily.svg?date=2026-11-13');assert.equal(svg.status,200);const svgText=await svg.text();assert.match(svgText,/<svg/);assert.ok(!svgText.includes('NaN%'),'cache rate must be numeric or unavailable');
  const weekly=await fetch(base+'/reports/fixture-user/weekly.json?date=2026-11-13').then(r=>r.json());assert.equal(weekly.totals.requests,196);
  const bad=summary('bad');bad.groups[0].input_tokens=-1;assert.deepEqual((await post({...payload,summaries:[bad]})).body.rejected_ids,['bad']);
  assert.equal((await post({...payload,summaries:[summary(),summary()]})).status,400);
  assert.equal((await fetch(base+'/admin/billing-policy')).status,401);
+});
+
+test('legacy minute totals use maker prices by exact model and managed deployment suffix, without a context revision',t=>{
+ const dataDir=temp(t);const prices=createPricingStore({dataDir,now:fixed});
+ const g={...group(),provider:'legacy-fixture',model:'glm-5.3-flash-zp',context_tier:'unclassified',rules_revision:''};
+ const tokens={...g,_summary:g,cache_write_tokens:70,ts:summary().minute};
+ const expected=(1000*0.11952+500*0.41831+250*0.03436)/1e6;
+ for(const model of ['glm-5.3-flash-zp','glm-5.3-flash-zp-openai','sub2agent-tigcodingplan/glm-5.3-flash-zp','glm-5.3-flash-maas-fixture-user']){
+  const cost=prices.costFor(model,tokens);assert.equal(cost.priced,true,model);assert.equal(cost.cost,expected,model);
+ }
+ assert.equal(prices.costFor('glm-5.3-flash-lite-zp',tokens).priced,false);
+ const billing=createBillingPolicy({dataDir,listPrice:(g,minute)=>prices.costFor(g.model,{...g,_summary:g,ts:minute,cache_write_tokens:70})});
+ assert.equal(billing.charge(g,summary().minute).amount,expected);
+ prices.setModels({'glm-5.3-flash-zp':{input:2,output:3,cache_read:1,cache_write:0}});
+ assert.equal(prices.costFor(g.model,tokens).cost,(1000*2+500*3+250)/1e6);
+ assert.equal(createPricingStore({dataDir,now:fixed}).costFor(g.model,tokens).cost,(1000*2+500*3+250)/1e6);
+});
+
+test('maker pricing preserves cache accounting and never applies request-size tiers to a minute sum',()=>{
+ const table={models:{'fixture-model':{input:1,output:2,cache_read:.1,cache_write:1.25,tiers:[{above:200,input:2,output:4,cache_read:.2,cache_write:2.5}]}}};
+ const tokens={input_tokens:100,output_tokens:50,cache_read_tokens:150,cache_write_tokens:0,reasoning_tokens:40};
+ assert.ok(Math.abs(computeCost(table,'fixture-model',tokens).cost-(100*2+50*4+150*.2)/1e6)<1e-12);
+ assert.equal(computeCost(table,'fixture-model',{...tokens,_summary:{}}).priced,false);
+ const claude={models:{'claude-fixture':{input:3,output:15,cache_read:.3,cache_write:3.75}}};
+ assert.ok(Math.abs(computeCost(claude,'claude-fixture',{input_tokens:0,output_tokens:0,cache_read_tokens:0,cache_write_tokens:100,cache_write_1h_tokens:40}).cost-(60*3.75+40*6)/1e6)<1e-12);
+});
+
+test('HTTP legacy receipt shows CNY model valuation and keeps the exchange rate server-maintained',async t=>{
+ const dataDir=temp(t);const app=createUsageServer({host:'127.0.0.1',port:0,dataDir,now:fixed,adminToken:'fixture-admin'});
+ const port=await app.start();t.after(()=>app.stop());const base='http://127.0.0.1:'+port;
+ const g={...group(),provider:'legacy-fixture',model:'glm-5.3-flash-zp',context_tier:'unclassified',rules_revision:''};
+ const post=await fetch(base+'/usage/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({schema:SCHEMA,...identity,summaries:[summary('legacy',g)]})});assert.equal(post.status,200);
+ const report=await fetch(base+'/reports/fixture-user/daily.json?date=2026-11-13').then(r=>r.json());
+ assert.ok(report.billing.amounts_by_currency.USD>0);assert.equal(report.billing.unpriced_attempts,0);
+ assert.equal(report.valuation.currency,'CNY');assert.ok(report.valuation.amount>0);assert.equal(report.totals.unpriced_requests,0);
+ const svg=(await fetch(base+'/reports/fixture-user/daily.svg?date=2026-11-13').then(r=>r.text())).replace(/<[^>]*>/g,'');
+ assert.ok(svg.includes('¥'));assert.ok(svg.includes('人民币'));assert.ok(!svg.includes('待定价'));assert.ok(!svg.includes('$'));
+ const url=base+'/admin/report-currency';assert.equal((await fetch(url)).status,401);
+ const update=body=>fetch(url,{method:'PUT',headers:{authorization:'Bearer fixture-admin','content-type':'application/json'},body:JSON.stringify(body)});
+ assert.equal((await update({currency:'CNY',usd_to_cny:0,as_of:'2026-11-13',source:'fixture'})).status,400);
+ assert.equal((await update({currency:'CNY',usd_to_cny:7,as_of:'2026-11-13',source:'fixture'})).status,200);
+ assert.equal(JSON.parse(fs.readFileSync(path.join(dataDir,'report-currency.json'),'utf8')).usd_to_cny,7);
+ assert.equal((await fetch(base+'/reports/fixture-user/daily.json?date=2026-11-13').then(r=>r.json())).valuation.usd_to_cny,7);
 });
 
 test('additional listener shares summary deduplication and closes with the service',async t=>{

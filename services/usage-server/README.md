@@ -29,7 +29,9 @@ not dollar rates. GLM plan token accounting is halved on China weekdays 14:00–
 without changing gateway quota or 429 handling. Promotions support `valid_until`;
 no end date for hy4free was provided, so its server-side zero coefficient is an
 administrator-maintained current promotion, not a client permanent-free flag.
-Unknown/unclassified models remain explicitly unpriced. Pricing is by completion
+Flat-rate models are priced without context-classification metadata; unknown
+models and request-size tiered minute summaries remain explicitly unpriced when
+their individual request sizes cannot be recovered. Pricing is by completion
 minute. Per-request details/quantiles cannot be reconstructed from these sums.
 
 Run `node --test test/summary.test.js` with an isolated temporary directory.
@@ -39,3 +41,32 @@ Run `node --test test/summary.test.js` with an isolated temporary directory.
 policy coefficients and may use `routing_score` to express a different relative
 selection weight. This is separate from billed currency and time-of-day billing.
 The client refreshes this cache without exposing the infrastructure address.
+
+## Model list prices and CNY receipts
+
+Refresh `src/catalog-prices.json` from the exact bundled catalog and the desktop's
+existing `provider.MakerPrice` implementation (no network or live config):
+
+```
+go run -tags intranet,nogui ./services/usage-server/tools/export-catalog
+```
+
+Run this from the repository root. The snapshot records the source catalog hash.
+Prices are USD per million tokens. Server administrator overrides take precedence;
+old automatically seeded entries are refreshed from the catalog. Exact deployment
+prices win before `-zp`, `-zp-openai` and `-maas[-account]` alias resolution.
+Minute summaries from `legacy-*` providers use the same model prices. Reasoning
+tokens are already part of output; cached reads and cache-write TTLs retain their
+separate prices. Never select a request-size price tier from a minute's token sum.
+
+Report `valuation` is the API list-price equivalent in CNY; original USD fields
+and enterprise point/plan accounting are retained separately. The dated exchange
+rate is maintained in `report-currency.json`, exposed only through authenticated
+`GET/PUT /admin/report-currency`. The initial 2026-11-13 CFETS reference is
+6.7152 CNY/USD, not a live quote or actual charge. The receipt prints its date/rate.
+
+Keep the original JetBrains Mono fonts and install the OFL-licensed Noto Sans CJK
+SC Regular/Bold fonts under `assets/fonts` with their license. They are available
+from [the Noto CJK project](https://github.com/notofonts/noto-cjk/tree/main/Sans).
+`USAGE_SERVER_FONT_FILE` may name an additional font; a missing CJK font must be
+fixed by installing the intended font rather than redesigning the receipt.

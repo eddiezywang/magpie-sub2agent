@@ -31,6 +31,7 @@ const path = require('node:path');
 const { createUsageStore } = require('./store');
 const {SCHEMA: summarySchema,createSummaryStore,withSummaries}=require('./summary-store');
 const {createBillingPolicy}=require('./billing-policy');
+const {createReportCurrency}=require('./report-currency');
 const { createTelemetryStore, MAX_JSON_BYTES } = require('./telemetry-store');
 const { createDailyLogger } = require('./daily-logger');
 const { createPricingStore } = require('./pricing');
@@ -68,7 +69,10 @@ function createUsageServer(options = {}) {
   const legacyStore = createUsageStore({ dataDir, keepDays, now });
   const summaries = createSummaryStore({dataDir,keepDays,now});
   const store = withSummaries(legacyStore,summaries);
-  const billing = createBillingPolicy({dataDir});
+  const pricing = createPricingStore({ dataDir, now });
+  const reportCurrency = createReportCurrency({dataDir});
+  const listPrice=(g,minute)=>pricing.costFor(g.model,{...g,_summary:g,ts:minute,cache_write_tokens:g.cache_write_5m_tokens+g.cache_write_1h_tokens});
+  const billing = createBillingPolicy({dataDir,listPrice});
   const telemetry = createTelemetryStore({
     dataDir,
     keepDays: telemetryKeepDays,
@@ -81,8 +85,7 @@ function createUsageServer(options = {}) {
     now,
     echo: (process.env.USAGE_SERVER_LOG_LEVEL || process.env.TELEMETRY_LOG_LEVEL || '').toUpperCase() === 'DEBUG',
   });
-  const pricing = createPricingStore({ dataDir, now });
-  const aggregator = createAggregator({ store, pricing:{...pricing,get:()=>({...pricing.get(),_summaryCharge:billing.charge})}, now, telemetryStore: telemetry });
+  const aggregator = createAggregator({ store, pricing, now, telemetryStore: telemetry });
 
   function log(...args) {
     if (logger) logger(...args);
@@ -308,6 +311,8 @@ function createUsageServer(options = {}) {
     const amounts={};let unpricedAttempts=0;
     for(const event of grouped){const cost=billing.charge(event._summary,event.ts);if(cost.priced)amounts[cost.currency]=(amounts[cost.currency]||0)+cost.amount;else unpricedAttempts+=event._summary.attempts;}
     report.billing={revision:billing.snapshot().revision,amounts_by_currency:amounts,unpriced_attempts:unpricedAttempts,completion_minute:true};
+    const currency=reportCurrency.get();
+    report.valuation={...currency,amount:(report.day?.cost??report.totals.cost_usd)*currency.usd_to_cny,unpriced_attempts:report.totals.unpriced_requests,basis:'model_list_price',catalog_sha256:require('./catalog-prices.json').catalog_sha256};
     report.measurement={minute_summaries:grouped.length,per_request_details_available:false,outcomes:"attempts"};
     if (format.endsWith('.json')) {
       sendJson(res, 200, report);
@@ -374,6 +379,12 @@ function createUsageServer(options = {}) {
     }
     if(pathname==='/usage/routing-catalog'&&req.method==='GET'){sendJson(res,200,billing.routing());return;}
     if(pathname==='/usage/aggregation-rules'&&req.method==='GET'){sendJson(res,200,billing.rules());return;}
+    if(pathname==='/admin/report-currency'){
+      if(!authorizeAdmin(req)){sendJson(res,401,{error:'unauthorized'});return;}
+      if(req.method==='GET'){sendJson(res,200,reportCurrency.get());return;}
+      if(req.method==='PUT'){try{sendJson(res,200,reportCurrency.set(JSON.parse(await readBody(req))));}catch{sendJson(res,400,{error:'invalid_report_currency'});}return;}
+      sendJson(res,405,{error:'method_not_allowed'});return;
+    }
     if(pathname==='/admin/billing-policy'){
       if(!authorizeAdmin(req)){sendJson(res,adminToken?401:403,{error:'unauthorized'});return;}
       if(req.method==='GET'){sendJson(res,200,billing.snapshot());return;}
