@@ -29,6 +29,8 @@
 const http = require('node:http');
 const path = require('node:path');
 const { createUsageStore } = require('./store');
+const {SCHEMA: summarySchema,createSummaryStore,withSummaries}=require('./summary-store');
+const {createBillingPolicy}=require('./billing-policy');
 const { createTelemetryStore, MAX_JSON_BYTES } = require('./telemetry-store');
 const { createDailyLogger } = require('./daily-logger');
 const { createPricingStore } = require('./pricing');
@@ -63,7 +65,10 @@ function createUsageServer(options = {}) {
     logger = null,
   } = options;
 
-  const store = createUsageStore({ dataDir, keepDays, now });
+  const legacyStore = createUsageStore({ dataDir, keepDays, now });
+  const summaries = createSummaryStore({dataDir,keepDays,now});
+  const store = withSummaries(legacyStore,summaries);
+  const billing = createBillingPolicy({dataDir});
   const telemetry = createTelemetryStore({
     dataDir,
     keepDays: telemetryKeepDays,
@@ -77,7 +82,7 @@ function createUsageServer(options = {}) {
     echo: (process.env.USAGE_SERVER_LOG_LEVEL || process.env.TELEMETRY_LOG_LEVEL || '').toUpperCase() === 'DEBUG',
   });
   const pricing = createPricingStore({ dataDir, now });
-  const aggregator = createAggregator({ store, pricing, now, telemetryStore: telemetry });
+  const aggregator = createAggregator({ store, pricing:{...pricing,get:()=>({...pricing.get(),_summaryCharge:billing.charge})}, now, telemetryStore: telemetry });
 
   function log(...args) {
     if (logger) logger(...args);
@@ -159,6 +164,18 @@ function createUsageServer(options = {}) {
         sendJson(res, 400, { error: 'invalid_json' });
       }
       return;
+    }
+    if(payload.schema===summarySchema) {
+      if(!Array.isArray(payload.summaries)||!payload.summaries.length||payload.summaries.length>200){sendJson(res,400,{error:'invalid_summaries'});return;}
+      const ack={ok:true,schema:summarySchema,accepted_ids:[],duplicate_ids:[],rejected_ids:[]};
+      const seen=new Set();
+      if(payload.summaries.some(r=>!r||typeof r.id!=='string'||!r.id||seen.has(r.id)||!seen.add(r.id))){sendJson(res,400,{error:'invalid_summary_ids'});return;}
+      for(const row of payload.summaries){
+        const state=summaries.append(payload,row);
+        if(state==='failed'){sendJson(res,503,{ok:false,error:'summary_persistence_failed'});return;}
+        ack[{accepted:'accepted_ids',duplicate:'duplicate_ids',rejected:'rejected_ids'}[state]].push(row.id);
+      }
+      sendJson(res,200,ack);return;
     }
     const events = Array.isArray(payload.events) ? payload.events : null;
     if (!events) {
@@ -279,7 +296,7 @@ function createUsageServer(options = {}) {
       return;
     }
 
-    const report = daily
+    let report = daily
       ? aggregator.dailyReport(user, date)
       : aggregator.weeklyReport(user, date);
     if (report.error === 'invalid_date') {
@@ -287,6 +304,11 @@ function createUsageServer(options = {}) {
       return;
     }
 
+    const grouped=store.eventsForUser(user.key,stamps[0],stamps[stamps.length-1]).filter(e=>e._summary);
+    const amounts={};let unpricedAttempts=0;
+    for(const event of grouped){const cost=billing.charge(event._summary,event.ts);if(cost.priced)amounts[cost.currency]=(amounts[cost.currency]||0)+cost.amount;else unpricedAttempts+=event._summary.attempts;}
+    report.billing={revision:billing.snapshot().revision,amounts_by_currency:amounts,unpriced_attempts:unpricedAttempts,completion_minute:true};
+    report.measurement={minute_summaries:grouped.length,per_request_details_available:false,outcomes:"attempts"};
     if (format.endsWith('.json')) {
       sendJson(res, 200, report);
       return;
@@ -343,13 +365,21 @@ function createUsageServer(options = {}) {
     if (pathname === '/healthz' && req.method === 'GET') {
       sendJson(res, 200, {
         ok: true,
+        usage_schemas:[summarySchema],
         png_available: pngAvailable(),
         users: store.users().length,
         now: now().toISOString(),
       });
       return;
     }
-    if (pathname === '/usage/events' && req.method === 'POST') {
+    if(pathname==='/usage/aggregation-rules'&&req.method==='GET'){sendJson(res,200,billing.rules());return;}
+    if(pathname==='/admin/billing-policy'){
+      if(!authorizeAdmin(req)){sendJson(res,adminToken?401:403,{error:'unauthorized'});return;}
+      if(req.method==='GET'){sendJson(res,200,billing.snapshot());return;}
+      if(req.method==='PUT'){try{const next=JSON.parse(await readBody(req));sendJson(res,200,{ok:true,policy:billing.set(next)});}catch{sendJson(res,400,{error:'invalid_billing_policy'});}return;}
+      sendJson(res,405,{error:'method_not_allowed'});return;
+    }
+    if (pathname === '/usage/events'  && req.method === 'POST') {
       await handleIngest(req, res);
       return;
     }
@@ -382,11 +412,11 @@ function createUsageServer(options = {}) {
     start() {
       if (server) return Promise.resolve(server.address().port);
       // Each store owns its own retention window; all three rotate by day.
-      store.prune();
+      store.prune();summaries.prune();
       telemetry.prune();
       dailyLog.prune();
       pruneTimer = setInterval(() => {
-        store.prune();
+        store.prune();summaries.prune();
         telemetry.prune();
         dailyLog.prune();
       }, 6 * 60 * 60 * 1000);
@@ -423,7 +453,7 @@ function createUsageServer(options = {}) {
       return new Promise((resolve) => closing.close(() => resolve()));
     },
     // Exposed for tests/admin tooling.
-    _store: store,
+    _store: store,_summaries:summaries,_billing:billing,
     _pricing: pricing,
     _aggregator: aggregator,
   };

@@ -86,9 +86,24 @@ telemetry.json preserves installation identity, independently of other apps.
 accounting-status.json keeps internal queue counts, delivery failures, cached rule
 revision, memory groups and dropped-call counts without credentials or event bodies.
 
-Current implementation stage: client protocol, durable delivery and runtime
-integration. Server pricing, ingestion adapters and report endpoints still need
-the existing usage-server source; this client does not calculate server bills.
+Server implementation is tracked in `services/usage-server`. It accepts v3
+summaries with explicit per-ID durable acknowledgements and preserves the old
+telemetry/report endpoints. Summaries use append-only, fsynced daily JSONL;
+conflicting IDs are rejected, torn tails preserved, complete corrupt rows fail
+startup. Reports sum counter weights directly without recreating requests.
+Username queries aggregate devices; install-ID queries remain separate and
+unknown usernames never merge devices.
+
+`billing-policy.json` on the server owns immutable revisions, context rules,
+WorkBuddy MaaS point coefficients, promotion expiry and China weekday 14:00–18:00
+GLM plan accounting factors. POINTS, PLAN_TOKENS and USD are separate currencies;
+no coefficient is presented as a dollar price. Unknown models, missing context
+classification and changed context boundaries remain unpriced. Normal reports
+include a billing breakdown as well as their existing JSON/SVG/PNG shape.
+Admin policy edits require the existing admin Bearer token. Clients only receive
+classification boundaries, with exact/trailing-wildcard deployment matching;
+they contain no billing amounts or quota-multiplication rule.
+Deployment status and real production verification are recorded separately.
 Run `go test ./internal/accounting`. No tests reach a real telemetry endpoint.
 
 Migration design: [minute-summary contract](../proposals/minute-usage.md), which supersedes the per-request transport in the older [server billing proposal](../proposals/server-billing.md).

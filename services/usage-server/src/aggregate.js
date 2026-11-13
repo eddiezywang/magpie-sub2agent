@@ -57,10 +57,12 @@ function aggregateEvents(events, pricingTable) {
   const byAgentModel = new Map(); // agent -> (model -> row)
 
   for (const event of events) {
-    totals.requests += 1;
+    const weight=event._summary?.requests ?? 1;
+    totals.requests += weight;
     // Share magpie's status definition with the day feed so the legacy
     // aliases can never disagree with day.calls/errors/unpriced.
-    if (canceled(event)) totals.aborted += 1;
+    if(event._summary){totals.aborted+=event._summary.canceled;totals.error+=event._summary.failed;totals.ok+=event._summary.success;}
+    else if (canceled(event)) totals.aborted += 1;
     else if (failed(event)) totals.error += 1;
     else totals.ok += 1;
 
@@ -81,7 +83,7 @@ function aggregateEvents(events, pricingTable) {
     totals.virtual_cost_usd += cost.virtual;
     // usage.go: a call with no input AND no output is neither priced nor
     // unpriced. Align with magpie-day.addRecord's early return.
-    if (!cost.priced && event.input_tokens + event.output_tokens > 0) totals.unpriced_requests += 1;
+    if (!cost.priced && event.input_tokens + event.output_tokens > 0) totals.unpriced_requests += event._summary?.attempts ?? 1;
 
     const modelKey = event.model || 'unknown';
     let modelRow = byModel.get(modelKey);
@@ -100,7 +102,7 @@ function aggregateEvents(events, pricingTable) {
       };
       byModel.set(modelKey, modelRow);
     }
-    modelRow.requests += 1;
+    modelRow.requests += weight;
     modelRow.input_tokens += event.input_tokens;
     modelRow.output_tokens += event.output_tokens;
     modelRow.cache_read_tokens += event.cache_read_tokens;
@@ -116,7 +118,7 @@ function aggregateEvents(events, pricingTable) {
       agentRow = { agent: agentKey, requests: 0, cost_usd: 0 };
       byAgent.set(agentKey, agentRow);
     }
-    agentRow.requests += 1;
+    agentRow.requests += weight;
     agentRow.cost_usd += cost.cost;
 
     // Two-level agent → model breakdown for the receipt-style card.
@@ -130,7 +132,7 @@ function aggregateEvents(events, pricingTable) {
       pairRow = { model: modelKey, requests: 0, cost_usd: 0, priced: cost.priced };
       agentModels.set(modelKey, pairRow);
     }
-    pairRow.requests += 1;
+    pairRow.requests += weight;
     pairRow.cost_usd += cost.cost;
     pairRow.priced = pairRow.priced || cost.priced;
   }

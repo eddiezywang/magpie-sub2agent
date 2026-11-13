@@ -290,7 +290,7 @@ function receipt(report) {
     ],
     totalLabel: 'API 总费用',
     total: money(cost),
-    totalNote: '按 API 价格折算 · 非发票',
+    totalNote: report.billing ? Object.entries(report.billing.amounts_by_currency).map(([unit,n])=>`${count(n)} ${unit==='POINTS'?'积分':unit==='PLAN_TOKENS'?'计划折算 token':'USD'}`).join(' · ') || '部分用量暂未定价' : '按 API 价格折算 · 非发票',
     stats: statRows,
     agentHead: ['AGENT / 模型', '费用'],
     agents: shown,

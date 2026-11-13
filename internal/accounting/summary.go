@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/usage"
 )
 
@@ -42,7 +43,7 @@ func (r AggregationRules) Validate() error {
 	seen := map[[3]string]bool{}
 	for _, m := range r.Models {
 		key := [3]string{m.Provider, m.Model, m.ServiceTier}
-		if m.Provider == "" || m.Model == "" || !safeLabel(m.Provider, 256) || !safeLabel(m.Model, 256) || !safeLabel(m.ServiceTier, 256) || seen[key] || m.Above == nil || len(m.Above) > 32 {
+		if m.Provider == "" || m.Model == "" || !safeLabel(m.Provider, 256) || !safeLabel(m.Model, 256) || !safeLabel(m.ServiceTier, 256) || seen[key] || strings.Contains(strings.TrimSuffix(m.Provider, "*"), "*") || strings.Contains(strings.TrimSuffix(m.Model, "*"), "*") || m.Above == nil || len(m.Above) > 32 {
 			return fmt.Errorf("invalid or duplicate aggregation model")
 		}
 		seen[key] = true
@@ -168,7 +169,7 @@ func (b *minuteBuffer) Add(r usage.Record, completed time.Time, rules *Aggregati
 	if rules != nil {
 		d.RulesRevision = rules.Revision
 		for _, m := range rules.Models {
-			if m.Provider != d.Provider || m.Model != d.Model || m.ServiceTier != d.ServiceTier {
+			if !summaryRuleMatch(m.Provider, d.Provider, false) || !summaryRuleMatch(m.Model, d.Model, true) || m.ServiceTier != d.ServiceTier {
 				continue
 			}
 			// Unknown cache counts or an all-zero record cannot prove a context tier.
@@ -273,4 +274,29 @@ func (b *minuteBuffer) Count() int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.held
+}
+
+// Managed rules can cover numbered provider IDs and account-suffixed models.
+// Only a trailing wildcard is a pattern; deployment aliases affect metadata,
+// never the actual model recorded in the summary.
+func summaryRuleMatch(pattern, value string, model bool) bool {
+	if model {
+		pattern = summaryRuleModel(pattern)
+		value = summaryRuleModel(value)
+	}
+	if prefix, ok := strings.CutSuffix(pattern, "*"); ok {
+		return strings.HasPrefix(value, prefix)
+	}
+	return pattern == value
+}
+
+func summaryRuleModel(id string) string {
+	id = strings.ToLower(id)
+	if i := strings.LastIndex(id, "-maas-"); i > 0 && i+6 < len(id) {
+		return id[:i] + "-maas"
+	}
+	if strings.HasSuffix(id, "-maas") {
+		return id
+	}
+	return catalog.DeploymentModel(id)
 }

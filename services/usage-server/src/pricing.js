@@ -87,6 +87,10 @@ function resolveModelKey(models, model) {
  * and the remainder at `cache_write` (magpie usage.go CostSplit semantics).
  */
 function computeCost(table, model, tokens) {
+  if(tokens._summary){
+    const cost=table._summaryCharge?.(tokens._summary,tokens.ts);
+    return {priced:!!cost?.priced&&cost.currency==='USD',cost:cost?.currency==='USD'?cost.amount:0,virtual:cost?.currency==='USD'?cost.amount:0,pricing:null,modelKey:model};
+  }
   const input = Math.max(0, Number(tokens.input_tokens) || 0);
   const output = Math.max(0, Number(tokens.output_tokens) || 0);
   const cacheRead = Math.max(0, Number(tokens.cache_read_tokens) || 0);

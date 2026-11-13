@@ -36,6 +36,7 @@ function cacheNotCounted(event) {
 }
 
 function cacheUnknownIn(event) {
+  if(event._summary)return event._summary.cache_unknown_input_tokens;
   if (!cacheNotCounted(event)) return 0;
   return event.input_tokens + event.cache_read_tokens + event.cache_write_tokens;
 }
@@ -88,6 +89,16 @@ function emptyTotals() {
 // usage.go Totals.addFrom + count + countCache.
 function addRecord(totals, event, pricingTable) {
   const t = totals;
+  if(event._summary){
+    const g=event._summary;t.calls+=g.requests;t.errors+=g.failed;t.canceled+=g.canceled;
+    t.input+=g.input_tokens;t.output+=g.output_tokens;t.cacheRead+=g.cache_read_tokens;
+    t.cacheWrite+=g.cache_write_5m_tokens+g.cache_write_1h_tokens;t.cacheWrite1h+=g.cache_write_1h_tokens;
+    t.cacheUnknown+=g.cache_unknown_input_tokens;t.cacheUnknownCalls+=g.cache_unknown_calls;
+    t.reasoning+=g.reasoning_tokens;t.timed+=g.ttft_samples;t.ttftMs+=g.ttft_ms_sum;
+    const charge=computeCost(pricingTable,event.model,event);
+    if(charge.priced)t.cost+=charge.cost;else if(g.input_tokens+g.output_tokens>0)t.unpriced+=g.attempts;
+    return;
+  }
   // magpie Record.Credits is a pointer: null/absent means "no credit info",
   // while an explicit 0 is a real reported value. Number(null) would be 0.
   if (event.credits !== null && event.credits !== undefined && Number.isFinite(Number(event.credits))) {
