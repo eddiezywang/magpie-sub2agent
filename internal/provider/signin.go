@@ -112,6 +112,7 @@ type signInFlow struct {
 	// pluginPorts are where a plugin's browser sign-in comes back to on
 	// this machine, for its address pasted (pluginsignin_paste.go)
 	pluginPorts        []string
+	pluginManual       string // plugin session accepting a vendor callback alongside auto completion
 	pluginCallbackPath string // explicit callback's nonce-scoped path, when supplied
 	// pluginKey is a plugin's browser sign-in also finished by a key made
 	// on KeysURL and pasted: its provider and "api" method, as the plugin
@@ -491,6 +492,9 @@ func SubmitSignInCallback(id, raw string) error {
 	}
 	if s.plugin != "" {
 		return s.pluginCode(raw)
+	}
+	if s.pluginManual != "" {
+		return s.pluginManualCallback(raw)
 	}
 	if s.pluginPorts != nil {
 		return s.pluginCallback(raw)

@@ -137,6 +137,8 @@ func (s *signInFlow) pluginBegin(id string, method int, inputs map[string]string
 	ports, callbackPath := pluginCallbackTarget(a)
 	if a.Method == "code" {
 		s.st.PasteCode, s.plugin = true, a.Session
+	} else if a.ManualCallback {
+		s.st.PasteCallback, s.pluginManual = true, a.Session
 	} else if pluginPostsCallback[id] == "" && len(ports) > 0 {
 		// a browser that can't reach the plugin's port here ends on a page
 		// that won't load: its address finishes it
@@ -268,4 +270,35 @@ func pluginUser(saved plugin.Saved) string {
 		}
 	}
 	return ""
+}
+
+func (s *signInFlow) pluginManualCallback(raw string) error {
+	s.mu.Lock()
+	waiting, session := s.st.State == "waiting", s.pluginManual
+	s.mu.Unlock()
+	if !waiting {
+		return errors.New("this sign-in is over; start it again")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), pastedPluginWait)
+	defer cancel()
+	if err := plugin.SubmitCallback(ctx, session, strings.TrimSpace(raw)); err != nil {
+		// The automatic path may have won while this address was submitted.
+		if s.status().State == "done" {
+			return nil
+		}
+		return err
+	}
+	select {
+	case <-s.done:
+		st := s.status()
+		if st.State == "done" {
+			return nil
+		}
+		if st.Error != "" {
+			return errors.New(st.Error)
+		}
+		return errors.New("the sign-in was canceled")
+	case <-ctx.Done():
+		return errors.New("已识别回调地址，但企业授权尚未完成；请完成浏览器登录后重试，自动识别仍在运行")
+	}
 }

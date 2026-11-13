@@ -989,9 +989,10 @@ type Authorization struct {
 	URL     string `json:"url"`
 	// CallbackURL is an optional explicit loopback return address. Login
 	// pages may wrap or omit it, so it cannot always be inferred from URL.
-	CallbackURL  string `json:"callbackUrl"`
-	Instructions string `json:"instructions"`
-	Method       string `json:"method"`
+	CallbackURL    string `json:"callbackUrl"`
+	ManualCallback bool   `json:"manualCallback"`
+	Instructions   string `json:"instructions"`
+	Method         string `json:"method"`
 	// Opened is a page the plugin (its vendor's CLI) opened already, not
 	// to be opened again
 	Opened bool `json:"opened"`
@@ -1059,6 +1060,22 @@ func Finish(ctx context.Context, session, code string) (Saved, error) {
 		return Saved{}, failure(r.Error)
 	}
 	return r.Saved, nil
+}
+
+// SubmitCallback supplements the automatic completion without starting a
+// second Finish or saving credentials twice.
+func SubmitCallback(ctx context.Context, session, raw string) error {
+	var r struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	if err := Call(ctx, "submitCallback", map[string]any{"session": session, "url": raw}, &r); err != nil {
+		return err
+	}
+	if !r.OK {
+		return failure(r.Error)
+	}
+	return nil
 }
 
 // APIKey signs in to account (a key, or NewAccount) with a key, as an

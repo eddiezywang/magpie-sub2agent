@@ -2813,7 +2813,7 @@ async function authorize({ provider, method, inputs, account, proxy }, signal) {
   // opened (not OpenCode's) is a page the plugin's own CLI opened already:
   // Grok Build's `grok login` opens it on macOS and Windows, and magpie's
   // opening it too showed it twice (andyfmyth on X)
-  return { ok: true, session, url: a.url ?? "", callbackUrl: typeof a.callbackUrl === "string" ? a.callbackUrl : "", instructions: a.instructions ?? "", method: a.method, opened: a.opened === true }
+  return { ok: true, session, url: a.url ?? "", callbackUrl: typeof a.callbackUrl === "string" ? a.callbackUrl : "", manualCallback: typeof a.submitCallback === "function", instructions: a.instructions ?? "", method: a.method, opened: a.opened === true }
 }
 
 // failed is a sign-in's failure, with why, where the plugin tells it
@@ -2837,13 +2837,27 @@ function signingIn(signal, proxy, provider, key, fn) {
 async function callback({ session, code }, signal) {
   const s = sessions.get(session)
   if (!s) throw new Error("no such sign-in")
-  sessions.delete(session)
-  const r = await signingIn(signal, s.proxy, s.provider, s.key, () => (s.a.method === "code" ? s.a.callback(code ?? "", { signal }) : s.a.callback(undefined, { signal })))
+  if (s.finishing) throw new Error("sign-in is already being completed")
+  s.finishing = true
+  let r
+  try {
+    r = await signingIn(signal, s.proxy, s.provider, s.key, () => (s.a.method === "code" ? s.a.callback(code ?? "", { signal }) : s.a.callback(undefined, { signal })))
+  } finally { sessions.delete(session) }
   if (signal?.aborted) throw abortedSignIn()
   if (!r || r.type !== "success") return failed(r)
   const kept = keptAs(r)
   if (!kept) return { ok: false, error: `${s.provider}'s sign-in gave nothing to keep` }
   return { ok: true, ...(await save(s.provider, s.key, kept, undefined)) }
+}
+
+// Manual callbacks supplement an in-flight automatic completion. The plugin
+// validates its own provider protocol and state; this host never opens the URL.
+async function submitCallback({session, url}, signal) {
+  const s = sessions.get(session)
+  if (!s || typeof s.a.submitCallback !== "function") throw new Error("this sign-in no longer accepts a callback address")
+  if (typeof url !== "string" || url.length > 16384) throw new Error("invalid callback address")
+  await signingIn(signal, s.proxy, s.provider, s.key, () => s.a.submitCallback(url, {signal}))
+  return {ok: true}
 }
 
 // keptAs is an OAuth callback's success r as save keeps it. save keeps an
@@ -3548,6 +3562,7 @@ const handlers = {
   validate: (p) => ({ error: validate(p.provider, p.method, p.key, p.value) }),
   authorize,
   callback,
+  submitCallback,
   tool: runTool,
   search: runSearch,
   apiKey,

@@ -96,9 +96,28 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
       const adapter = deps.workbuddyAdapter || createWorkBuddySubscriptionAdapter({fetchImpl:network});
       const login = await adapter.requestLoginLink();
       let pendingToken = null;
-      return {url:login.url,method:'auto',instructions:'使用企业 SSO 扫码登录；完成授权和企业校验后会自动添加。',
+      let tokenRequest = null;
+      const readToken = async () => {
+        if (pendingToken) return pendingToken;
+        tokenRequest ||= Promise.resolve().then(() => adapter.pollToken(login.state))
+          .then(token => (pendingToken ||= token)).finally(() => {tokenRequest = null;});
+        return tokenRequest;
+      };
+      return {url:login.url,method:'auto',instructions:'请完成企业 SSO 登录，应用会自动识别。也可粘贴浏览器最后跳转的完整 WorkBuddy 回调地址，立即检查授权结果。',
+        submitCallback: async raw => {
+          let url;
+          try {url = new URL(String(raw).trim());} catch {throw new Error('请粘贴完整的 WorkBuddy 回调地址。');}
+          if (url.origin !== 'https://www.workbuddy.cn' || !['/login','/login/'].includes(url.pathname) ||
+              url.username || url.password || url.hash || url.searchParams.getAll('state').length !== 1 ||
+              url.searchParams.get('state') !== login.state || url.searchParams.get('platform') !== 'workbuddy') {
+            throw new Error('此地址不属于本次 WorkBuddy 企业登录，请粘贴当前登录页面最后跳转的完整地址。');
+          }
+          // The official return page carries state, not a token. Re-check that
+          // session at the trusted API; never fetch a user-supplied callback URL.
+          await readToken();
+        },
         callback: async (_code, {signal: finishSignal} = {}) => { activeSignal = finishSignal; return poll(finishSignal, async () => {
-          const token = pendingToken || await adapter.pollToken(login.state);
+          const token = await readToken();
           if (!token) return null;
           pendingToken = token;
           let bundle;

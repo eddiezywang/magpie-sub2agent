@@ -190,6 +190,9 @@ func (s *signInFlow) pluginCallback(raw string) error {
 // PastePluginCallback is pluginCallback for the command line, which runs
 // a plugin's sign-in itself: page is the address the sign-in opened.
 func PastePluginCallback(ctx context.Context, a plugin.Authorization, raw string) (next string, err error) {
+	if a.ManualCallback {
+		return "", plugin.SubmitCallback(ctx, a.Session, strings.TrimSpace(raw))
+	}
 	ports, path := pluginCallbackTarget(a)
 	if len(ports) == 0 {
 		return "", errors.New("this sign-in can't be finished from a pasted address")
@@ -211,7 +214,7 @@ func PastePluginCallback(ctx context.Context, a plugin.Authorization, raw string
 // can be finished from the address its browser ends on.
 func PluginPastesCallback(id string, a plugin.Authorization) bool {
 	ports, _ := pluginCallbackTarget(a)
-	return pluginPostsCallback[id] == "" && len(ports) > 0
+	return a.ManualCallback || (pluginPostsCallback[id] == "" && len(ports) > 0)
 }
 
 type pluginKeyWay struct {

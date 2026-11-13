@@ -7,6 +7,28 @@ const client={auth:{set:async()=>{throw new Error('Unexpected credential write')
 const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
 const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
 
+test('WorkBuddy manual callback validates vendor and session while automatic login continues',async()=>{
+ let ready=false,polls=0;
+ const adapter={requestLoginLink:async()=>({url:'https://login.example.invalid',state:'fixture-state'}),
+  pollToken:async()=>{polls++;return ready?{accessToken:'fixture-access'}:null;},
+  resolveAccount:async(state,token)=>({...token,userId:'fixture-user',enterpriseId:'fixture-tenant'}),listModels:async()=>models};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:adapter});
+ const auth=await plugin.auth.methods[0].authorize();
+ assert.equal(typeof auth.submitCallback,'function');
+ const callback='https://www.workbuddy.cn/login/?platform=workbuddy&state=fixture-state&version=2.0.0&force_login_type=sso&loginSessionId=fixture';
+ for(const invalid of [callback.replace('fixture-state','other-session'),callback.replace('www.workbuddy.cn','evil.invalid'),callback+'&state=other',callback.replace('/login/','/other/'),'not a URL']) {
+  await assert.rejects(auth.submitCallback(invalid));
+ }
+ assert.equal(polls,0,'invalid callbacks must not reach the vendor');
+ const finished=auth.callback();
+ await new Promise(resolve=>setTimeout(resolve,20));
+ ready=true;
+ await auth.submitCallback(callback);
+ const result=readBundle(await finished);
+ assert.equal(result.enterpriseId,'fixture-tenant');
+ assert.ok(polls>=2);
+});
+
 test('WorkBuddy enterprise login keeps tenant identity and discovered models',async()=>{
  const adapter={requestLoginLink:async()=>({url:'https://login.example.invalid',state:'test-state'}),
   pollToken:async state=>(assert.equal(state,'test-state'),{accessToken:'test-access'}),

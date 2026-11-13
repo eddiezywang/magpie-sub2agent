@@ -525,3 +525,24 @@ routing catalog without deleting their records. Native and plugin sign-in
 entry points enforce the same policy. CodeBuddy and Trae bundled entries
 remain on disk for compatibility but the effective host list forces them off,
 regardless of saved switches; the provider cache exposes only WorkBuddy.
+
+### Automatic login with an explicit vendor callback fallback
+
+An authorization may expose `submitCallback(url, {signal})` alongside its
+ordinary automatic `callback`. The host returns `manualCallback: true` and
+keeps the session while the one automatic Finish is pending. GUI and CLI pass
+pasted URLs to the new `submitCallback` RPC; the host never fetches them.
+Invalid input leaves the automatic flow running. Finish remains single-use
+and removes the session on completion or cancellation. The GUI waits for the
+original completion and credentials are saved exactly once.
+
+WorkBuddy accepts only its official HTTPS `/login` or `/login/` return page,
+`platform=workbuddy`, and exactly one `state` equal to the current login.
+That page carries no code or token: submission triggers an immediate token
+check against the existing trusted adapter, with concurrent token checks
+coalesced; enterprise identity and models still pass the ordinary checks.
+An unfinished authorization produces a retryable message after 30 seconds,
+while automatic polling continues. Callback addresses are never persisted.
+Trae's existing nonce-scoped loopback callback remains supported while its
+provider is disabled by distribution policy. TIG and ZHT use API keys and
+do not present a browser OAuth callback form.
