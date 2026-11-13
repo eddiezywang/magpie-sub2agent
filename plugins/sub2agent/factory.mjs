@@ -59,6 +59,10 @@ async function poll(signal, run) {
 export async function createSub2AgentPlugin(kind, input, deps = {}) {
   if (!names[kind]) throw new Error('Unknown Sub2Agent provider');
   const id = 'sub2agent-' + kind;
+  // The enterprise list omits this supported model. Offer it for signed-in
+  // accounts, without inventing a permanent free price or changing auth.
+  const modelsFor = bundle => kind === 'workbuddy'
+    ? [...new Set([...(bundle.models || []),'hy4free'])] : bundle.models;
   const rawFetch = deps.fetchImpl || globalThis.fetch;
   // Private resolvers replace credentials after a 401 using canonical header
   // names; the protocol executor may already have lowercased them. HTTP names
@@ -177,7 +181,7 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
     },
     provider:{id,async models(provider,{auth}={}) {
       if(!auth?.access)return provider.models;
-      return modelSet(readBundle(auth).models);
+      return modelSet(modelsFor(readBundle(auth)));
     }},
     auth:{provider:id,methods:[{type:'oauth',label:kind==='workbuddy'?'企业 SSO 扫码登录':'浏览器授权登录',authorize}],
       loader:async getAuth => {
@@ -203,7 +207,7 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
         }}});
         return {apiKey:'sub2agent-account',baseURL:'https://sub2agent.invalid/v1',async fetch(_url,init) {
           const bundle=readBundle(await getAuth());
-          const source=await resolver.resolve({id,kind:'subscription',provider:kind,models:bundle.models,
+          const source=await resolver.resolve({id,kind:'subscription',provider:kind,models:modelsFor(bundle),
             defaultModel:bundle.defaultModel,auth:{secretRef:id},subscription:bundle});
           // Magpie translates the client's protocol to Chat before handing
           // the request to this plugin; Sub2Agent handles the private wire.

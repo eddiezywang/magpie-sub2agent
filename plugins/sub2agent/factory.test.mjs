@@ -41,7 +41,7 @@ test('WorkBuddy enterprise login keeps tenant identity and discovered models',as
  assert.equal(bundle.enterpriseId,'test-tenant');
  assert.deepEqual(bundle.modelMap,models.modelMap);
  const listed=await plugin.provider.models({models:{}},{auth:result});
- assert.deepEqual(Object.keys(listed),models.models);
+ assert.deepEqual(Object.keys(listed),[...models.models,"hy4free"]);
 });
 
 test('WorkBuddy concurrent requests share refresh and retain private request headers',async()=>{
@@ -160,4 +160,19 @@ test('Trae cancellation closes its local callback listener without saving an acc
  const controller=new AbortController();const done=flow.callback(undefined,{signal:controller.signal});
  const rejected=assert.rejects(done,/abort|cancel/i);controller.abort();await rejected;
  await assert.rejects(fetch(flow.callbackUrl));
+});
+
+test('WorkBuddy fallback is listed once and hy4free is sent as the actual upstream model',async()=>{
+ const sent=[];
+ const auth={type:'oauth',access:JSON.stringify({...models,accessToken:'fixture',expiresAt:Date.now()+3600000,userId:'u',enterpriseId:'e'})};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:{},fetchImpl:async(url,options)=>{sent.push(JSON.parse(options.body));return sse();}});
+ const listed=await plugin.provider.models({models:{}},{auth});
+ assert.equal(Object.keys(listed).filter(id=>id==='hy4free').length,1);
+ assert.equal(listed.hy4free.cost,undefined,'discovery must not hardcode a permanent free price');
+ const loader=await plugin.auth.loader(async()=>auth);
+ const response=await loader.fetch('',{body:JSON.stringify({model:'hy4free',messages:[{role:'user',content:'hello'}],stream:true})});
+ assert.equal(response.status,200);await response.text();
+ assert.equal(sent[0].model,'hy4free');
+ const duplicate={...auth,access:JSON.stringify({...readBundle(auth),models:['hy4free','hy4free','Enterprise Model']})};
+ assert.equal(Object.keys(await plugin.provider.models({models:{}},{auth:duplicate})).filter(id=>id==='hy4free').length,1);
 });
