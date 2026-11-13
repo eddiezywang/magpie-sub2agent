@@ -213,13 +213,13 @@ func sameAny(dir string, dirs []string) bool {
 // with no home folder.
 func installed() string {
 	if x := os.Getenv("XDG_CONFIG_HOME"); rooted(x) {
-		return filepath.Join(x, distribution.DataDir)
+		return distributionFolder(x, false)
 	}
 	h, err := Home()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(h, ".config", distribution.DataDir)
+	return distributionFolder(filepath.Join(h, ".config"), false)
 }
 
 // Beside is the folder a portable magpie run from exe keeps its data folder
@@ -265,9 +265,9 @@ func Config() string {
 		return p
 	}
 	if x := os.Getenv("XDG_CONFIG_HOME"); rooted(x) {
-		return Join(x, distribution.DataDir)
+		return Join(distributionFolder(x, true), "")
 	}
-	return Join(Join(mustHome(), ".config"), distribution.DataDir)
+	return Join(distributionFolder(filepath.Join(mustHome(), ".config"), true), "")
 }
 
 // Redirected is the folder magpie keeps its files in when it is opened
@@ -297,9 +297,9 @@ func Cache() string {
 		return Join(p, "cache")
 	}
 	if x := os.Getenv("XDG_CACHE_HOME"); rooted(x) {
-		return Join(x, distribution.DataDir)
+		return Join(distributionFolder(x, true), "")
 	}
-	return Join(Join(mustHome(), ".cache"), distribution.DataDir)
+	return Join(distributionFolder(filepath.Join(mustHome(), ".cache"), true), "")
 }
 
 // Logs is the folder the desktop app writes its log in, where each system

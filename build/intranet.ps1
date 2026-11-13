@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if (!$OutputRoot) { $OutputRoot = Join-Path (Split-Path -Parent $repoRoot) 'magpie-builds' }
 $OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
-$bundleName = 'Sub2Agent-Magpie-windows-x64-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+$bundleName = 'sub2agent-windows-x64-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 $bundle = Join-Path $OutputRoot $bundleName
 if (Test-Path -LiteralPath $bundle) { throw "Output already exists: $bundle" }
 if ($SingleFile) { $WithoutBun = $true }
@@ -39,7 +39,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Console launcher build failed' }
     go run github.com/tc-hib/go-winres@v0.3.3 make --in build/windows/winres.json --arch amd64 --out rsrc
     if ($LASTEXITCODE -ne 0) { throw 'Windows resources failed' }
-    go build -tags $buildTags -trimpath -buildvcs=false "-ldflags=-s -w -H windowsgui -X main.version=$Version" -o (Join-Path $bundle 'Sub2Agent.exe') .
+    go build -tags $buildTags -trimpath -buildvcs=false "-ldflags=-s -w -H windowsgui -X main.version=$Version" -o (Join-Path $bundle 'sub2agent.exe') .
     if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     if (!$SingleFile) {
@@ -75,7 +75,7 @@ try {
     [ordered]@{ version = $Version; sourceCommit = $sourceCommit; workingTreeChanges = ($sourceChanges.Count -gt 0); profile = 'intranet'; singleFile = [bool]$SingleFile; bundledBun = !$WithoutBun; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
     $archive = $bundle + '.zip'
     [IO.Compression.ZipFile]::CreateFromDirectory($bundle, $archive, [IO.Compression.CompressionLevel]::Optimal, !$SingleFile)
-    $exe = Get-Item -LiteralPath (Join-Path $bundle 'Sub2Agent.exe')
+    $exe = Get-Item -LiteralPath (Join-Path $bundle 'sub2agent.exe')
     $runtimeBytes = if ($WithoutBun) { 0 } else { (Get-Item -LiteralPath (Join-Path $bundle 'runtime\bun.exe')).Length }
     [ordered]@{ bundle = $bundle; archive = $archive; exeBytes = $exe.Length; bunBytes = $runtimeBytes; unpackedBytes = (Get-ChildItem -LiteralPath $bundle -Recurse -File | Measure-Object Length -Sum).Sum; zipBytes = (Get-Item -LiteralPath $archive).Length; zipSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $OutputRoot ($bundleName + '.sizes.json'))
 } finally { Pop-Location }

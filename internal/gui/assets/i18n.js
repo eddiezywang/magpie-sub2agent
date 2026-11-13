@@ -20814,7 +20814,7 @@ function dateFmt(opts) {
 
 function brandText(s) {
   return window.bootPrefs?.intranet && typeof s === "string"
-    ? s.replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "Sub2Agent") : s;
+    ? s.replace(/sub2agent[- ]magpie/gi, "sub2agent").replace(/sub2agent/gi, "sub2agent").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "sub2agent") : s;
 }
 function t(s, vars) {
   let out = I18N[locale]?.[s] ?? s;

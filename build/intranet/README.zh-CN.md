@@ -1,6 +1,6 @@
-# Sub2Agent 内网版
+# sub2agent 内网版
 
-解压后运行 Sub2Agent.exe。请保留 providers 和 .portable；若包含 runtime/bun.exe，也请保留。
+解压后运行 sub2agent.exe。请保留 providers 和 .portable；若包含 runtime/bun.exe，也请保留。
 这是源码构建的试验版，不会替换已经运行的官方 Magpie。
 配置保存在程序旁的 data 目录。本包不含真实账号、密钥或用户配置。
 
@@ -24,7 +24,7 @@ Agent 自动升级及安装下载。使用内置模型目录及离线汇率回�
 
 插件由管理员统一维护和发布。插件广场连接失败时显示原因、重试入口和
 已保存目录，不会切换到公共社区。也可离线导入完整插件文件夹：
-  Sub2Agent.exe plugin add D:\path\to\bundled-plugin
+  sub2agent.exe plugin add D:\path\to\bundled-plugin
 内网发布的完整离线包支持一键安装、版本与摘要校验；不在线下载外部依赖，
 不运行安装脚本。服务地址由应用维护，无需用户配置。
 供应商插件自身具有网络能力，仍须在发布到内网前审查其业务地址。
@@ -38,7 +38,7 @@ Agent 自动升级及安装下载。使用内置模型目录及离线汇率回�
 暂停采集和发送、保留已保存队列。无需配置服务地址或上报方式。
 本包为内部试用构建，不作为正式版。
 
-源码、构建入口及模块说明位于 magpie-intranet 工作树：
+源码、构建入口及模块说明位于 当前工作树：
   build/intranet.ps1
   docs/intranet-build.md
 

@@ -220,10 +220,10 @@ func Main(v string) {
 		if len(os.Args) > 1 {
 			switch os.Args[1] {
 			case "-v", "--version", "version":
-				fmt.Println("magpie", version)
+				fmt.Println(distribution.Name, version)
 				return
 			case "-h", "--help", "help":
-				fmt.Print(usage)
+				fmt.Print(distributionUsage())
 				return
 			case "licenses":
 				fmt.Print(notices.Text)
@@ -572,10 +572,10 @@ func run(args []string) error {
 	case "daemon":
 		return daemonCmd(args[1:])
 	case "-h", "--help", "help":
-		fmt.Print(usage)
+		fmt.Print(distributionUsage())
 		return nil
 	case "-v", "--version", "version":
-		fmt.Println("magpie", version)
+		fmt.Println(distribution.Name, version)
 		return nil
 	case "licenses":
 		fmt.Print(notices.Text)
@@ -734,7 +734,7 @@ func run(args []string) error {
 		}
 		return set(a, args[1], value)
 	}
-	return fmt.Errorf("too many arguments\n\n%s", usage)
+	return fmt.Errorf("too many arguments\n\n%s", distributionUsage())
 }
 
 func set(a *agent.Agent, key, value string) error {
@@ -1077,4 +1077,11 @@ func pad(s string, w int) string {
 		return s + strings.Repeat(" ", n)
 	}
 	return s
+}
+
+func distributionUsage() string {
+	if distribution.Internal {
+		return strings.ReplaceAll(usage, "magpie", distribution.Name)
+	}
+	return usage
 }

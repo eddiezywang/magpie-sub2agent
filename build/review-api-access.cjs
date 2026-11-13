@@ -34,7 +34,7 @@ const {chromium,webkit}=require('playwright');
     if(u.pathname.startsWith('/api/')) return json({});
     if(u.host!=='magpie.test') return route.abort();
     const file=path.join(assets,u.pathname==='/'?'index.html':u.pathname);
-    try{let body=await fs.readFile(file); if(u.pathname==='/') body=body.toString().split('\n').map(line=>line.includes('<span class="logo"')?'<span class="logo" aria-hidden="true"><img src="icons/magpie.svg" width="22" height="22" alt=""></span>':line).join('\n').replaceAll('<title>magpie</title>','<title>Sub2Agent</title>').replaceAll('<span>magpie</span>','<span>Sub2Agent</span>'); return route.fulfill({body,contentType:{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]});}catch{return route.fulfill({status:404,body:''});}
+    try{let body=await fs.readFile(file); if(u.pathname==='/') body=body.toString().split('\n').map(line=>line.includes('<span class="logo"')?'<span class="logo" aria-hidden="true"><img src="icons/sub2agent.svg" width="22" height="22" alt=""></span>':line).join('\n').replaceAll('<title>magpie</title>','<title>sub2agent</title>').replaceAll('<span>magpie</span>','<span>sub2agent</span>'); return route.fulfill({body,contentType:{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]});}catch{return route.fulfill({status:404,body:''});}
    });
    await page.goto('http://magpie.test/?view=providers');
    assert.ok((await page.locator('#addSheet').innerText()).includes('API 接入'));

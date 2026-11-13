@@ -24,11 +24,11 @@ func internalIndex(b []byte) []byte {
 		}
 		if !omit {
 			if strings.Contains(line, `<span class="logo"`) {
-				line = `<span class="logo" aria-hidden="true"><img src="icons/magpie.svg" width="22" height="22" alt=""></span>`
+				line = `<span class="logo" aria-hidden="true"><img src="icons/sub2agent.svg" width="22" height="22" alt=""></span>`
 			}
-			line = strings.ReplaceAll(line, "<title>magpie</title>", "<title>Sub2Agent</title>")
-			line = strings.ReplaceAll(line, "<span>magpie</span>", "<span>Sub2Agent</span>")
-			line = strings.ReplaceAll(line, `name="apple-mobile-web-app-title" content="magpie"`, `name="apple-mobile-web-app-title" content="Sub2Agent"`)
+			line = strings.ReplaceAll(line, "<title>magpie</title>", "<title>sub2agent</title>")
+			line = strings.ReplaceAll(line, "<span>magpie</span>", "<span>sub2agent</span>")
+			line = strings.ReplaceAll(line, `name="apple-mobile-web-app-title" content="magpie"`, `name="apple-mobile-web-app-title" content="sub2agent"`)
 			out = append(out, line)
 		}
 	}
