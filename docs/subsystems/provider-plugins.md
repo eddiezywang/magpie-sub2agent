@@ -644,3 +644,29 @@ the private resolver so requests use that upstream ID. This does not assign a
 permanent zero price: promotions and their end date belong to the server price
 catalog. Model discovery alone does not establish tenant access; upstream errors
 continue through the existing fallback path.
+
+### WorkBuddy MaaS usage fallback
+
+The private protocol kernel bundled by the internal provider build already
+fills missing usage for WorkBuddy MaaS requests. The resolver recognizes MaaS
+through the selected model and its upstream model mapping. The gateway requests
+stream usage; the kernel preserves reported counters, including explicit zero,
+and estimates only missing counters from request messages, tool definitions,
+reasoning, text and tool-call output. Completed SSE replies receive a usage-only
+chunk before `DONE`; aggregated non-streaming replies receive JSON usage.
+Errors and unfinished streams are not turned into successfully measured replies.
+This fallback is MaaS-specific, not a guarantee for every provider/model.
+
+The normal gateway decoder collects that final chunk. Anthropic clients receive
+the counters in `message_delta`, and Responses clients in `response.completed`.
+This supplies context accounting for clients that use response usage when
+deciding whether to compact. A correct model context limit and the client's own
+compaction policy are still required. Image/document content is not tokenized
+by the text estimator, so these counts are approximate and must not be described
+as authoritative vendor billing. The private Chat response marks estimated
+usage, but protocol conversion does not promise to retain that extra marker.
+
+Verification: `plugins/sub2agent/factory.test.mjs` exercises the bundled kernel
+through the real provider loader with missing and reported usage. Gateway
+`TestPromptUsageOnMessageStart` covers final Anthropic counters;
+`TestChatTranslationKeepsUsageAfterFinish` covers final Responses counters.

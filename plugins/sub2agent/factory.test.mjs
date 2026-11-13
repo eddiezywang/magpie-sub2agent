@@ -7,6 +7,31 @@ const client={auth:{set:async()=>{throw new Error('Unexpected credential write')
 const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
 const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
 
+test('WorkBuddy MaaS emits estimated usage before DONE and preserves real upstream usage',async()=>{
+ for(const reported of [null,{prompt_tokens:1234,completion_tokens:17,total_tokens:1251}]) {
+  const model='glm-5.3-maas-fixture';
+  const auth={type:'oauth',access:JSON.stringify({models:[model],defaultModel:model,accessToken:'fixture',expiresAt:Date.now()+3600000,userId:'u',enterpriseId:'e'})};
+  const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:{},fetchImpl:async(_url,opts)=>{
+   assert.equal(JSON.parse(opts.body).stream_options.include_usage,true);
+   const text='data: '+JSON.stringify({id:'fixture',model,choices:[{index:0,delta:{content:'你好，已完成分析。'},finish_reason:null}]})+'\n\n'
+    +'data: '+JSON.stringify({id:'fixture',model,choices:[{index:0,delta:{},finish_reason:'stop'}],...(reported?{usage:reported}:{})})+'\n\n'
+    +'data: [DONE]\n\n';
+   return new Response(text,{headers:{'Content-Type':'text/event-stream'}});
+  }});
+  const loader=await plugin.auth.loader(async()=>auth);
+  const response=await loader.fetch('https://sub2agent.invalid/v1/chat/completions',{body:JSON.stringify({model,stream:true,stream_options:{include_usage:true},messages:[{role:'user',content:'请分析项目代码与工具调用结果。'}],tools:[{type:'function',function:{name:'read_file',parameters:{type:'object',properties:{path:{type:'string'}}}}}]})});
+  const text=await response.text();
+  const frames=text.split('\n\n').filter(s=>s.startsWith('data: {')).map(s=>JSON.parse(s.slice(6)));
+  const usage=frames.findLast(s=>s.usage)?.usage;
+  assert.ok(usage?.prompt_tokens>0,'Agent needs a nonzero input estimate');
+  assert.ok(usage.completion_tokens>0);
+  assert.equal(usage.total_tokens,usage.prompt_tokens+usage.completion_tokens);
+  assert.ok(text.indexOf('"usage"')<text.indexOf('[DONE]'));
+  if(reported)assert.deepEqual(usage,reported,'real counts must not be overwritten');
+  else assert.equal(frames.findLast(s=>s.usage).usage_source,'estimated');
+ }
+});
+
 test('WorkBuddy keeps deployment limits from authenticated model discovery and coalesces accounts',async()=>{
  let calls=0,now=0,offline=false;
  const auth={access:JSON.stringify({accessToken:'fixture',userId:'u',enterpriseId:'e',models:['old'],modelMap:{old:'old'}})};
