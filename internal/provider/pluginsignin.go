@@ -134,12 +134,13 @@ func (s *signInFlow) pluginBegin(id string, method int, inputs map[string]string
 	s.st.State, s.st.Installing = "waiting", ""
 	s.st.URL, s.st.Instructions, s.st.Code, s.st.Opened = a.URL, a.Instructions, codeIn(a.Instructions), a.Opened
 	s.stop = stop
+	ports, callbackPath := pluginCallbackTarget(a)
 	if a.Method == "code" {
 		s.st.PasteCode, s.plugin = true, a.Session
-	} else if PluginPastesCallback(id, a.URL) {
+	} else if pluginPostsCallback[id] == "" && len(ports) > 0 {
 		// a browser that can't reach the plugin's port here ends on a page
 		// that won't load: its address finishes it
-		s.st.PasteCallback, s.pluginPorts = true, loopbackPorts(a.URL)
+		s.st.PasteCallback, s.pluginPorts, s.pluginCallbackPath = true, ports, callbackPath
 	} else if m, keys, ok := pluginKeyMethod(id); ok && m != method {
 		// its page posts where nothing can be pasted: a key made on the
 		// keys page finishes it

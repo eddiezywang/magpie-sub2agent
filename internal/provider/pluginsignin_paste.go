@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +32,31 @@ var pluginPostsCallback = map[string]string{"commandcode-plan": cmdKeysURL}
 // pastedPluginWait is how long a pasted address is given to finish the
 // sign-in before magpie says it didn't.
 var pastedPluginWait = 30 * time.Second
+
+// An explicit callback takes precedence over inference from the login page.
+// It must stay on loopback; malformed declarations never open a paste relay.
+func pluginCallbackTarget(a plugin.Authorization) (ports []string, path string) {
+	if a.CallbackURL == "" {
+		return loopbackPorts(a.URL), ""
+	}
+	u, err := url.Parse(a.CallbackURL)
+	if err != nil || u.Scheme != "http" || !isLoopback(u.Hostname()) || u.User != nil || u.Fragment != "" {
+		return nil, ""
+	}
+	port := u.Port()
+	if port == "" {
+		port = "80"
+	}
+	n, err := strconv.Atoi(port)
+	if err != nil || n < 1 || n > 65535 {
+		return nil, ""
+	}
+	path = u.EscapedPath()
+	if path == "" {
+		path = "/"
+	}
+	return []string{port}, path
+}
 
 // loopbackPorts are the ports on this machine a sign-in page sends the
 // browser back to, as its address names them: a redirect address on
@@ -121,10 +147,16 @@ func openPastedCallback(ctx context.Context, ports []string, raw string) (next s
 // browser ended on.
 func (s *signInFlow) pluginCallback(raw string) error {
 	s.mu.Lock()
-	ports, waiting := s.pluginPorts, s.st.State == "waiting"
+	ports, path, waiting := s.pluginPorts, s.pluginCallbackPath, s.st.State == "waiting"
 	s.mu.Unlock()
 	if !waiting {
 		return errors.New("this sign-in is over; start it again")
+	}
+	if path != "" {
+		u, err := url.Parse(strings.TrimSpace(raw))
+		if err != nil || u.User != nil || u.Fragment != "" || u.EscapedPath() != path {
+			return errors.New("that address isn't from this sign-in: paste the one its browser tab ended on")
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), pastedPluginWait)
 	defer cancel()
@@ -138,7 +170,7 @@ func (s *signInFlow) pluginCallback(raw string) error {
 		s.mu.Unlock()
 		return nil
 	}
-	if status == http.StatusNotFound {
+	if status < 200 || status >= 300 {
 		return errors.New("that address isn't from this sign-in: paste the one its browser tab ended on")
 	}
 	select {
@@ -157,13 +189,19 @@ func (s *signInFlow) pluginCallback(raw string) error {
 
 // PastePluginCallback is pluginCallback for the command line, which runs
 // a plugin's sign-in itself: page is the address the sign-in opened.
-func PastePluginCallback(ctx context.Context, page, raw string) (next string, err error) {
-	ports := loopbackPorts(page)
+func PastePluginCallback(ctx context.Context, a plugin.Authorization, raw string) (next string, err error) {
+	ports, path := pluginCallbackTarget(a)
 	if len(ports) == 0 {
 		return "", errors.New("this sign-in can't be finished from a pasted address")
 	}
+	if path != "" {
+		u, err := url.Parse(strings.TrimSpace(raw))
+		if err != nil || u.User != nil || u.Fragment != "" || u.EscapedPath() != path {
+			return "", errors.New("that address isn't from this sign-in: paste the one its browser tab ended on")
+		}
+	}
 	next, status, err := openPastedCallback(ctx, ports, raw)
-	if err == nil && next == "" && status == http.StatusNotFound {
+	if err == nil && next == "" && (status < 200 || status >= 300) {
 		err = errors.New("that address isn't from this sign-in: paste the one its browser tab ended on")
 	}
 	return next, err
@@ -171,8 +209,9 @@ func PastePluginCallback(ctx context.Context, page, raw string) (next string, er
 
 // PluginPastesCallback says whether a plugin's sign-in that opened page
 // can be finished from the address its browser ends on.
-func PluginPastesCallback(id, page string) bool {
-	return pluginPostsCallback[id] == "" && len(loopbackPorts(page)) > 0
+func PluginPastesCallback(id string, a plugin.Authorization) bool {
+	ports, _ := pluginCallbackTarget(a)
+	return pluginPostsCallback[id] == "" && len(ports) > 0
 }
 
 type pluginKeyWay struct {

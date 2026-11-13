@@ -22,6 +22,19 @@ loopback callback and login state before retaining credentials. User cancellatio
 must leave no account behind. Tests: `plugins/sub2agent/factory.test.mjs` after
 building with `SUB2AGENT_TEST_BUNDLE=1`.
 
+Trae binds a random loopback port and a nonce-scoped path before generating
+the login link. It declares `callbackUrl` explicitly from authorize; the plugin
+host forwards that optional field even when the login page wraps its redirect.
+Magpie exposes its normal manual callback form alongside automatic listening.
+Pasted callbacks are relayed only to this sign-in's loopback port and exact
+declared path, then pass through the same private credential parser and enterprise
+login validation as browser callbacks. Invalid callbacks can be corrected without
+restarting the flow, and accepted callbacks are consumed once. Cancel and completion
+close the listener. The command line uses the same explicit target and checks.
+Plugins without that declaration retain URL-based inference. CodeBuddy and
+WorkBuddy enterprise keep their actual server-polling protocols, rather than
+inventing a local browser redirect their vendors do not provide.
+
 The `intranet` build fixes plugin resources to the internal server and supports
 local complete plugin folders in its offline trial. Network installation is
 refused. See [internal distribution](../intranet-build.md#plugin-distribution).

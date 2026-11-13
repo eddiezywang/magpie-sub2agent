@@ -980,8 +980,11 @@ func Validate(ctx context.Context, provider string, method int, key, value strin
 // the plugin waits for it itself ("auto") or needs the code the page
 // shows pasted back ("code").
 type Authorization struct {
-	Session      string `json:"session"`
-	URL          string `json:"url"`
+	Session string `json:"session"`
+	URL     string `json:"url"`
+	// CallbackURL is an optional explicit loopback return address. Login
+	// pages may wrap or omit it, so it cannot always be inferred from URL.
+	CallbackURL  string `json:"callbackUrl"`
 	Instructions string `json:"instructions"`
 	Method       string `json:"method"`
 	// Opened is a page the plugin (its vendor's CLI) opened already, not

@@ -683,7 +683,7 @@ func pluginLogin(ctx context.Context, name, method string) error {
 		}
 		wait, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
-		if a.Method != "code" && provider.PluginPastesCallback(pp.ID, a.URL) {
+		if a.Method != "code" && provider.PluginPastesCallback(pp.ID, a) {
 			// a browser on another computer (magpie on a server or in
 			// Docker) ends on a page that won't load: its address finishes it
 			fmt.Println("If the page the browser ends on won't load (magpie on a server or in Docker), paste its whole address here and press Enter:")
@@ -691,7 +691,7 @@ func pluginLogin(ctx context.Context, name, method string) error {
 				for wait.Err() == nil {
 					line, err := stdin().ReadString('\n')
 					if strings.TrimSpace(line) != "" && wait.Err() == nil {
-						if next, err := provider.PastePluginCallback(wait, a.URL, line); err != nil {
+						if next, err := provider.PastePluginCallback(wait, a, line); err != nil {
 							fmt.Println(err)
 						} else if next != "" {
 							fmt.Println("Go on signing in at:")

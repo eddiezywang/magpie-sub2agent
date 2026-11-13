@@ -2813,7 +2813,7 @@ async function authorize({ provider, method, inputs, account, proxy }, signal) {
   // opened (not OpenCode's) is a page the plugin's own CLI opened already:
   // Grok Build's `grok login` opens it on macOS and Windows, and magpie's
   // opening it too showed it twice (andyfmyth on X)
-  return { ok: true, session, url: a.url ?? "", instructions: a.instructions ?? "", method: a.method, opened: a.opened === true }
+  return { ok: true, session, url: a.url ?? "", callbackUrl: typeof a.callbackUrl === "string" ? a.callbackUrl : "", instructions: a.instructions ?? "", method: a.method, opened: a.opened === true }
 }
 
 // failed is a sign-in's failure, with why, where the plugin tells it

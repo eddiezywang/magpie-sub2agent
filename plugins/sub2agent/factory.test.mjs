@@ -60,6 +60,7 @@ test('Trae callback is nonce-scoped, validates login, and closes its listener',a
   getUserInfo:async()=>({UserID:'trae-user'}),checkLogin:async()=>{checked=true;return {IsLogin:true,UserID:'trae-user'};},listModels:async()=>models};
  const plugin=await createSub2AgentPlugin('trae',{client},{traeAdapter:adapter});
  const flow=await plugin.auth.methods[0].authorize();
+ assert.equal(flow.callbackUrl,callbackUrl,'manual callback target must survive an opaque login URL');
  const wrong=new URL(callbackUrl);wrong.pathname='/wrong';assert.equal((await fetch(wrong)).status,404);
  const done=flow.callback();
  const response=await fetch(callbackUrl+'?test=yes');assert.equal(response.status,200);assert.doesNotMatch(await response.text(),/trae-token/);
@@ -74,4 +75,30 @@ test('Trae refuses a callback whose enterprise login is not confirmed',async()=>
  const plugin=await createSub2AgentPlugin('trae',{client},{traeAdapter:adapter});
  const flow=await plugin.auth.methods[0].authorize();const rejected=assert.rejects(flow.callback(),/校验未通过/);
  await fetch(callbackUrl);await rejected;
+});
+
+test('Trae allows retrying invalid callbacks and consumes the valid callback only once',async()=>{
+ let release;const verifying=new Promise(r=>release=r);let parsed=0;
+ const adapter={requestLoginLink:async()=>({loginUrl:'https://login.example.invalid'}),
+  parseAuthorizationCallback:url=>{if(new URL(url).searchParams.get('code')!=='valid')throw new Error('invalid');parsed++;return {token:'fixture-token'};},
+  getUserInfo:async()=>{await verifying;return {UserID:'u'};},checkLogin:async()=>({IsLogin:true}),listModels:async()=>models};
+ const plugin=await createSub2AgentPlugin('trae',{client},{traeAdapter:adapter});
+ const flow=await plugin.auth.methods[0].authorize();
+ const done=flow.callback();
+ try {
+  assert.equal((await fetch(flow.callbackUrl+'?code=bad')).status,400);
+  assert.equal((await fetch(flow.callbackUrl+'?code=valid')).status,200);
+  assert.equal((await fetch(flow.callbackUrl+'?code=valid')).status,409);
+  assert.equal(parsed,1);
+ }finally{release();await done;}
+ await assert.rejects(fetch(flow.callbackUrl));
+});
+
+test('Trae cancellation closes its local callback listener without saving an account',async()=>{
+ const adapter={requestLoginLink:async()=>({loginUrl:'https://login.example.invalid'})};
+ const plugin=await createSub2AgentPlugin('trae',{client},{traeAdapter:adapter});
+ const flow=await plugin.auth.methods[0].authorize();
+ const controller=new AbortController();const done=flow.callback(undefined,{signal:controller.signal});
+ const rejected=assert.rejects(done,/abort|cancel/i);controller.abort();await rejected;
+ await assert.rejects(fetch(flow.callbackUrl));
 });

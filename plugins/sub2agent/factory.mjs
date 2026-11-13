@@ -101,11 +101,14 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
     let settle, reject;
     const received = new Promise((yes,no) => {settle=yes;reject=no;});
     received.catch(() => {});
+    let accepted = false;
     const server = http.createServer((req,res) => {
       const url = new URL(req.url,'http://127.0.0.1');
       if (req.method !== 'GET' || url.pathname !== callbackPath) {res.writeHead(404);res.end();return;}
+      if (accepted) {res.writeHead(409);res.end('Authorization already received');return;}
       try {
         const result = traeLogin.parseAuthorizationCallback(url.href);
+        accepted = true;
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer'});
         res.end('<title>Sub2Agent</title>授权已接收，可以返回 Sub2Agent。');
         settle(result);
@@ -115,10 +118,11 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
     const timeout = setTimeout(() => {reject(new Error('Trae 登录已超时。'));server.close();},300_000);
     timeout.unref?.();
     const close = () => {clearTimeout(timeout);server.close();};
+    const callbackUrl = `http://127.0.0.1:${server.address().port}${callbackPath}`;
     let login;
-    try {login = await traeLogin.requestLoginLink({callbackUrl:`http://127.0.0.1:${server.address().port}${callbackPath}`});}
+    try {login = await traeLogin.requestLoginLink({callbackUrl});}
     catch (error) {close();throw error;}
-    return {url:login.loginUrl,method:'auto',instructions:'在浏览器完成 Trae 企业登录，回调仅由本机接收。',
+    return {url:login.loginUrl,callbackUrl,method:'auto',instructions:'正在监听本地回调。请在浏览器完成 Trae 企业登录；如未自动完成，可在下方粘贴浏览器最后跳转的完整回调地址。',
       callback:async (_code,{signal:finishSignal}={}) => {
         activeSignal = finishSignal;
         const abort = () => {reject(finishSignal.reason || new Error('登录已取消。'));close();};

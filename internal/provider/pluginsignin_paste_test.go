@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -11,6 +14,70 @@ import (
 	"github.com/yetone/magpie/internal/plugin"
 	"github.com/yetone/magpie/internal/testenv"
 )
+
+func TestPluginExplicitCallbackSurvivesAnOpaqueLoginURL(t *testing.T) {
+	bun := testenv.Bun(t)
+	claudeHome(t)
+	t.Setenv("MAGPIE_BUN", bun)
+	t.Setenv("FAKE_LOOPBACK", "1")
+	t.Cleanup(plugin.Settle)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	abs, _ := filepath.Abs("../plugin/testdata/fake/index.js")
+	if _, err := plugin.Add(ctx, abs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := plugin.Providers(ctx); err != nil {
+		t.Fatal(err)
+	}
+	st, err := StartPluginSignIn("fakeco", 1, map[string]string{"where": "explicit", "team": "blue"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.PasteCallback {
+		t.Fatal("opaque login page hid the manual callback field")
+	}
+	u, _ := url.Parse(st.URL)
+	if len(loopbackPorts(st.URL)) != 0 {
+		t.Fatal("fixture still reveals a callback port")
+	}
+	back, err := base64.RawURLEncoding.DecodeString(u.Query().Get("target"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrong := strings.Replace(string(back), "/callback", "/unrelated", 1)
+	if err := SubmitSignInCallback(st.ID, wrong); err == nil {
+		t.Fatal("an unrelated callback path was accepted")
+	}
+	raw := string(back) + "?state=" + u.Query().Get("state") + "&code=good"
+	if err := SubmitSignInCallback(st.ID, raw); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := SignInStatus(st.ID); got.State != "done" || got.User != "blue@fake" {
+		t.Fatalf("pasted callback did not sign in: %+v", got)
+	}
+}
+
+func TestPluginRejectedCallbackReturnsWithoutWaitingForCompletion(t *testing.T) {
+	claudeHome(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) }))
+	defer srv.Close()
+	ports := loopbackPorts("https://login.invalid/?redirect_uri=" + url.QueryEscape(srv.URL+"/callback"))
+	s := &signInFlow{st: SignInState{State: "waiting"}, pluginPorts: ports, done: make(chan struct{})}
+	// The completion channel is deliberately never closed. Invalid input must
+	// return on the HTTP rejection, not wait for the sign-in's 30-second timeout.
+	if err := s.pluginCallback(srv.URL + "/callback?bad=1"); err == nil {
+		t.Fatal("rejected callback was treated as accepted")
+	}
+}
+
+func TestExplicitCallbackMustBeLoopback(t *testing.T) {
+	for _, raw := range []string{"https://127.0.0.1:123/callback", "http://example.com:123/callback", "http://user@127.0.0.1:123/callback", "http://127.0.0.1:0/callback", "http://127.0.0.1:123/callback#token"} {
+		if ports, _ := pluginCallbackTarget(plugin.Authorization{CallbackURL: raw}); len(ports) > 0 {
+			t.Fatalf("unsafe callback accepted: %s", raw)
+		}
+	}
+}
 
 // A plugin's browser sign-in that comes back to a port of the plugin's on
 // this machine can be finished from the address the browser ended on, for
@@ -95,7 +162,7 @@ func TestLoopbackPorts(t *testing.T) {
 			t.Errorf("loopbackPorts(%s) = %q, want %q", page, got, want)
 		}
 	}
-	if PluginPastesCallback("commandcode-plan", "https://commandcode.ai/studio/auth/cli?callback=http%3A%2F%2F127.0.0.1%3A4000%2Fcallback") {
+	if PluginPastesCallback("commandcode-plan", plugin.Authorization{URL: "https://commandcode.ai/studio/auth/cli?callback=http%3A%2F%2F127.0.0.1%3A4000%2Fcallback"}) {
 		t.Error("Command Code's page posts its key: there is no address to paste")
 	}
 }

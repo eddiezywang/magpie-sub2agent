@@ -111,7 +111,8 @@ type signInFlow struct {
 	claude   *claudeCLISignIn // Claude Code's own sign-in, run by magpie
 	// pluginPorts are where a plugin's browser sign-in comes back to on
 	// this machine, for its address pasted (pluginsignin_paste.go)
-	pluginPorts []string
+	pluginPorts        []string
+	pluginCallbackPath string // explicit callback's nonce-scoped path, when supplied
 	// pluginKey is a plugin's browser sign-in also finished by a key made
 	// on KeysURL and pasted: its provider and "api" method, as the plugin
 	// lists it (pluginsignin_paste.go)

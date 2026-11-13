@@ -61,7 +61,8 @@ async function loopbackSignIn(inputs) {
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const back = `http://127.0.0.1:${server.address().port}/callback`
   return {
-    url: "https://fake.invalid/auth?" + new URLSearchParams({ redirect_uri: back, state }),
+    url: "https://fake.invalid/auth?" + new URLSearchParams(inputs.where === "explicit" ? { target: Buffer.from(back).toString("base64url"), state } : { redirect_uri: back, state }),
+    callbackUrl: inputs.where === "explicit" ? back : undefined,
     instructions: "Sign in in the browser",
     method: "auto",
     callback: () => done.finally(() => setTimeout(() => server.close(), 1000)),
