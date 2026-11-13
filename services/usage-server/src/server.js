@@ -404,6 +404,7 @@ function createUsageServer(options = {}) {
   }
 
   let server = null;
+  const aliases=[];
   let pruneTimer = null;
 
   return {
@@ -441,6 +442,11 @@ function createUsageServer(options = {}) {
         server.listen(port, host, () => resolve(server.address().port));
       });
     },
+    listenAlias(aliasPort) {
+      if(!server || !Number.isInteger(aliasPort) || aliasPort<1024 || aliasPort>65535) return Promise.reject(new Error('Invalid alias port'));
+      const alias=http.createServer(server.listeners('request')[0]);
+      return new Promise((resolve,reject)=>{alias.once('error',reject);alias.listen(aliasPort,host,()=>{aliases.push(alias);resolve(aliasPort);});});
+    },
     stop() {
       if (pruneTimer) {
         clearInterval(pruneTimer);
@@ -450,7 +456,7 @@ function createUsageServer(options = {}) {
       if (!server) return Promise.resolve();
       const closing = server;
       server = null;
-      return new Promise((resolve) => closing.close(() => resolve()));
+      return Promise.all([closing,...aliases.splice(0)].map(s=>new Promise(resolve=>s.close(()=>resolve()))));
     },
     // Exposed for tests/admin tooling.
     _store: store,_summaries:summaries,_billing:billing,
@@ -463,7 +469,8 @@ module.exports = { createUsageServer, DEFAULT_PORT };
 
 if (require.main === module) {
   const app = createUsageServer();
-  app.start().then((bound) => {
+  app.start().then(async (bound) => {
+    if(process.env.USAGE_SERVER_ALIAS_PORT)await app.listenAlias(Number(process.env.USAGE_SERVER_ALIAS_PORT));
     console.log(`[usage-server] listening on ${app.host}:${bound} (png: ${pngAvailable() ? 'available' : 'svg-only, install @resvg/resvg-js'})`);
   });
   const shutdown = () => app.stop().then(() => process.exit(0));

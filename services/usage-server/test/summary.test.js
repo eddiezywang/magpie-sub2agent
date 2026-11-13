@@ -60,3 +60,9 @@ test('real HTTP accepts explicit IDs, preserves old telemetry and generates weig
  assert.equal((await post({...payload,summaries:[summary(),summary()]})).status,400);
  assert.equal((await fetch(base+'/admin/billing-policy')).status,401);
 });
+
+test('additional listener shares summary deduplication and closes with the service',async t=>{
+ const net=require('node:net');const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const aliasPort=probe.address().port;await new Promise(r=>probe.close(r));
+ const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:temp(t),now:fixed});await app.start();t.after(()=>app.stop());
+ await app.listenAlias(aliasPort);assert.equal((await fetch('http://127.0.0.1:'+aliasPort+'/healthz')).status,200);
+});
