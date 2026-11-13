@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/appdir"
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 const internalBunRegistry = "http://wnpm.weoa.com:8001"
@@ -25,6 +26,22 @@ const internalBunPackage = "@oven/bun-windows-x64-baseline"
 
 // Pinned executable digest, independently verified from the packaged release.
 const internalBunSHA256 = "15277c59ccd6c6c20f8dc9716c2b59c1776320d606b6a8658f70be8799519ca4"
+
+// CanStart includes an internal first-run download, unlike HasBun's read-only
+// presence check. This keeps preinstalled providers discoverable in light builds.
+func CanStart() bool {
+	if Running() || HasBun() {
+		return true
+	}
+	if distribution.Internal {
+		for _, entry := range Load().Plugins {
+			if !entry.Off {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 func internalBunCache() string {
 	return filepath.Join(appdir.Cache(), "plugin-runtime", BunVersion, "bun.exe")

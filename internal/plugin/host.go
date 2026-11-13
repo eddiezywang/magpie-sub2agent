@@ -882,7 +882,7 @@ func Running() bool {
 // too, so one started before the gateway moved (hostAddr) is started
 // again with the address the page's service needs.
 func Warm(ctx context.Context) error {
-	if !Running() && !HasBun() {
+	if !CanStart() {
 		return nil
 	}
 	_, err := get(ctx)

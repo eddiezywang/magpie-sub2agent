@@ -46,6 +46,25 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 	}
 }
 
+func TestIntranetLightRuntimeAdmission(t *testing.T) {
+	storeSandbox(t)
+	t.Setenv("MAGPIE_BUN", "")
+	was := shippedDirectory
+	shippedDirectory = func() string { return t.TempDir() }
+	t.Cleanup(func() { shippedDirectory = was })
+	if HasBun() {
+		t.Fatal("fixture unexpectedly has a runtime")
+	}
+	writeList(t, `{"plugins":[{"spec":"@sub2agent/codebuddy"}]}`)
+	if !CanStart() {
+		t.Fatal("first-run runtime download was skipped for an enabled provider")
+	}
+	writeList(t, `{"plugins":[{"spec":"@sub2agent/codebuddy","off":true}]}`)
+	if CanStart() {
+		t.Fatal("disabled providers requested a runtime")
+	}
+}
+
 func TestShippedMarketVersionWinsAndFallsBackWithoutDuplicates(t *testing.T) {
 	storeSandbox(t)
 	root := t.TempDir()

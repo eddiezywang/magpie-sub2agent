@@ -262,7 +262,7 @@ func pluginsState(ctx context.Context, w Windows) pluginsJSON {
 	idName := map[string]string{}
 	var tools []plugin.PluginTools
 	asked := false
-	if len(l.Plugins) > 0 && (plugin.Running() || plugin.HasBun()) {
+	if len(l.Plugins) > 0 && plugin.CanStart() {
 		loaded, err := plugin.Plugins(ctx)
 		if err != nil {
 			s.Error = err.Error()

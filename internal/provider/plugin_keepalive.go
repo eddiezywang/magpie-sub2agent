@@ -99,7 +99,7 @@ var pluginSignInsKept = func() []pluginSignIn {
 
 // keepPluginSignedIn renews one sign-in if it is due; tests replace it.
 var keepPluginSignedIn = func(ctx context.Context, s pluginSignIn) (plugin.KeptSignedIn, error) {
-	if !plugin.Running() && !plugin.HasBun() {
+	if !plugin.CanStart() {
 		return plugin.KeptSignedIn{}, errNoBun
 	}
 	return plugin.KeepSignedIn(ViaLogin(ctx, PluginID(s.ID), s.User), s.ID, s.Key)
