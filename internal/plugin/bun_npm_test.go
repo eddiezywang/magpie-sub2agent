@@ -11,10 +11,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/yetone/magpie/internal/testenv"
 )
 
 func TestNPMBunVerifiedCacheAndInternalTarball(t *testing.T) {
@@ -84,6 +88,58 @@ func TestNPMBunVerifiedCacheAndInternalTarball(t *testing.T) {
 	}
 	if requests.Load() != before {
 		t.Fatal("valid cache contacted server")
+	}
+}
+
+func TestNPMBunRunsVerifiedExecutable(t *testing.T) {
+	if runtime.GOOS != "windows" || runtime.GOARCH != "amd64" {
+		t.Skip("pinned Windows runtime")
+	}
+	source := testenv.Bun(t)
+	if !bunDigest(source, internalBunSHA256) {
+		t.Skip("requires the pinned Bun 1.4.2 executable")
+	}
+	data, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var archive bytes.Buffer
+	gz, err := gzip.NewWriterLevel(&archive, gzip.BestSpeed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := tar.NewWriter(gz)
+	if err = writer.WriteHeader(&tar.Header{Name: "package/bin/bun.exe", Mode: 0755, Size: int64(len(data))}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = writer.Write(data); err != nil {
+		t.Fatal(err)
+	}
+	if err = writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, ".tgz") {
+			_, _ = w.Write(archive.Bytes())
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"name": internalBunPackage, "version": BunVersion, "dist": map[string]string{"tarball": "https://registry.npmjs.org/@oven/bun-windows-x64-baseline/-/bun-windows-x64-baseline-1.4.2.tgz"}})
+	}))
+	defer server.Close()
+	target := filepath.Join(t.TempDir(), "bun.exe")
+	if err = fetchNPMBun(context.Background(), server.URL, target, internalBunSHA256); err != nil {
+		t.Fatal(err)
+	}
+	output, err := exec.Command(target, "--version").Output()
+	if err != nil || strings.TrimSpace(string(output)) != BunVersion {
+		t.Fatalf("downloaded runtime failed: %q %v", output, err)
+	}
+	server.Close()
+	if err = fetchNPMBun(context.Background(), server.URL, target, internalBunSHA256); err != nil {
+		t.Fatal("offline cached execution failed:", err)
 	}
 }
 
