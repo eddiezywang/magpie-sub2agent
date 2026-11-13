@@ -612,3 +612,10 @@ Validation: the Playwright preview checks tile order, hidden protocol controls,
 successful automatic adoption of Anthropic + Responses with Chat rejected,
 and no save when all protocols fail, in Chromium/WebKit at three layouts.
 Existing provider detection tests and core script budget are also checked.
+
+Release .15: single-file/no-Bun package built from 0ec9924. Packed asset,
+intranet and embedded-provider checks pass. Playwright checked all nine
+retained views on the actual executable. The live custom fixture drives the
+real detection API against a local Responses-only server and verifies the
+saved base/API excludes the three rejected protocols. No live enterprise
+gateway credentials were exercised.
