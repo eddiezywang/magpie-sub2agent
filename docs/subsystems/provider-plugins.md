@@ -594,3 +594,21 @@ layouts, masked CLI key selection, custom ZHT protocol base URL save payloads,
 and generic custom gateway/key saves. Provider tests round-trip both custom
 ZHT URLs and the key and check final transport paths. The eight localization
 checks and core JavaScript budget check pass. No application build was run.
+
+### Custom API key with protocol detection
+
+The intranet picker places Custom API key after ZHT in the API access grid,
+removing the header Custom provider action. Its editor asks for the gateway
+and key without protocol tabs or additional protocol endpoint fields. Saving
+loads the lazy autogateway module and calls the existing provider/detect API,
+which retrieves candidate models and sends a minimal request per protocol.
+Only successful protocol bases are saved, with unsupported draft bases
+cleared. An empty result or request failure keeps the editor and input open;
+users may enter a model if the gateway offers no model list. Changes during
+an in-flight probe invalidate its result, and concurrent clicks cannot save
+before the probe completes. Preset gateways and subscription login are unchanged.
+
+Validation: the Playwright preview checks tile order, hidden protocol controls,
+successful automatic adoption of Anthropic + Responses with Chat rejected,
+and no save when all protocols fail, in Chromium/WebKit at three layouts.
+Existing provider detection tests and core script budget are also checked.

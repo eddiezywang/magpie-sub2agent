@@ -13,6 +13,7 @@ const {chromium,webkit}=require('playwright');
   const browser=await(engine==='webkit'?webkit.launch():chromium.launch({channel:'chrome'}));
   try {for(const [width,theme] of [[1440,'light'],[1440,'dark'],[420,'light']]) {
    const page=await browser.newPage({viewport:{width,height:1100},reducedMotion:'reduce'});
+   let detectCount=0,saveCount=0;
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(()=>{window.reviewOpened=[];window.open=url=>{window.reviewOpened.push(url);return null;};});
    await page.route('**/*',async route=>{
@@ -20,7 +21,13 @@ const {chromium,webkit}=require('playwright');
     if(u.pathname==='/boot.js') return route.fulfill({contentType:'text/javascript',body:`window.bootPrefs=${JSON.stringify({lang:'zh',theme,web:true,intranet:true,featuresOff:['library','middleware','otel','redact','search','tools','warmups']})};`});
     if(u.pathname==='/wails/runtime.js') return route.fulfill({contentType:'text/javascript',body:'export const Window={};'});
     if(u.pathname==='/api/state') return json({agents:[],profiles:[],settings:{lang:'zh',theme,builtins:[]}});
-    if(u.pathname==='/api/provider/save') return json({providers:[],excluded:[],unmoved:[],presets:[tig,preset],plugins:[vendor],gateway:{lanes:[]}});
+    if(u.pathname==='/api/provider/save') { saveCount++; return json({providers:[],excluded:[],unmoved:[],presets:[tig,preset],plugins:[vendor],gateway:{lanes:[]}}); }
+    if(u.pathname==='/api/provider/detect') {
+     const body=route.request().postDataJSON(); detectCount++;
+     assert.equal(body.base,'http://custom-gateway.test/v1');
+     assert.equal(body.key,'fixture-custom-key');
+     return json({results:body.picked?.includes('retry-model')?[]:[{protocol:'anthropic',base:'http://custom-gateway.test',ok:true},{protocol:'responses',base:'http://custom-gateway.test/v1',ok:true},{protocol:'chat',base:'http://custom-gateway.test/v1',ok:false,status:404}]});
+    }
     if(u.pathname==='/api/providers') return json({providers:[],excluded:[],unmoved:[],presets:[tig,preset],plugins:[vendor],gateway:{lanes:[]}});
     if(u.pathname==='/api/open') return json({});
     if(u.pathname==='/api/provider-zht/key') return json({keys:[{apiKeyId:'fixture_8899',apiKeyValue:'fixture-key'}]});
@@ -32,6 +39,8 @@ const {chromium,webkit}=require('playwright');
    await page.goto('http://magpie.test/?view=providers');
    assert.ok((await page.locator('#addSheet').innerText()).includes('API 接入'));
    assert.ok(!(await page.locator('#addSheet').innerText()).includes('中转'));
+   assert.equal(await page.locator('#addSheet [data-pick=custom]').innerText(),'自定义 API Key');
+   assert.ok(await page.locator('#addSheet [data-pick=custom]').evaluate(e=>e.previousElementSibling.textContent.includes('CIB-智汇通-APIKEY')));
    await page.locator('img[src="icons/tig-color.svg"]').waitFor();
    await page.mouse.move(width-12,12); await page.waitForTimeout(350);
    await page.screenshot({path:path.join(output,`15-api-access-${engine}-${width}-${theme}.png`),fullPage:true});
@@ -64,6 +73,8 @@ const {chromium,webkit}=require('playwright');
    const custom=page.locator('.editor.new');
    const gateway=custom.locator('input.base-url');
    await gateway.waitFor();
+   assert.equal(await custom.locator('[data-api]:visible').count(),0);
+   await custom.locator('.auto-gateway-status').waitFor();
    await custom.locator('input').first().fill('自定义 API');
    await gateway.fill('http://custom-gateway.test/v1');
    await custom.locator('input[type=password]:visible').fill('fixture-custom-key');
@@ -72,9 +83,23 @@ const {chromium,webkit}=require('playwright');
    const saveCustom=page.waitForRequest(r=>new URL(r.url()).pathname==='/api/provider/save');
    await custom.getByRole('button',{name:'添加',exact:true}).click();
    const customBody=(await saveCustom).postDataJSON();
-   assert.equal(customBody.chat,'http://custom-gateway.test/v1');
+   assert.equal(customBody.chat,'');
+   assert.equal(customBody.anthropic,'http://custom-gateway.test');
+   assert.equal(customBody.responses,'http://custom-gateway.test/v1');
+   assert.equal(detectCount,1);
    assert.equal(customBody.key,'fixture-custom-key');
-   assert.deepEqual(errors,[]);report.push({engine,width,theme,notice:true,dualProtocolDefaults:true,keyMasked:true,cliSelection:true});await page.close();
+   await page.waitForTimeout(500);
+   await page.goto('http://magpie.test/?view=providers');
+   await page.locator('#addSheet [data-pick=custom]').click();
+   const failed=page.locator('.editor.new');
+   await failed.locator('.auto-gateway-status').waitFor();
+   await failed.locator('.base-url').fill('http://custom-gateway.test/v1');
+   await failed.locator('input[type=password]:visible').fill('fixture-custom-key');
+   await failed.locator('.add-models input').first().fill('retry-model');
+   await failed.getByRole('button',{name:'添加',exact:true}).click();
+   await page.waitForFunction(()=>document.querySelector('.auto-gateway-status')?.textContent.includes('无法识别'));
+   assert.equal(saveCount,2);
+   assert.deepEqual(errors,[]);report.push({engine,width,theme,notice:true,dualProtocolDefaults:true,keyMasked:true,cliSelection:true,autoProtocols:true,failedDetectionBlocksSave:true});await page.close();
   }}finally{await browser.close();}
  }
  await fs.writeFile(path.join(output,'15-zht-results.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));

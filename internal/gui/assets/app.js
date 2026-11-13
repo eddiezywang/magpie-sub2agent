@@ -3611,7 +3611,7 @@ async function openAgentModels(a, anchor, ev) {
       if (pick && !words && g.name !== pick) continue;
       const rows = g.models.filter((m) => (!onlyShown || !m.hidden || kept.has(m.id)) &&
         (!words || [m.name, m.id, g.name].some((s) => s.toLowerCase().includes(words))));
-      if (!rows.length) continue;
+      if (!rows.length && !(window.bootPrefs?.intranet && kind === "relay")) continue;
       const on = g.models.filter((m) => !m.hidden).length;
       const folded = !words && !pick && shut.has(g.name);
       const sec = el("section", "am-g" + (folded ? " shut" : "") + (g.name === ROUTING_GROUPS ? " routes" : ""));
@@ -7141,11 +7141,12 @@ function renderAdd() {
     }).catch(() => {});
   };
   const c = el("button", "text custom" + (editing?.custom ? " on" : ""));
-  c.append(svg(PLUS, 11, 1.8), t("Custom provider"));
+  c.append(svg(PLUS, 11, 1.8), t(window.bootPrefs?.intranet ? "Custom API key" : "Custom provider"));
   c.dataset.pick = "custom";
   c.title = t("any OpenAI or Anthropic compatible URL");
   c.onclick = () => { editing = { custom: true }; draft = null; renderProviders(); };
-  head.append(q, c);
+  head.append(q);
+  if (!window.bootPrefs?.intranet) head.append(c);
   const imp = el("button", "text", t("Import…"));
   imp.title = t("Bring over providers set up in other apps");
   imp.onclick = openImportApps;
@@ -7252,6 +7253,7 @@ function renderAdd() {
       any = true;
       const grid = section(window.bootPrefs?.intranet && kind === "relay" ? "API access" : title, window.bootPrefs?.intranet && kind === "relay" ? "Configure a gateway and API key" : hint);
       for (const [pr, cn] of rows) grid.append(cn ? pairTile(pr, cn) : tile(pr));
+      if (window.bootPrefs?.intranet && kind === "relay") { c.className = "tile"; grid.append(c); }
     }
     if (!any) {
       const none = el("div", "none");
@@ -9312,7 +9314,7 @@ function drawEditor(p, presetID) {
   {
     const h = el("div", "ehead");
     const copyOf = draft.copyOf && providers.providers.find((x) => x.id === draft.copyOf);
-    h.append(icon(p?.icon || (copyOf && draft.icon) || pr?.icon || "generic"), el("b", "", p ? p.name : copyOf ? t("Copy of {name}", { name: copyOf.name }) : pr ? pr.name : t("Custom provider")));
+    h.append(icon(p?.icon || (copyOf && draft.icon) || pr?.icon || "generic"), el("b", "", p ? p.name : copyOf ? t("Copy of {name}", { name: copyOf.name }) : pr ? pr.name : t(window.bootPrefs?.intranet ? "Custom API key" : "Custom provider")));
     if (pr?.kind === "partner") { if (partnerNote(pr)) h.append(el("span", "note", partnerNote(pr))); } else if (pr?.note) h.append(el("span", "note", t(pr.note)));
     h.append(el("span", "grow"));
     // a region's own page (Tencent Cloud's), following the region picked
@@ -9483,7 +9485,7 @@ function drawEditor(p, presetID) {
       showSearch(); showLocal(); showTLS(); showAuth(); showCompaction(); showSocket();
     };
     const urlWrap = el("div", "stack");
-    urlWrap.append(seg, url);
+    urlWrap.append(...(window.bootPrefs?.intranet ? [url] : [seg, url]));
     // the APIs a detection found: URLs set, a 404/405 one cleared
     const useDetected = (rs) => {
       carried = null;
@@ -9506,7 +9508,8 @@ function drawEditor(p, presetID) {
       draft.onModelPrefs?.();
     };
     // Detect asks OpenAI's, Anthropic's and Gemini's APIs (#1346)
-    urlWrap.append(detectAPIs(p, () => url.value, useDetected));
+    if (window.bootPrefs?.intranet) ed.autoDetect = import("./autogateway.js").then((m) => m.setup(ed, urlWrap, url, draft, p, useDetected, asTyped));
+    else urlWrap.append(detectAPIs(p, () => url.value, useDetected));
     ed.append(...field(window.bootPrefs?.intranet ? t("Gateway URL") : "Base URL", urlWrap));
   }
 
@@ -10152,7 +10155,7 @@ function drawEditor(p, presetID) {
   }
   ed.append(adv);
 
-  if (custom) {
+  if (custom && !window.bootPrefs?.intranet) {
     const more = edAligned(el("details", "more"));
     more.append(el("summary", "", t("More endpoints")));
     const inner = el("div", "inner");
@@ -10254,7 +10257,8 @@ function drawEditor(p, presetID) {
   const cancel = el("button", "text", t("Cancel"));
   cancel.onclick = cancelEdit;
   const saveBtn = el("button", "text primary", t(isNew ? "Add" : "Save"));
-  const save = () => {
+  const save = async () => {
+    if (ed.autoDetect && !await (await ed.autoDetect)()) return;
     if (p && pickingNone()) return editorError(t("Pick a model first."), "warn");
     // a typed icon address first; one that fails stays (hoobnn)
     const waiting = custom && ed.iconFlush?.();
