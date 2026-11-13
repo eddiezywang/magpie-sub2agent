@@ -1,5 +1,46 @@
 # Production usage receipt verification — 2026-11-14
 
+## Completed follow-up: model prices, CNY and original fonts
+
+Deployed source `fdf87be` and re-read the real report. The same 306 calls now
+have **zero unpriced attempts**, USD list-price equivalent 0.73189930475,
+and **CNY 4.9148502112572 (display ¥4.91)**. No historical summaries were
+rewritten. `legacy-*` provider identities no longer block model-name pricing.
+The export reuses the existing desktop `provider.MakerPrice` implementation for
+1,280 spellings from the bundled catalog. It was regenerated twice with the
+same snapshot hash; deployment-suffix aliases preserve exact admin overrides.
+
+API-equivalent valuation is separate from WorkBuddy points and plan-token
+accounting. Reports default to CNY with a dated server-maintained CFETS reference
+of 6.7152 CNY/USD (2026-11-13), printed on the image. It is a reference conversion,
+not a live rate or an assertion of actual subscription charges. Truly unknown
+models and minute totals whose request-size price tiers cannot be recovered
+remain explicitly unpriced rather than assigned a guessed context tier.
+
+The intended **JetBrains Mono + Noto Sans CJK SC Regular/Bold** font package is
+now installed, with the Noto OFL license retained. The temporary Song font
+fallback was removed. Receipt geometry and design were preserved. Fonts are
+server assets and do not increase the desktop executable.
+
+Verification: 10 Node integration/unit tests pass locally and on the production
+Node 18 host; the legacy suffix regression fails against the previous pricing
+module with `glm-5.3-flash-zp: false !== true`. The Go exporter ran under isolated
+app configuration; gofmt, targeted Go vet and deterministic snapshot checks
+passed. The full desktop Go suite was not run for this server-only change.
+
+The encrypted release followed the authorized laptop/idisk/KF/jump route and
+its SHA-256 matched on the destination. Production source and font configuration
+were backed up; listeners were stopped and released before updating. Both live
+report endpoints generated PNGs with the expected real counts and positive CNY
+valuation. Both images were visually checked, and the updated preview and PNGs
+returned HTTP 200. The public encrypted transport artifact was removed.
+
+- [Updated preview](http://124.220.199.224:8805/usage-eddiewang-20261113.html)
+- [CNY daily PNG](http://124.220.199.224:8805/eddiewang-daily-20261113-cny.png)
+- [CNY weekly PNG](http://124.220.199.224:8805/eddiewang-weekly-20261113-cny.png)
+
+## Initial verification, before the follow-up above
+
 Verified the existing internal service with real `eddiewang` reports, not fixture
 traffic. The daily report for 2026-11-13 contains 306 calls, 439,150 input tokens,
 179,378 output tokens and 14,300,480 cache-read tokens: 14,919,008 total tokens.
