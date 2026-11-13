@@ -2,6 +2,7 @@
 let active = false, generation = 0, snapshot = null;
 const visible = () => !document.getElementById("view-agents")?.hidden;
 export function leave() { active = false; snapshot = null; generation++; }
+export async function refresh() { leave(); await enter(); return t("Agents looked for again"); }
 function draw() {
   if (!snapshot || !visible()) return;
   for (const row of document.querySelectorAll("#agents .agent[data-id]")) {
@@ -36,6 +37,9 @@ export async function enter() {
   try {
     const next = await api("agents/connections");
     if (visit !== generation || !visible()) return;
-    snapshot = next; draw();
+    snapshot = next.checks;
+    const previous = new Map((state.agents || []).map(a => [a.id, a]));
+    state.agents = next.agents.map(a => ({ ...previous.get(a.id), ...a }));
+    renderAgents(); draw();
   } catch (err) { if (visit === generation && visible()) statusErr(err); }
 }

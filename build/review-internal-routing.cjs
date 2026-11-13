@@ -22,8 +22,8 @@ const templates = ['plan','smart','thrifty','steady'].map(kind=>({kind,group:{id
     const u=new URL(route.request().url()),json=data=>route.fulfill({json:data});
     if(u.pathname==='/boot.js')return route.fulfill({contentType:'text/javascript',body:`window.bootPrefs=${JSON.stringify({lang:'zh',theme:'light',web:true,intranet:true,featuresOff:['library','middleware','otel','redact','search','tools','warmups']})};`});
     if(u.pathname==='/wails/runtime.js')return route.fulfill({contentType:'text/javascript',body:'export const Window={};'});
-    if(u.pathname==='/api/state')return json({agents:[{id:'codex',name:'Codex',path:'fixture/config.toml',fields:[]},{id:'claude',name:'Claude Code',path:'fixture/settings.json',fields:[]}],profiles:[],settings:{lang:'zh',theme:'light'}});
-    if(u.pathname==='/api/agents/connections'){checks++;return json({codex:{status:'configured',managed:false,path:'fixture/config.toml'},claude:{status:'disconnected',managed:false,path:'fixture/settings.json'}});}
+    if(u.pathname==='/api/state')return json({agents:[{id:'codex',name:'Codex',path:'fixture/config.toml',fields:[]}],profiles:[],settings:{lang:'zh',theme:'light'}});
+    if(u.pathname==='/api/agents/connections'){checks++;return json({checks:{codex:{status:'configured',managed:false,path:'fixture/config.toml'},claude:{status:'disconnected',managed:false,path:'fixture/settings.json'}},agents:[{id:'codex',name:'Codex',path:'fixture/config.toml',fields:[]},{id:'claude',name:'Claude Code',path:'fixture/settings.json',fields:[]}]});}
     if(u.pathname==='/api/plugins')return json({plugins:[]});
     if(u.pathname==='/api/groups')return json({models,pools:[],deciders:[],found:true,groups:[],templates});
     if(u.pathname==='/api/gateway/trace')return u.searchParams.get('wait')?new Promise(()=>{}):json({mine:true,now:new Date().toISOString(),seq:1,totals:{requests:0,rerouted:0,errors:0},routes:[]});
@@ -53,7 +53,10 @@ const templates = ['plan','smart','thrifty','steady'].map(kind=>({kind,group:{id
    await page.screenshot({path:path.join(output,`16-agent-connections-${engine}-${width}.png`),fullPage:true});
    await page.evaluate(()=>show('groups'));await page.evaluate(()=>show('agents'));
    await page.waitForFunction(()=>document.querySelectorAll('.connection-check').length===2);
-   assert.equal(checks,2);assert.deepEqual(errors,[]);
+   assert.equal(checks,2);
+   const refreshed=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/agents/connections');
+   await page.locator('#sync').click();await refreshed;
+   assert.equal(checks,3);assert.deepEqual(errors,[]);
    results.push({engine,width,templates:4,oncePerVisit:true,branding:true});await page.close();
   }}finally{await browser.close();}
  }

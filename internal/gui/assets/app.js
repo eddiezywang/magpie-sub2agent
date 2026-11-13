@@ -23470,6 +23470,7 @@ function syncTitle() {
 async function refreshPage(kind) {
   switch (kind) {
     case "agents":
+      if (window.bootPrefs?.intranet) return (await import("./agentconnections.js")).refresh();
       state = await api("agents/rescan", {});
       renderAgents();
       await Promise.all([loadInstalls(), loadCLIs()]);

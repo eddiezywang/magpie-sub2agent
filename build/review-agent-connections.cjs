@@ -12,7 +12,7 @@ const assert=require('node:assert/strict');
    await page.evaluate(async()=>{
     window.calls=[]; window.t=s=>s; window.state={}; window.renderAgents=()=>{};
     window.statusErr=e=>{throw e};
-    window.api=async(name)=>{calls.push(name);return name==='agents/connections'?{codex:{status:'configured',managed:false,path:'fixture/config.toml'}}:{};};
+    window.api=async(name)=>{calls.push(name);return name==='agents/connections'?{checks:{codex:{status:'configured',managed:false,path:'fixture/config.toml'}},agents:[{id:'codex',fields:[]}]}:{};};
     window.check=await import('/agentconnections.js');await check.enter();
    });
    assert.equal(await page.locator('.connection-check').innerText(),'Configured for sub2agent · Adapt existing connection');

@@ -441,6 +441,12 @@ header is added by the internal Codex writer; existing user headers are kept.
 Detected agents stay visible in the internal page unless explicitly hidden.
 Entering from another page also triggers the snapshot; rerendering the current
 page only redraws the cached result. Leaving invalidates any in-flight result.
+The snapshot returns both checks and the detected local agent rows, so entering
+the page also discovers an agent installed since startup. Existing row metadata
+is retained; removed detections leave the page. This read does not call state(),
+whose Follow and telemetry maintenance paths can write configuration.
+The internal header refresh explicitly invalidates and repeats this same local
+snapshot, without triggering the upstream release/vendor refresh path.
 
 The internal browser page does not apply the server-only gateway-mode veto to
 local session discovery. The existing per-agent session-read permissions still

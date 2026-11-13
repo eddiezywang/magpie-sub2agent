@@ -1314,10 +1314,13 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	mux.HandleFunc("GET /api/agents/connections", func(rw http.ResponseWriter, r *http.Request) {
 		agent.RescanLocal()
 		out := map[string]agent.ConnectionCheck{}
+		found := []agentJSON{}
 		for _, a := range agent.DetectedIn(heldAgents()) {
-			out[a.ID] = agent.CheckConnection(a, gateway.URL())
+			check := agent.CheckConnection(a, gateway.URL())
+			out[a.ID] = check
+			found = append(found, agentJSON{ID: a.ID, Name: a.Name, Icon: a.Icon, Path: tilde(a.Path), Fields: agentFields(a, a.Values()), Wired: check.Managed})
 		}
-		writeJSON(rw, out)
+		writeJSON(rw, map[string]any{"checks": out, "agents": found})
 	})
 	mux.HandleFunc("POST /api/agents/rescan", func(rw http.ResponseWriter, r *http.Request) {
 		agent.Rescan()
