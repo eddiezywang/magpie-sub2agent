@@ -540,3 +540,13 @@ shared provider Rename path: groups/settings follow, Was keeps old model refs
 working, and saved keys, enabled state and model selections remain intact.
 Only imported records at the exact managed host are reclassified; arbitrary
 custom gateways and explicitly assigned other presets are left alone.
+
+### Internal deployment model names
+
+The internal catalog recognizes the exact deployment suffixes `-zp`,
+`-zp-openai`, `-maas`, and `-maas-<account>` for GLM, DeepSeek, MiniMax and
+Hunyuan identifiers. `catalog.DeploymentModel` feeds capability/name/price
+fallbacks and model-family matching without changing upstream request IDs.
+Exact catalog entries and explicit provider prices retain precedence. No
+shorter-prefix guessing or image-generation capability is invented. A suffix
+can only borrow metadata when the full base model is known by the catalog.

@@ -55,7 +55,7 @@ var familyPreview = map[string]bool{"preview": true, "exp": true, "experimental"
 
 // FamilyOf reads id's family off its name.
 func FamilyOf(id string) Family {
-	s := strings.ToLower(strings.TrimSpace(id))
+	s := strings.ToLower(DeploymentModel(strings.TrimSpace(id)))
 	words := familySep.Split(s, -1)
 	seps := familySep.FindAllString(s, -1)
 	// which purely numeric words are a snapshot rather than a version

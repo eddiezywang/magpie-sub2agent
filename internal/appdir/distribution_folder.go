@@ -3,7 +3,6 @@ package appdir
 import (
 	"github.com/yetone/magpie/internal/distribution"
 	"os"
-	"path/filepath"
 	"sync"
 )
 
@@ -19,11 +18,11 @@ func distributionFolder(root string, move bool) string {
 	if p, ok := settledFolders.Load(root); ok {
 		return p.(string)
 	}
-	next := filepath.Join(root, distribution.DataDir)
+	next := Join(root, distribution.DataDir)
 	if !distribution.Internal {
 		return next
 	}
-	old := filepath.Join(root, "sub2agent-magpie")
+	old := Join(root, "sub2agent-magpie")
 	if _, err := os.Stat(next); !os.IsNotExist(err) {
 		if err == nil {
 			settledFolders.Store(root, next)
