@@ -456,3 +456,14 @@ Anthropic base and links; saved addresses remain user-owned. Native Anthropic
 transport and mandatory Bearer signing remain host-owned; installing the
 adapter creates no second login provider or credential copy. The three other
 adapters keep their private subscription implementations and account store.
+
+
+The internal publisher and installer also accept format 2 offline archives with
+an exact files list and declared provider, hooks and/or page entries. Nested
+JS/HTML/CSS assets are supported without dependency resolution or install scripts.
+Extraction rejects undeclared/missing files, case collisions, links, unsafe paths,
+Windows device names and oversized archives. Format 1 single-file packages remain
+compatible. `build/prepare-plugin-market.py` prepares all four provider packages
+and the pinned optional upstream notify package; it does not deploy a server.
+Notify retains its upstream hooks and settings page, with empty channels and
+message bodies disabled by default. See the internal marketplace deployment guide.

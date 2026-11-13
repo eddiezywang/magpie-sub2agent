@@ -19,8 +19,8 @@ import (
 	"github.com/yetone/magpie/internal/distribution"
 )
 
-// InternalBundle v1 is a single bundled ESM plugin, without install scripts or
-// external runtime dependencies. Its three permitted files cannot escape staging.
+// InternalBundle contains reviewed offline code, without dependency installation.
+// Format 1 is a bundled ESM; format 2 declares exact hook/page files in its manifest.
 type InternalBundle struct {
 	Version string `json:"version"`
 	URL     string `json:"url"`
@@ -143,13 +143,18 @@ func extractInternalBundle(b []byte, dir, pkg, version string) error {
 	if err != nil {
 		return fmt.Errorf("插件离线包不是有效的 ZIP 文件")
 	}
+	if len(z.File) > 128 {
+		return fmt.Errorf("插件离线包文件数量超出限制")
+	}
 	seen := map[string]bool{}
+	folded := map[string]bool{}
 	var total uint64
 	for _, f := range z.File {
-		if seen[f.Name] || (f.Name != "package.json" && f.Name != "index.js" && f.Name != "README.md") || !f.Mode().IsRegular() {
+		if folded[strings.ToLower(f.Name)] || !safeBundlePath(f.Name) || !allowedBundleFile(f.Name) || !f.Mode().IsRegular() {
 			return fmt.Errorf("插件离线包包含不受支持的文件或链接")
 		}
 		seen[f.Name] = true
+		folded[strings.ToLower(f.Name)] = true
 		total += f.UncompressedSize64
 		if f.UncompressedSize64 > internalBundleLimit || total > 2*internalBundleLimit {
 			return fmt.Errorf("插件离线包解压后超出大小限制")
@@ -166,11 +171,23 @@ func extractInternalBundle(b []byte, dir, pkg, version string) error {
 		if len(data) > internalBundleLimit {
 			return fmt.Errorf("plugin file too large")
 		}
-		if err := os.WriteFile(filepath.Join(dir, f.Name), data, 0o644); err != nil {
+		target := filepath.Join(dir, filepath.FromSlash(f.Name))
+		if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+			return err
+		}
+		if err := os.WriteFile(target, data, 0o644); err != nil {
 			return err
 		}
 	}
 	var manifest struct {
+		Format int      `json:"sub2agentBundle,omitempty"`
+		Files  []string `json:"files"`
+		Magpie struct {
+			Hooks string `json:"hooks"`
+			Page  struct {
+				File string `json:"file"`
+			} `json:"page"`
+		} `json:"magpie"`
 		Name         string         `json:"name"`
 		Version      string         `json:"version"`
 		Main         string         `json:"main"`
@@ -181,10 +198,57 @@ func extractInternalBundle(b []byte, dir, pkg, version string) error {
 		Scripts      map[string]any `json:"scripts"`
 	}
 	m, err := os.ReadFile(filepath.Join(dir, "package.json"))
-	if err != nil || json.Unmarshal(m, &manifest) != nil || !seen["index.js"] || manifest.Name != pkg || manifest.Version != version || manifest.Main != "index.js" || manifest.Type != "module" || len(manifest.Dependencies)+len(manifest.Optional)+len(manifest.Peer)+len(manifest.Scripts) > 0 {
+	if err != nil || json.Unmarshal(m, &manifest) != nil || manifest.Name != pkg || manifest.Version != version || manifest.Type != "module" || len(manifest.Dependencies)+len(manifest.Optional)+len(manifest.Peer)+len(manifest.Scripts) > 0 {
 		return fmt.Errorf("插件必须是名称、版本匹配且不含外部依赖或安装脚本的完整 ESM 包")
 	}
+	if manifest.Format == 2 {
+		declared := map[string]bool{"package.json": true}
+		for _, name := range manifest.Files {
+			if !safeBundlePath(name) || declared[name] || !seen[name] {
+				return fmt.Errorf("插件声明的文件缺失或不合法")
+			}
+			declared[name] = true
+		}
+		for name := range seen {
+			if !declared[name] {
+				return fmt.Errorf("插件离线包包含未声明文件")
+			}
+		}
+		hasEntry := false
+		for _, entry := range []string{manifest.Main, manifest.Magpie.Hooks, manifest.Magpie.Page.File} {
+			if entry == "" {
+				continue
+			}
+			entry = strings.TrimPrefix(entry, "./")
+			if !safeBundlePath(entry) || !seen[entry] {
+				return fmt.Errorf("插件入口缺失或不合法")
+			}
+			hasEntry = true
+		}
+		if !hasEntry {
+			return fmt.Errorf("插件没有可加载的入口")
+		}
+	} else if manifest.Format != 0 && manifest.Format != 1 || !seen["index.js"] || manifest.Main != "index.js" {
+		return fmt.Errorf("插件必须是完整 ESM 包或已声明的离线页面与钩子包")
+	} else {
+		for name := range seen {
+			if name != "package.json" && name != "index.js" && name != "README.md" && name != "LICENSE" {
+				return fmt.Errorf("单文件插件包含不受支持的文件")
+			}
+		}
+	}
 	return nil
+}
+
+func allowedBundleFile(name string) bool {
+	if name == "LICENSE" || name == "NOTICE" || name == "README.md" {
+		return true
+	}
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".json", ".js", ".mjs", ".html", ".css", ".svg":
+		return true
+	}
+	return false
 }
 
 func internalServiceError(reason string, code int) error {

@@ -14,6 +14,35 @@ from serve import Handler
 
 
 class MarketTests(unittest.TestCase):
+    def test_hooks_page_bundle_has_only_declared_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = pathlib.Path(temp)
+            plugin = base / 'plugin'
+            (plugin / 'page').mkdir(parents=True)
+            manifest = {'name': '@internal/notify', 'type': 'module', 'sub2agentBundle': 2,
+                        'files': ['notify.mjs', 'page/index.html', 'page/app.js'],
+                        'magpie': {'hooks': './notify.mjs', 'page': {'file': 'page/index.html'}}}
+            for name in manifest['files']:
+                (plugin / name).write_text('fixture', encoding='utf-8')
+            (plugin / 'credentials.json').write_text('must stay private')
+            def save():
+                (plugin / 'package.json').write_text(json.dumps(manifest), encoding='utf-8')
+            save()
+            entry = publish(base / 'www', plugin, '1.0.0', 'Notify')
+            archive = base / 'www/magpie/plugins/dist' / (entry['bundle']['sha256'] + '.zip')
+            with zipfile.ZipFile(archive) as bundle:
+                self.assertEqual(set(bundle.namelist()), {'package.json', *manifest['files']})
+            for unsafe in ['../outside.js', 'page/CON.js', 'page/APP.js', 'credentials.exe']:
+                manifest['files'].append(unsafe)
+                save()
+                with self.assertRaises((ValueError, FileNotFoundError)):
+                    publish(base / 'www', plugin, '1.0.1', 'Unsafe')
+                manifest['files'].pop()
+            manifest['magpie']['hooks'] = './missing.mjs'
+            save()
+            with self.assertRaisesRegex(ValueError, 'entry'):
+                publish(base / 'www', plugin, '1.0.1', 'Incomplete')
+
     def test_publish_serve_and_refuse_changed_versions(self):
         with tempfile.TemporaryDirectory() as temp:
             base = pathlib.Path(temp)

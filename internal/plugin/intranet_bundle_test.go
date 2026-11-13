@@ -37,6 +37,40 @@ func internalTestZIP(t *testing.T, files map[string]string) []byte {
 	return b.Bytes()
 }
 
+func TestIntranetBundleHooksAndPage(t *testing.T) {
+	manifest := `{"name":"@internal/notify","version":"1.0.0","type":"module","sub2agentBundle":2,"files":["notify.mjs","page/index.html","page/app.js"],"magpie":{"hooks":"./notify.mjs","page":{"file":"page/index.html"}}}`
+	files := map[string]string{"package.json": manifest, "notify.mjs": "export function onResponse() {}", "page/index.html": `<script src="app.js"></script>`, "page/app.js": "console.log('ready')"}
+	dir := t.TempDir()
+	if err := extractInternalBundle(internalTestZIP(t, files), dir, "@internal/notify", "1.0.0"); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := os.ReadFile(filepath.Join(dir, "page", "app.js")); err != nil || string(data) != files["page/app.js"] {
+		t.Fatalf("page dependency missing: %q, %v", data, err)
+	}
+	for _, mutation := range []func(map[string]string){
+		func(f map[string]string) { delete(f, "page/app.js") },
+		func(f map[string]string) { f["extra.json"] = "{}" },
+		func(f map[string]string) { f["page/APP.js"] = "collision" },
+		func(f map[string]string) { f["page/../outside.js"] = "escape" },
+		func(f map[string]string) { f["page/CON.js"] = "device" },
+		func(f map[string]string) {
+			f["package.json"] = strings.Replace(manifest, `"./notify.mjs"`, `"./missing.mjs"`, 1)
+		},
+		func(f map[string]string) {
+			f["package.json"] = strings.Replace(manifest, `"sub2agentBundle":2`, `"sub2agentBundle":3`, 1)
+		},
+	} {
+		copy := make(map[string]string)
+		for name, data := range files {
+			copy[name] = data
+		}
+		mutation(copy)
+		if err := extractInternalBundle(internalTestZIP(t, copy), t.TempDir(), "@internal/notify", "1.0.0"); err == nil {
+			t.Fatal("accepted incomplete or unsafe hooks/page bundle")
+		}
+	}
+}
+
 func TestIntranetBundleInstallsAndPreservesPreviousOnFailure(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())

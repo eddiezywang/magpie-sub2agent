@@ -28,6 +28,18 @@ def encoded(data):
     return (json.dumps(data, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
 
 
+def safe_path(name):
+    if not re.fullmatch(r'[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*', name):
+        return False
+    for part in name.split('/'):
+        base = part.split('.')[0].upper()
+        if part in ['.', '..'] or part.endswith('.') or part.startswith('.internal-'):
+            return False
+        if base in ['CON', 'PRN', 'AUX', 'NUL'] or re.fullmatch(r'(COM|LPT)[0-9]', base):
+            return False
+    return True
+
+
 def publish(root, plugin, version, summary):
     root = pathlib.Path(root).resolve()
     plugin = pathlib.Path(plugin).resolve(strict=True)
@@ -39,13 +51,37 @@ def publish(root, plugin, version, summary):
         raise ValueError('an exact semantic version is required')
     if any(manifest.get(key) for key in ['dependencies', 'optionalDependencies', 'peerDependencies', 'scripts']):
         raise ValueError('bundle dependencies first; remove package scripts before publication')
-    if manifest.get('main') != 'index.js' or manifest.get('type') != 'module':
-        raise ValueError('complete ESM bundle must use main: index.js and type: module')
+    if manifest.get('type') != 'module':
+        raise ValueError('offline bundles must use type: module')
     manifest['version'] = version
-    # Only these explicit files are published, never credentials or working data.
-    files = {'package.json': encoded(manifest), 'index.js': (plugin / 'index.js').read_bytes()}
-    if (plugin / 'README.md').is_file():
-        files['README.md'] = (plugin / 'README.md').read_bytes()
+    files = {'package.json': encoded(manifest)}
+    if manifest.get('sub2agentBundle') == 2:
+        names = manifest.get('files', [])
+        if not isinstance(names, list) or not names or len(names) > 127:
+            raise ValueError('declare an exact, bounded files list')
+        entries = [manifest.get('main'), manifest.get('magpie', {}).get('hooks'),
+                   manifest.get('magpie', {}).get('page', {}).get('file')]
+        entries = [entry.removeprefix('./') for entry in entries if entry]
+        if not entries or any(entry not in names for entry in entries):
+            raise ValueError('declared entry is missing from files')
+    else:
+        if manifest.get('main') != 'index.js' or manifest.get('sub2agentBundle', 1) != 1:
+            raise ValueError('complete ESM bundle must use main: index.js')
+        names = ['index.js'] + [name for name in ['README.md', 'LICENSE'] if (plugin / name).is_file()]
+    seen = {'package.json'}
+    for filename in names:
+        if not isinstance(filename, str) or not safe_path(filename) or filename.lower() in seen:
+            raise ValueError('unsafe or duplicate bundle path')
+        seen.add(filename.lower())
+        if filename not in ['README.md', 'LICENSE', 'NOTICE'] and pathlib.PurePosixPath(filename).suffix.lower() not in ['.json', '.js', '.mjs', '.html', '.css', '.svg']:
+            raise ValueError('unsupported bundle file type')
+        source = plugin / filename
+        if source.is_symlink() or any(parent.is_symlink() for parent in source.parents if parent != plugin.parent):
+            raise ValueError('bundle links are forbidden')
+        resolved = source.resolve(strict=True)
+        if not resolved.is_relative_to(plugin) or not resolved.is_file():
+            raise ValueError('bundle file escaped package')
+        files[filename] = resolved.read_bytes()
     if sum(map(len, files.values())) > 32 << 20:
         raise ValueError('bundle exceeds 32 MiB')
     buffer = io.BytesIO()

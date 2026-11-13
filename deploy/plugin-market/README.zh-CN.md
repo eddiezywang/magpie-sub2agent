@@ -73,61 +73,49 @@ python3 /opt/sub2agent-plugin-market/bin/check.py
 Go `TestIntranetBundleInstallsAndPreservesPreviousOnFailure` 覆盖安装、摘要不匹配、
 版本不匹配和不完整/不安全归档。真实账户登录与第三方插件运行需各插件单独验证。
 
-## 首批目录建议（2026-11-13）
+## 首批发布与更新
 
-建议先发布内部维护的 `@sub2agent/codebuddy`、`@sub2agent/workbuddy`、
-`@sub2agent/trae` 三个完整包，作为分发及版本归档；现有应用已经随包加载它们，
-不要在同一个客户端再安装第二份。现阶段发布到广场不会自动将客户端随包插件迁移
-成市场管理的插件，统一更新入口需要另行实现和验证。
+四套内部供应商为 `@sub2agent/codebuddy`、`@sub2agent/workbuddy`、
+`@sub2agent/trae`、`@sub2agent/aiep`，均随应用内置，可断网启动。
+广场安装的有效版本优先于随包版本，升级应用不会覆盖广场版本；下载或校验
+失败保留旧安装。既有账号、Key、配置、关闭状态均保留，不生成重复供应商。
+AIEP 保留原生 Key 配置与 Bearer 鉴权，插件管理其版本化默认配置。
 
-行内 AIEP Coding Plan 是原生 API-key 供应商；Claude、Codex 也已有入口，
-均不需要为了广场再包装一份认证插件。埋点上报和会话是已保留的内置模块，
-不需要下载。不要恢复已删除的资源库、脱敏、联网搜索等模块。
+Model map 是默认启用的内置模块，不需要从广场安装。
+`@magpie-community/gateway-notify` 是可选广场插件，保留上游通知页面与钩子，
+不随应用安装；通知渠道默认空、正文默认不发送，需填写内部通知地址。
+社区插件不代表供应商官方认证。其源码固定到审核提交，许可证随包保留。
 
-外部候选只按实际账户需求引入：有 GitHub Copilot Business/Enterprise 使用场景
-时再评估 `@magpie-community/opencode-copilot-auth`；有 Qoder、Kiro 等实际
-账户时再单独审核对应插件。不默认安装全部认证插件。
-Magpie community 仓库自己标明由社区维护，不等于供应商官方认证：
-<https://github.com/magpie-community/plugins>。Copilot 插件说明也明确标为
-unofficial：<https://github.com/magpie-community/plugins/tree/main/packages/copilot>。
-社区 Trae 插件的企业模式仍有未验证范围，不能直接替换本项目的私有认证逻辑：
-<https://github.com/magpie-community/plugins/tree/main/packages/trae>。
-
-### 构建机准备内部制品
-
-从受控构建环境生成完整运行包（不把私有实现提交到公开仓库）：
+### 构建机准备五个完整包
 
 ```powershell
 node build/sub2agent-providers.mjs ..\sub2agent
+python build/prepare-plugin-market.py --community <community-plugins源码目录> --output <私有发布目录>
 ```
 
-输出为 `build/sub2agent-runtime/{codebuddy,workbuddy,trae}`，包入口为
-`index.js`，无依赖声明或安装脚本。将这三个目录通过已授权的内网通道传到
-服务器专用暂存目录，例如 `/opt/sub2agent-plugin-market/staging/`。
-不要打包 portable 的 data 目录、账户文件或密钥。发布器会为包写入指定版本。
+社区源码必须固定在 `e90d6f011a7320372c5570600e9b267f75b34714`。
+准备工具生成 `www`（已生成目录与制品）、`staging`（五套发布源）、`service`
+（部署工具）和来源记录。该目录含内部供应商实现，须经已授权的内网通道传输，
+不得放到公开截图站、公开仓库或包含任何客户端 data/账户/Key。
 
-服务器首次发布示例（`1.0.0` 是示例首版号，实际按内部版本管理分配）：
+通过 kf 中转进入服务器后，先核查端口与已有业务；以 root 身份执行：
 
 ```sh
-for name in codebuddy workbuddy trae; do
-  python3 /opt/sub2agent-plugin-market/bin/publish.py \
-    --root /opt/sub2agent-plugin-market/www \
-    --plugin "/opt/sub2agent-plugin-market/staging/$name" \
-    --version 1.0.0 --summary "Sub2Agent 内部维护的 $name 认证适配"
-done
-python3 /opt/sub2agent-plugin-market/bin/check.py --base http://127.0.0.1
+cd <解压后的私有发布目录>/service
+bash deploy-release.sh
 ```
 
-还应从实际客户端所在网络运行 `check.py`，并在隔离客户端验证安装、登录、
-回调、刷新令牌和一次真实推理。包的本地测试通过不代表真实企业账户已验证。
-当前测试套件可验证目录服务、元数据和制品，但没有真实企业账户可代测登录。
+部署器拒绝占用现有非本服务的 80 端口；已有反向代理时应先配置转发。
+发布器依次写入制品和元数据，最后原子替换目录，保留其他已发布插件及上次目录；
+同一版本不允许覆盖修改，更新请提升语义版本。不会覆盖客户端安装或认证数据。
+多文件离线包使用格式 2，声明精确文件清单与页面/钩子入口；禁止路径越界、
+链接、Windows 设备名、重复路径、安装脚本与外部依赖。单文件旧包继续支持。
 
-### 部署边界与状态
+从实际客户端网络再运行 `check.py --base http://172.21.0.177`，并在隔离客户端
+验证发现、安装、升级、离线保留与通知配置。真实企业登录和推理需可用企业账号验证。
+广场仅分发插件，供应商登录、额度查询和推理仍访问对应企业服务。
 
-广场服务器只分发审核后的代码和版本元数据；登录、本地回调和凭据保存仍由
-各客户端负责。将包放入内网，不会把第三方 OAuth、额度查询和推理变成离线服务，
-这些请求仍需到相应供应商或企业服务。
+### 部署状态
 
-截至本次复查，`hc exec --on kf` 仍报告 kf 的 SSH 中转连接关闭；
-因此服务仍是“部署包已准备，服务器尚未完成安装验证”。恢复链路后先重新检查
-端口和现有服务，再执行上面的部署及跨主机检查，不直接覆盖其他业务。
+当前 kf SSH 中转不可达，服务器尚未完成安装验证。发布包和本地验证完成不等于
+服务已上线。链路恢复后先重新检查端口与服务，再部署并跨主机验证。

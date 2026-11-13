@@ -46,6 +46,7 @@ try {
     New-Item -ItemType File -Path (Join-Path $bundle '.portable') | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $bundle 'licenses') | Out-Null
     Copy-Item -LiteralPath LICENSE,THIRD_PARTY_NOTICES -Destination (Join-Path $bundle 'licenses')
+    Copy-Item -LiteralPath plugins/modelmap/LICENSE -Destination (Join-Path $bundle 'licenses/model-map-LICENSE')
     Copy-Item -LiteralPath build\intranet\BUN-LICENSE.md -Destination (Join-Path $bundle 'licenses\BUN-LICENSE.md')
     Copy-Item -LiteralPath build\intranet\README.zh-CN.md -Destination (Join-Path $bundle 'README.txt')
     $fileRecords = @(Get-ChildItem -LiteralPath $bundle -Recurse -File | ForEach-Object {
