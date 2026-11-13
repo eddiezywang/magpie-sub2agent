@@ -9526,6 +9526,7 @@ function drawEditor(p, presetID) {
   adv.append(advIn);
 
   const unmaskRow = (hint, urls) => {
+    if (window.bootPrefs?.intranet) return [];
     const [ltk, lcb] = tick(t("Send requests unmasked"), !!draft.unredacted);
     const row = field(t("Redaction"), ltk, hint), note = el("div", "hint unmasked-away");
     row[1].append(note);
@@ -20089,7 +20090,8 @@ function renderSettings() {
   window.pipeCheckFill ? pipeCheckFill() : import("./pipecheck.js").then(() => pipeCheckFill(), () => {});
   renderReplies(s, keep);
   renderDisabledModels(s);
-  renderRedact(s, keep);
+  renderSharing(s, keep);
+  if (typeof renderRedact === "function") renderRedact(s, keep);
   renderDiscovery(s, keep);
   if (typeof renderSessionReads === "function") renderSessionReads(s);
   if (typeof renderOTel === "function") renderOTel(s, keep);
@@ -21893,17 +21895,10 @@ async function discoveryOffWarning() {
     : t("Every subscription stops working in magpie until this is on again: magpie reads none of the sign-ins they come from. API-key providers work as before.");
 }
 
-// renderRedact: what the gateway masks before a request goes to a vendor —
-// secrets, personal data, the user's own words — and puts back in what the
-// vendor answers. The page says it in three parts under what masking did
-// (Insights › Masking): how it is found (the local model first, then the
-// rules), what to mask, what is shared.
-function renderRedact(s, keep) {
-  const box = $("#redactList"), find = $("#findList"), share = $("#shareList");
-  box.replaceChildren();
-  find.replaceChildren();
+// Sharing and account visibility stay available without the masking plugin.
+function renderSharing(s, keep) {
+  const share = $("#shareList");
   share.replaceChildren();
-  featOff(box, s, "redact", t("Nothing is masked until it is on. Choosing anything to mask below turns it on"));
   const rowIn = (into, name, sub, ...tools) => {
     const r = el("div", "row pref");
     const who = el("div", "who");
@@ -21914,40 +21909,7 @@ function renderRedact(s, keep) {
     into.append(r);
     return r;
   };
-  const row = (...a) => rowIn(box, ...a);
   const onOff = (on, fn) => segs([["off", t("Off")], ["on", t("On")]], on ? "on" : "off", (v) => fn(v === "on"));
-  row(t("Mask secrets"), t("API keys, private keys, tokens and passwords go to vendors as placeholders, and come back as they were"),
-    onOff(s.redact, (redact) => savePrefs({ ...keep, redact })));
-  if (s.redact) row(t("Keep a key's form"), t("A key goes as a made-up one of the same form (sk_… stays sk_…), not a placeholder, and comes back as it was"),
-    onOff(s.redactShape, (redactShape) => savePrefs({ ...keep, redactShape }))).id = "redactShapeRow";
-  row(t("Mask personal data"), t("Emails, phone numbers, ID and bank card numbers too"),
-    onOff(s.redactPersonal, (redactPersonal) => {
-      if (redactPersonal) window.hideAccounts?.set(true, true);
-      savePrefs({ ...keep, redactPersonal });
-    }));
-  if (s.redactPersonal) for (const [id, name, sub, on] of REDACT_KINDS) {
-    const kinds = s.redactKinds || {};
-    const r = el("div", "row pref redact-kind");
-    r.dataset.redact = id;
-    const who = el("div", "who");
-    who.append(el("div", "name", t(name)), el("div", "sub", t(sub)));
-    const val = el("div", "val");
-    val.append(onOff(kinds[id] ?? on, (v) => savePrefs({ ...keep, redactKinds: { ...kinds, [id]: v } })));
-    r.append(who, val);
-    box.append(r);
-  }
-  row(t("Masked words in any case"), t("A word also matches in other capitals: Nightjar masks NIGHTJAR and nightjar too"),
-    onOff(s.redactWordsAnyCase, (redactWordsAnyCase) => savePrefs({ ...keep, redactWordsAnyCase }))).id = "redactWordsAnyCaseRow";
-  row(t("Whole words only"), t("A word is not masked inside a longer one: ABC masks ABC and 'ABC' but not XABCD, and 123456 not 0.123456"),
-    onOff(s.redactWordsWhole, (redactWordsWhole) => savePrefs({ ...keep, redactWordsWhole }))).id = "redactWordsWholeRow";
-  renderRedactRules(s, row);
-  renderMaskActions(s);
-  renderMaskTry(s);
-  const masking = s.redact || s.redactPersonal;
-  const why = t("Turn on Mask secrets or Mask personal data first");
-  privacyModelRow(find, masking ? "" : why);
-  const always = el("span", "static-pill" + (masking ? " on" : ""), masking ? t("Always on") : t("Off"));
-  rowIn(find, t("Rules"), masking ? t("Keys, tokens, emails and numbers whose checksum adds up: patterns that are certain, checked on every request") : why, always).id = "maskRulesRow";
   if (window.hideAccounts) rowIn(share, t("Hide accounts"), t("Email addresses and account names on every page are blurred, for a screenshot to share"),
     onOff(window.hideAccounts.on(), (on) => { window.hideAccounts.set(on); renderSettings(); }));
   rowIn(share, t("Turn off telemetry for all agents"), t("Over each agent's own Telemetry switch, an agent found later too"),
@@ -21961,12 +21923,6 @@ function renderRedact(s, keep) {
     onOff(!s.noStats, (on) => savePrefs({ ...keep, noStats: !on })));
   if (!s.noStats) rowIn(share, t("Share the agents, providers, models and plugins I use"), t("Sent with that event, by magpie's own ids, with how many of each, and how often each partner was shown, opened and added; a provider you added yourself is only “custom”. Which of Discover's plugins are installed goes to usemagpie.ai for its counts. No names, addresses, accounts, keys or usage"),
     onOff(!s.noUsageStats, (on) => savePrefs({ ...keep, noUsageStats: !on })));
-  if (!featureHides($('#nav button[data-view="masking"]'))) {
-    const open = el("button", "", t("Open"));
-    open.type = "button";
-    open.onclick = () => openMaskRecord(0);
-    box.prepend(rowIn(box, t("What was masked"), t("Each request masking changed, what the vendor saw, and how, on Insights › Masking"), open));
-  }
 }
 
 // privacyModelRow: the local masking model (internal/pii); its state read
@@ -23312,7 +23268,7 @@ function applyFeatures(list) {
   if (!Array.isArray(list)) return;
   for (const f of list) if (f.schema) magpie.configure(f.id, f.config);
   const off = new Set(list.filter((f) => !f.on).map((f) => f.id));
-  if (window.bootPrefs?.intranet) for (const id of ["library", "middleware", "otel", "search", "tools", "warmups"]) off.add(id);
+  if (window.bootPrefs?.intranet) for (const id of ["library", "middleware", "otel", "redact", "search", "tools", "warmups"]) off.add(id);
   if (off.size === featuresOff.size && [...off].every((id) => featuresOff.has(id))) return;
   featuresOff = off;
   featureStyle();

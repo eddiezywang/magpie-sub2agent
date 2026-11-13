@@ -54,6 +54,20 @@ func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
 			t.Fatalf("%s: %d", path, r.Code)
 		}
 	}
+	for _, path := range []string{"/api/masking/summary", "/api/masking/records", "/api/privacy-model", "/plugins/redact/client.js"} {
+		r := httptest.NewRecorder()
+		h.ServeHTTP(r, httptest.NewRequest("GET", path, nil))
+		if r.Code != 404 {
+			t.Fatalf("removed masking route %s: %d", path, r.Code)
+		}
+	}
+	for _, path := range []string{"/api/settings/redact-route", "/api/settings/redact-rule", "/api/settings/redact-rules", "/api/settings/redact-actions", "/api/settings/redact-allow", "/api/masking/try", "/api/privacy-model"} {
+		r := httptest.NewRecorder()
+		h.ServeHTTP(r, httptest.NewRequest("POST", path, strings.NewReader(`{}`)))
+		if r.Code != 404 {
+			t.Fatalf("removed masking mutation %s: %d", path, r.Code)
+		}
+	}
 	r := httptest.NewRecorder()
 	h.ServeHTTP(r, httptest.NewRequest("GET", "/boot.js", nil))
 	if r.Code != 200 || !strings.Contains(r.Body.String(), `"intranet":true`) {
@@ -70,6 +84,9 @@ func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
 	}
 	if strings.Contains(string(page), `src="plugins/library/`) || strings.Contains(string(page), `href="plugins/library/`) {
 		t.Fatal("library still loaded")
+	}
+	if strings.Contains(string(page), `plugins/redact/`) || strings.Contains(string(page), `data-view="masking"`) || strings.Contains(string(page), `id="redactList"`) {
+		t.Fatal("masking is still in packed HTML")
 	}
 	for _, match := range regexp.MustCompile(`(?:src|href)="([^"]+\.(?:js|css))"`).FindAllStringSubmatch(string(page), -1) {
 		name := match[1]

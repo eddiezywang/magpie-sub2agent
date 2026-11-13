@@ -7747,6 +7747,7 @@ function routingPage(part) {
     // ("Send requests unmasked") and Settings, or is masked as Settings say
     // whichever provider it has, or is sent as written (Group.Redact)
     const redactLabel = el("label", "rt-gredact", t("Masking")), redactBox = el("div", "rt-gredact");
+    redactLabel.hidden = redactBox.hidden = !!window.bootPrefs?.intranet;
     ed.append(redactLabel, redactBox);
     const REDACT = { "": "Follow providers", on: "Always masked", off: "Sent as written" };
     const drawRedact = () => {

@@ -1015,6 +1015,7 @@ function gatewayRedactBadge(k) {
   b.textContent = t(own === "on" ? "Masking on" : own === "off" ? "Masking off" : "Masking");
   b.title = t(own === "on" ? "This key's requests are always masked" : own === "off" ? "This key's requests are never masked" : "This key's requests are masked as Settings › Privacy says");
   b.setAttribute("aria-label", t("Masking"));
+  b.hidden = !!window.bootPrefs?.intranet;
   b.setAttribute("aria-haspopup", "menu");
   b.setAttribute("aria-expanded", "false");
   b.onclick = (e) => {

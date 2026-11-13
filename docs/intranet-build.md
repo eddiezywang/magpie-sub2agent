@@ -27,6 +27,23 @@ require them; this is not yet a complete source-level separation.
 Shared switch styling belongs to app.css, because accounts, usage and built-in
 plugin settings use these controls even when Library is absent.
 
+## Masking removal
+
+The internal build also omits the `redact` registration, navigation, clients,
+styles, translations, demos, masking records/preview APIs and local PII model
+APIs. Masking-specific settings mutations return 404. Privacy retains sharing,
+account visibility, agent sign-in discovery and Sessions' history consent.
+Masking controls in provider, routing group and gateway key editors are hidden.
+The primary masking settings renderer belongs to the redact plugin; it is no
+longer loaded in this build. Intranet marketplace status is lazy loaded too,
+keeping the core script size within its existing budget.
+
+Existing settings and key policies are preserved on disk, but do not enable
+request masking or download its model in this distribution. A gateway key
+imported with forced masking therefore does not block requests for a missing
+masker. Credential scrubbing in application logs remains independent and active.
+Shared backend masking types are still compiled where upstream callers need them.
+
 ## Plugin distribution
 
 Directory, npm metadata, dist tarballs, README and icon endpoints are fixed to

@@ -19,7 +19,7 @@ const assert = require('node:assert/strict');
     // Test the app's generated login link without opening a user's browser.
     await page.route('**/api/open', r => r.fulfill({json:{}}));
     await page.goto('http://127.0.0.1:8990/?k=' + encodeURIComponent(key));
-    for (const view of (process.argv.includes('--auth-only') ? [] : ['agents','sessions','providers','routing','groups','gateway','usage','masking','plugins','settings'])) {
+    for (const view of (process.argv.includes('--auth-only') ? [] : ['agents','sessions','providers','routing','groups','gateway','usage','plugins','settings'])) {
       errors.length = 0;
       await page.goto('http://127.0.0.1:8990/?view=' + view);
       await page.waitForTimeout(6000);

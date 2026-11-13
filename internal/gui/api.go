@@ -1595,8 +1595,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		appPageRoutes(mux)
 		remoteRoutes(mux, w)
 	}
-	privacyModelRoutes(mux)
-	maskingRoutes(mux)
+	if !distribution.Internal {
+		privacyModelRoutes(mux)
+		maskingRoutes(mux)
+	}
 	builtinRoutes(mux)
 	mux.HandleFunc("GET /api/settings", func(rw http.ResponseWriter, r *http.Request) {
 		access.MigrateLegacyLANKeyBestEffort()
@@ -2119,6 +2121,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// written (jessyoungyu on X): "" masks it as before; else a model whose
 	// every route the user set to go unmasked (gateway.MaskRoute)
 	mux.HandleFunc("POST /api/settings/redact-route", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct{ Model string }
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			fail(rw, err)
@@ -2696,6 +2702,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// the user's own masking rules, all of them each time: set on their own,
 	// so a pattern that doesn't compile is said and the rest are kept (#195)
 	mux.HandleFunc("POST /api/settings/redact-rules", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct{ Rules []redact.Rule }
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			fail(rw, err)
@@ -2713,6 +2723,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// At, which must still be Was, becomes Rule, checked as an added one is.
 	// A rule that can't be used is said and every rule is kept as it was.
 	mux.HandleFunc("POST /api/settings/redact-rule", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct {
 			At   int         `json:"at"`
 			Was  redact.Rule `json:"was"`
@@ -2738,6 +2752,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// what is done with a value of a kind found, other than masking it
 	// (warn, block), all of them each time (#1977)
 	mux.HandleFunc("POST /api/settings/redact-actions", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct {
 			Actions map[string]string `json:"actions"`
 		}
@@ -2755,6 +2773,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	})
 	// the values masking lets go as written, all of them each time (#1977)
 	mux.HandleFunc("POST /api/settings/redact-allow", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct {
 			Allow []string `json:"allow"`
 		}

@@ -10,6 +10,13 @@ func internalIndex(b []byte) []byte {
 	out := lines[:0]
 	for _, line := range lines {
 		omit := false
+		if strings.Contains(line, `data-view="masking"`) {
+			omit = true
+		}
+		// Keep Privacy's sharing, sign-in and session consent controls.
+		if strings.Contains(line, `id="findList"`) || strings.Contains(line, `id="redactList"`) || strings.Contains(line, `id="maskActList"`) || strings.Contains(line, `id="maskTryList"`) || strings.Contains(line, `data-t>How it's found<`) || strings.Contains(line, `data-t>What to mask<`) || strings.Contains(line, `data-t>When a value is found<`) || strings.Contains(line, `data-t>Try it<`) {
+			omit = true
+		}
 		for _, id := range distribution.Removed {
 			if (strings.Contains(line, "<script ") || strings.Contains(line, "<link ")) && strings.Contains(line, "plugins/"+id+"/") {
 				omit = true
