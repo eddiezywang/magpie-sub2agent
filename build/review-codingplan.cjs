@@ -5,7 +5,7 @@ const {chromium,webkit}=require('playwright');
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});
  const assets=path.resolve(process.env.INTRANET_ASSETS||'internal/gui/assets');
- const preset={id:'aiep-coding-plan',name:'TIG Coding Plan',icon:'generic',kind:'relay',anthropic:'http://172.21.11.82/public',endpoint:'http://172.21.11.82/public',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV',keysUrl:'https://aiep.weoa.com'};
+ const preset={id:'aiep-coding-plan',name:'TIG Coding Plan',icon:'tig-color',kind:'relay',anthropic:'http://172.21.11.82/public',endpoint:'http://172.21.11.82/public',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV',keysUrl:'https://aiep.weoa.com'};
  const report=[];
  for(const engine of ['chromium','webkit']) {
   const browser=await(engine==='webkit'?webkit.launch():chromium.launch({channel:'chrome'}));

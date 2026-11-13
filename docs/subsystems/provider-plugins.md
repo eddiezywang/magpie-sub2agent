@@ -571,3 +571,26 @@ by a hash of source identity in `sub2agent-auth-import.json`. Deleted imported
 accounts are never resurrected. Partial failures retry on the next launch;
 malformed sources or migration markers never overwrite existing files.
 Only generic, credential-free errors reach startup output.
+
+### API access provider editor
+
+The intranet add sheet labels key-based sources as “API access” (API 接入),
+with “Configure a gateway and API key” as its hint. Provider kind and stored
+IDs remain unchanged. TIG uses the supplied SVG's three logo paths and two
+linear gradients; wordmark geometry, raster pattern and text resources are
+excluded from the bundled `tig-color.svg`.
+
+The ZHT editor exposes separate editable Anthropic and OpenAI base URLs next
+to the existing masked key field. Changes update the same provider draft and
+save payload as custom providers; the CLI helper only fills the key and never
+resets addresses. The generic custom provider editor also labels its base URL
+as Gateway URL in the intranet distribution. Defaults remain protocol bases,
+so `/v1/messages` and `/chat/completions` are appended once by transport.
+This UI change is previewed from source assets without rebuilding or replacing
+the installed application; review screenshots use only isolated fixture keys.
+
+Validation: Chromium and WebKit each cover desktop light/dark and narrow light
+layouts, masked CLI key selection, custom ZHT protocol base URL save payloads,
+and generic custom gateway/key saves. Provider tests round-trip both custom
+ZHT URLs and the key and check final transport paths. The eight localization
+checks and core JavaScript budget check pass. No application build was run.

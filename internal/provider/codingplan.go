@@ -8,7 +8,7 @@ import (
 
 // The AIEP plan is a key-based Anthropic relay, not a subscription login.
 var codingPlanPreset = PresetDef{
-	ID: "aiep-coding-plan", Name: "TIG Coding Plan", Icon: "generic", Kind: KindRelay,
+	ID: "aiep-coding-plan", Name: "TIG Coding Plan", Icon: "tig-color", Kind: KindRelay,
 	Anthropic: "http://172.21.11.82/public",
 	Endpoint:  "http://172.21.11.82/public",
 	Website:   "http://docs.weoa.com/docs/47kgJOEB8WTo77qV",

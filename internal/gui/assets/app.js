@@ -7250,7 +7250,7 @@ function renderAdd() {
         .map((p) => [p, chinaOf(p)]).filter(([p, cn]) => hit(p) || (cn && hit(cn)));
       if (!rows.length) continue;
       any = true;
-      const grid = section(title, hint);
+      const grid = section(window.bootPrefs?.intranet && kind === "relay" ? "API access" : title, window.bootPrefs?.intranet && kind === "relay" ? "Configure a gateway and API key" : hint);
       for (const [pr, cn] of rows) grid.append(cn ? pairTile(pr, cn) : tile(pr));
     }
     if (!any) {
@@ -9507,7 +9507,7 @@ function drawEditor(p, presetID) {
     };
     // Detect asks OpenAI's, Anthropic's and Gemini's APIs (#1346)
     urlWrap.append(detectAPIs(p, () => url.value, useDetected));
-    ed.append(...field("Base URL", urlWrap));
+    ed.append(...field(window.bootPrefs?.intranet ? t("Gateway URL") : "Base URL", urlWrap));
   }
 
   // Cline's DeepSeek and GLM models pinned to their makers' APIs (sdytman, ARNO on Discord);
@@ -9746,7 +9746,7 @@ function drawEditor(p, presetID) {
   }
   const keyWrap = el("div", "pair");
   keyWrap.append(key, side);
-  if (pr?.id === "cib-zht-apikey") import("./zht.js").then((m) => m.setup(keyWrap, key), statusErr);
+  if (pr?.id === "cib-zht-apikey") import("./zht.js").then((m) => key.isConnected && m.setup(keyWrap, key, draft, p || pr), statusErr);
   // Vertex AI: no key, the user's Google Cloud project's token
   const vertex = p ? !!p.vertex : !!pr?.vertex;
   let vertexProject = null;
@@ -10133,7 +10133,7 @@ function drawEditor(p, presetID) {
     ed.append(...field(t(jev ? "Jev endpoint" : "System One endpoint"), du, tmpl().includes(WORKSPACE) ? t("The address the decision model is asked at, POST …/systemone under it; the workspace ID above fills it in") : jev ? t("The address Jev is asked at; paste the one from your gateway's docs, e.g. Cloudflare's …/accounts/<account id>/ai/run") : t("The address its decision models are asked at, POST …/systemone under it")));
   }
 
-  if (!custom && !(decides && !p)) {
+  if (!custom && !(decides && !p) && pr?.id !== "cib-zht-apikey") {
     const ebox = el("div");
     const row = field(t("Endpoints"), ebox, "");
     refreshEndpoints = () => {
@@ -10879,7 +10879,6 @@ function renderImport(im) {
   if (p.keysUrl && !p.key) { const b = el("button", "link", t("Get a key ↗")); b.onclick = () => api("open", { url: p.keysUrl }); side.append(b); }
   const keyWrap = el("div", "pair");
   keyWrap.append(key, side);
-  if (pr?.id === "cib-zht-apikey") import("./zht.js").then((m) => m.setup(keyWrap, key), statusErr);
   ed.append(...field(t("API key"), keyWrap, p.key ? t("From the link. Kept in ~/.config/magpie/providers.json, readable by you alone.") : ""));
 
   ed.append(...field(t("Endpoints"), renderEndpoints(null, p), ""));

@@ -5294,3 +5294,8 @@ body .row.agent .ag-prefs .row.pref .who { display: block; }
 .coding-plan-notice { grid-column: 1 / -1; padding: 14px 16px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; line-height: 1.65; }
 .coding-plan-notice p { margin: 6px 0; }
 .coding-plan-notice button { margin: 6px 16px 0 0; }
+
+.zht-gateways { grid-column: 1 / -1; display: grid; gap: 12px; margin: 0 0 16px; }
+.zht-gateways label { display: grid; grid-template-columns: 145px minmax(0, 1fr); align-items: center; gap: 12px; font-size: 12px; }
+.zht-gateways span { color: var(--muted); }
+@media (max-width: 600px) { .zht-gateways label { grid-template-columns: minmax(0, 1fr); gap: 6px; } }

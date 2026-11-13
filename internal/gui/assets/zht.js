@@ -1,5 +1,5 @@
 // Only imported by the CIB ZHT provider editor. No CLI output is displayed.
-export function setup(wrap, key) {
+export function setup(wrap, key, draft, preset) {
   const box = document.createElement("section");
   box.className = "coding-plan-notice";
   const hint = document.createElement("p");
@@ -46,5 +46,21 @@ export function setup(wrap, key) {
     } finally { button.disabled = false; }
   };
   box.append(hint, command, note, button, status, choices);
-  wrap.after(box);
+  const gateways = document.createElement("section");
+  gateways.className = "zht-gateways";
+  for (const [protocol, label] of [["anthropic", "Anthropic"], ["chat", "OpenAI"]]) {
+    const row = document.createElement("label");
+    const title = document.createElement("span");
+    title.textContent = `${label} · ${t("Gateway URL")}`;
+    const address = document.createElement("input");
+    address.type = "url";
+    address.className = "zht-gateway";
+    address.dataset.protocol = protocol;
+    address.value = draft[protocol] ?? preset[protocol] ?? "";
+    address.placeholder = preset[protocol] || "https://…";
+    address.oninput = () => { draft[protocol] = address.value.trim(); };
+    row.append(title, address);
+    gateways.append(row);
+  }
+  wrap.after(gateways, box);
 }
