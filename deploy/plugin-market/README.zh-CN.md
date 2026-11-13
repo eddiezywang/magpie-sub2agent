@@ -90,7 +90,7 @@ Model map 是默认启用的内置模块，不需要从广场安装。
 不随应用安装；通知渠道默认空、正文默认不发送，需填写内部通知地址。
 社区插件不代表供应商官方认证。其源码固定到审核提交，许可证随包保留。
 
-### 构建机准备五个完整包
+### 构建机准备三个完整包
 
 ```powershell
 node build/sub2agent-providers.mjs ..\sub2agent
@@ -98,7 +98,7 @@ python build/prepare-plugin-market.py --community <community-plugins源码目录
 ```
 
 社区源码必须固定在 `e90d6f011a7320372c5570600e9b267f75b34714`。
-准备工具生成 `www`（已生成目录与制品）、`staging`（五套发布源）、`service`
+准备工具生成 `www`（已生成目录与制品）、`staging`（三套发布源）、`service`
 （部署工具）和来源记录。该目录含内部供应商实现，须经已授权的内网通道传输，
 不得放到公开截图站、公开仓库或包含任何客户端 data/账户/Key。
 
@@ -119,7 +119,37 @@ bash deploy-release.sh
 验证发现、安装、升级、离线保留与通知配置。真实企业登录和推理需可用企业账号验证。
 广场仅分发插件，供应商登录、额度查询和推理仍访问对应企业服务。
 
-### 部署状态
+### 经 laptop 和云盘转运
 
-当前 kf SSH 中转不可达，服务器尚未完成安装验证。发布包和本地验证完成不等于
-服务已上线。链路恢复后先重新检查端口与服务，再部署并跨主机验证。
+部署包先上传外部中转服务器的私有目录。需要 HTTP 下载时，仅公开临时加密包，
+解密密钥通过已连接的 `hc` 会话单独传入 laptop，不写入下载页或公开日志。
+laptop 在 `hc machine ls` 中的当前名称是 `labtop`，kf 名称是 `kf`。
+
+1. laptop 下载、解密并核对部署归档 SHA-256，再执行
+   `wecli idisk upload <归档> --space self -f json`。
+2. kf 使用同一账号执行
+   `wecli idisk download <云盘路径> <本地归档> --space self -f json`，核对同一摘要。
+   老版本没有 idisk 时，可通过内部 npm 仓库临时调用已验证的版本：
+   `npm exec --yes --registry=http://wnpm.weoa.com:8001 --package=@webank/wecli@1.14.0 -- wecli idisk ...`。
+3. 先读取 `wecli test-jump` 命名会话当前主机，确保已通过
+   `ssh -p 36000 eddiewang@172.21.0.177` 登录目标；不要把跳板机当成部署目标。
+   用 `wecli test-jump upload <会话> <归档> --remote-dir /tmp` 上传。
+4. 在目标上再次核对 SHA-256，通过 `sudo -n` 备份专用服务目录和 unit；解压到
+   `/opt/sub2agent-plugin-market/releases/<发布标识>`，指定 Python 3.11 执行部署。
+5. 检查服务 enabled/active、本机 healthz 和 check.py，再从 kf 验证目录、npm
+   元数据及每个实际下载包的字节数与 SHA-256。完成后移除公网临时加密包。
+
+发布到服务器时，以目标 Python 3.11 发布器实际生成的制品摘要为准。不同 Python/
+zlib 构建环境的 ZIP 压缩结果可能不同；不要直接把构建机的 www 覆盖到生产目录，
+也不要绕过同版本不可变检查。本次在目标重打包得到与既有版本完全相同的摘要。
+
+### 部署状态（2026-11-14）
+
+已按“中转服务器 → laptop → idisk → kf → test-jump → 目标机”完成部署和跨主机验证。
+`sub2agent-plugin-market.service` 已启用并运行，监听 TCP 80，healthz 返回 3 个插件。
+当前发布 WorkBuddy 企业 1.0.4、TIG Coding Plan 1.0.4、Notify 0.1.4；同版本制品
+摘要保持不变。此次未发布尚在研究的 MaaS gzip/容量调整。
+
+本次发布源位于 `releases/20261114-relay/market-release-20261114`；部署前目录备份
+为 `backups/before-relay-20261114.tgz`，unit 备份在同目录。真实账号登录和长上下文
+推理不属于静态广场可用性检查。
