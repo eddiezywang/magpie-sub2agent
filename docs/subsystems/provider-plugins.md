@@ -1,5 +1,13 @@
 # Provider and plugin ownership
 
+The internal Sub2Agent login transport bounds each vendor authentication JSON
+request, including its body, to 12 seconds. Timeout, refused connection, DNS,
+unreachable server and HTTP 5xx/404 failures have actionable Chinese messages
+without upstream URLs or credentials. User cancellation remains cancellation;
+business authentication responses such as 401 still reach the private adapter.
+Inference streaming keeps its original transport. See
+[`login-network.mjs`](../../plugins/sub2agent/login-network.mjs).
+
 ## Sub2Agent intranet distribution
 
 The intranet executable loads complete local CodeBuddy, WorkBuddy enterprise

@@ -1,6 +1,7 @@
 // Magpie owns the sheets, accounts and gateway. Private Sub2Agent modules
 // are supplied by build/sub2agent-providers.mjs from the authorized checkout.
 import { createCodeBuddySubscriptionAdapter } from 'sub2agent/core/source-adapters/codebuddy-subscription-adapter';
+import { loginNetwork } from './login-network.mjs';
 import { createWorkBuddySubscriptionAdapter } from 'sub2agent/core/source-adapters/workbuddy-subscription-adapter';
 import { createTraeSubscriptionAdapter } from 'sub2agent/core/source-adapters/trae-subscription-adapter';
 import { createCodeBuddySubscriptionResolver } from 'sub2agent/core/source-resolvers/codebuddy-subscription-resolver';
@@ -67,8 +68,7 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
   async function authorize(_inputs, {signal} = {}) {
     let activeSignal = signal;
     // The host's sign-in signal is also used by the adapter's HTTP calls.
-    const network = (url, opts = {}) => fetchImpl(url, {...opts,
-      signal: opts.signal && activeSignal ? AbortSignal.any([opts.signal, activeSignal]) : activeSignal || opts.signal});
+    const network = loginNetwork(fetchImpl, () => activeSignal);
     if (kind === 'codebuddy') {
       const adapter = deps.codebuddyAdapter || codeBuddyAdapter(network);
       const login = await adapter.requestLoginLink();
