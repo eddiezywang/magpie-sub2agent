@@ -29,6 +29,10 @@ Existing consent for Sessions remains on the Sessions page. Licenses remain
 embedded and available through /api/notices. Internal services stay managed by
 the distribution. Review: build/review-internal-settings.cjs, five locales and
 two browser engines at desktop and narrow widths with intercepted mutations.
+The internal command resolver, console companion and fallback shim use
+sub2agent / sub2agent.com / sub2agent.cmd. Adding the command never installs
+or resolves a magpie-named command. The upstream distribution keeps its names;
+console trailer format remains compatible with the shared launcher.
 
 The desktop app has a tray (menu bar) icon whose click drops a compact
 panel, and a regular window. Both show one small web UI served from

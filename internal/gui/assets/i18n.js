@@ -20822,7 +20822,7 @@ function dateFmt(opts) {
 
 function brandText(s) {
   return window.bootPrefs?.intranet && typeof s === "string"
-    ? s.replace(/sub2agent[- ]magpie/gi, "sub2agent").replace(/sub2agent/gi, "sub2agent").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "sub2agent").replace(/\bmagpies\b/gi, "sub2agent") : s;
+    ? s.replace(/sub2agent[- ]magpie/gi, "sub2agent").replace(/sub2agent/gi, "sub2agent").replace(/(?<![\w./\\:{-])magpie\.(cmd|com)(?![\w./\\:}-])/gi, "sub2agent.$1").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "sub2agent").replace(/\bmagpies\b/gi, "sub2agent") : s;
 }
 function t(s, vars) {
   let out = I18N[locale]?.[s] ?? s;
