@@ -1931,6 +1931,9 @@ func normalize(p Provider) Provider {
 	if !slices.Contains(Affinities, p.Affinity) {
 		p.Affinity = ""
 	}
+	if p.isCodingPlan() {
+		p.AuthHeader = AuthBearer
+	}
 	if !slices.Contains(AuthChoices, p.AuthHeader) {
 		p.AuthHeader = AuthBoth
 	}

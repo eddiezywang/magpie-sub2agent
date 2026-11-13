@@ -506,3 +506,25 @@ real `~/.codex`, `~/.claude`, `~/.config/gcloud` or `~/.config/magpie` files.
 Vertex AI's tests send Vertex AI, Google's token endpoint and IAM Credentials
 to a server of their own (`VertexForTest`). Check a change
 against real accounts in a sandbox HOME, as [Code standards](../code-standards.md#acceptance-criteria) describes.
+
+## Intranet AIEP Coding Plan
+
+The intranet picker includes `aiep-coding-plan` alongside private authentication
+plugins. It is a native API-key provider, not an account-login plugin. Its
+Anthropic base is `http://172.21.11.82/public`; the shared endpoint builder
+appends `/v1/messages`. The editor exposes the base and the masked key using
+the existing provider sheet. Shared URL normalization also accepts an
+accidentally pasted full messages URL without duplicating its suffix.
+
+`FromPreset`, persistence normalization and request authentication select
+Bearer alone. Model discovery has its own `WithListAuth` context, also fixed
+to Bearer; it must not fall back to the catalog's two-header default. There
+is no header-mode selector or invented model list for this preset. If discovery
+is unsupported, the normal manual model entry remains available.
+
+The lazy `codingplan.js` notice quotes the enterprise WeChat security
+instructions and links to AIEP and the institutional documentation. Personal
+key aliases and actual keys are never shipped in source or review fixtures.
+`TestCodingPlanDefaultsAndSavedAuthentication` covers defaults and persistence;
+`TestCodingPlanRequestAndModelDiscovery` records local HTTP requests for the
+model list and inference, checking the exact messages path and Bearer alone.

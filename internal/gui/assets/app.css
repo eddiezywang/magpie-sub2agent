@@ -5290,3 +5290,7 @@ body .row.agent .ag-prefs .row.pref .who { display: block; }
 .server-pin .hint.err { color: var(--red); overflow-wrap: anywhere; }
 .server-pin .pin-acts { display: flex; flex-wrap: wrap; gap: 12px; }
 .server-pin .pin-peek.busy { pointer-events: none; opacity: .6; }
+
+.coding-plan-notice { grid-column: 1 / -1; padding: 14px 16px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; line-height: 1.65; }
+.coding-plan-notice p { margin: 6px 0; }
+.coding-plan-notice button { margin: 6px 16px 0 0; }

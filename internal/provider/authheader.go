@@ -99,6 +99,9 @@ func LearnAuthHeader(id, only string) {
 // listAuth is ctx for asking p's model list at its Anthropic base: its key
 // in the header AuthHeader says, and learned as RetryOneAuth learns it.
 func (p Provider) listAuth(ctx context.Context) context.Context {
+	if p.isCodingPlan() {
+		return catalog.WithListAuth(ctx, AuthBearer, nil)
+	}
 	if !p.BothAuth() {
 		return ctx
 	}

@@ -46,7 +46,7 @@ func TestIntranetReportingHidesInfrastructureAndRejectsOverrides(t *testing.T) {
 }
 
 func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
-	if len(provider.Presets()) != 0 {
+	if ps := provider.Presets(); len(ps) != 1 || ps[0].ID != "aiep-coding-plan" {
 		t.Fatal("upstream vendor presets must not appear in the internal distribution")
 	}
 	registeredSessions := false

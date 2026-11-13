@@ -9337,6 +9337,8 @@ function drawEditor(p, presetID) {
     }
   }
 
+  if (pr?.id === "aiep-coding-plan") import("./codingplan.js").then((m) => m.notice(ed), statusErr);
+
   // a vendor's global and China endpoints: one row in the add sheet, picked here
   const pair = isNew && pr ? (globalOf(pr) ? [globalOf(pr), pr] : chinaOf(pr) ? [pr, chinaOf(pr)] : null) : null;
   if (pair) {
@@ -9632,10 +9634,12 @@ function drawEditor(p, presetID) {
   // a vendor at the user's own resource (Azure OpenAI): its URL typed here
   let endpoint = null;
   if (pr?.endpoint) {
-    if (draft.chat === undefined) { draft.chat = p?.chat || ""; draft.responses = p?.responses || ""; }
-    endpoint = input(draft.chat || draft.responses || "", pr.endpoint, "url");
+    const anthropic = !!pr.anthropic && !pr.chat && !pr.responses;
+    if (anthropic) draft.anthropic ??= p?.anthropic || pr.anthropic;
+    else if (draft.chat === undefined) { draft.chat = p?.chat || ""; draft.responses = p?.responses || ""; }
+    endpoint = input(anthropic ? draft.anthropic : draft.chat || draft.responses || "", pr.endpoint, "url");
     endpoint.classList.add("endpoint");
-    endpoint.oninput = () => { draft.chat = draft.responses = endpoint.value.trim(); refreshEndpoints(); showCompaction(); showSocket(); };
+    endpoint.oninput = () => { if (anthropic) draft.anthropic = endpoint.value.trim(); else draft.chat = draft.responses = endpoint.value.trim(); refreshEndpoints(); showCompaction(); showSocket(); };
     ed.append(...field(t("Endpoint"), endpoint, pr.endpointHint ? t(pr.endpointHint) : ""));
   }
 
@@ -9847,7 +9851,7 @@ function drawEditor(p, presetID) {
 
   // a third-party Anthropic API's key header: both, or one for a service refusing two (Aloha)
   const twoKeyHeaders = () => {
-    if (p?.account || vertex) return false;
+    if (p?.account || vertex || pr?.id === "aiep-coding-plan") return false;
     if (p && !custom) return !!p.bothAuth;
     const a = ((draft.anthropic ?? (isNew && pr ? pr.anthropic : "")) || "").trim();
     if (!a) return false;
@@ -10352,7 +10356,7 @@ function drawEditor(p, presetID) {
     if (vertex) body.vertex = vertexOfDraft();
     if (isNew && custom && !body.name) { name.focus(); return editorError(t("Give it a name"), "warn"); }
     if (isNew && custom && !body.chat && !body.anthropic && !body.responses && !body.gemini && !body.decide) { url.focus(); return editorError(t("A base URL is needed"), "warn"); }
-    if (endpoint && !body.chat && !body.responses) { endpoint.focus(); return editorError(t(pr.endpointNeeded || "Your resource's endpoint is needed"), "warn"); }
+    if (endpoint && !body.chat && !body.responses && !body.anthropic) { endpoint.focus(); return editorError(t(pr.endpointNeeded || "Your resource's endpoint is needed"), "warn"); }
     if (vertex && !body.vertex.project && !(draft.key || "").trim() && !p?.key?.set) { vertexProject?.focus(NO_SCROLL); return editorError(t("Google Vertex AI needs the id of your Google Cloud project"), "warn"); }
     if (address) {
       const a = (draft.address || "").trim();
