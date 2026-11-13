@@ -5936,7 +5936,7 @@ function routingPage(part) {
   // a group may also be routed by hand: every request to the member the
   // user picks on its card (provider.Manual, #317) — a provider's keys can't
   // and by its members' weights, as a provider's keys are (#1910)
-  const GROUP_ROUTE_OPTS = [...ROUTE_OPTS, ["cheap", "Cheapest first"], ["expiring", "Free quota by expiry"], ["weight", "By weight"], ["manual", "Manual"]];
+  const GROUP_ROUTE_OPTS = [...ROUTE_OPTS, ["cheap", "Cheapest first"], ["expiring", "Free quota by expiry"], ["weight", "By weight"], ["manual", "Manual"]].filter(([id]) => !window.bootPrefs?.intranet || !["free", "expiring"].includes(id));
   const AFF_OPTS = [["", "Auto"], ["session", "Session"], ["turn", "Within a turn"], ["off", "Off"], ["strict", "Strict"]];
   // what one rate limited with quota left does then (provider.Sink), as in
   // a provider's editor (app.js SINKS)
@@ -6660,7 +6660,7 @@ function routingPage(part) {
     fast: ["Fastest first", "Whichever provider has answered fastest lately goes first"],
     even: ["Spread evenly", "The strongest model, taken in turn over every provider and account that serves it"],
   };
-  const tplName = (tp) => t(TPL[tp.kind]?.[0] || tp.group.name);
+  const tplName = (tp) => t((window.bootPrefs?.intranet && { smart: "Balanced first", steady: "Stability first" }[tp.kind]) || TPL[tp.kind]?.[0] || tp.group.name);
   // what a template that can't be made is missing (provider.Need*)
   const tplNeed = (tp) => tp.need === "providers" ? t("Needs models from two providers: {name} is the only one", { name: tp.of })
     : tp.need === "cheap" ? t("Needs a model cheap beside {name}", { name: tp.of })

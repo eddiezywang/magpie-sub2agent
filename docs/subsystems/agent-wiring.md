@@ -438,6 +438,9 @@ unused tables, other ports, remote hosts and unrelated paths do not count.
 Managed state remains separate. The Adapt/Connect action uses the existing
 backed-up agent connection writer only after a click. No special OpenAI actor
 header is added by the internal Codex writer; existing user headers are kept.
+Detected agents stay visible in the internal page unless explicitly hidden.
+Entering from another page also triggers the snapshot; rerendering the current
+page only redraws the cached result. Leaving invalidates any in-flight result.
 
 The internal browser page does not apply the server-only gateway-mode veto to
 local session discovery. The existing per-agent session-read permissions still

@@ -2898,7 +2898,7 @@ function arrangeAgents() {
   const guiding = !anyUsed && !!guideShown();
   // what is set on it alone decides where one not hidden goes: pinned in view
   // by hand, one cleared stayed up among the set ones with nothing to say why
-  const inView = (a) => !guiding && !hidden.has(a.id) && (!anyUsed || agentUsed(a));
+  const inView = (a) => !hidden.has(a.id) && (window.bootPrefs?.intranet || (!guiding && (!anyUsed || agentUsed(a))));
   return { all, shown: all.filter(inView), folded: all.filter((a) => !inView(a)) };
 }
 
@@ -12225,7 +12225,7 @@ function routingSegs(items, current, onPick) {
   });
   return box;
 }
-const routingsOf = (p) => [...ROUTINGS, ...jsRoutings(p.routing || "")];
+const routingsOf = (p) => [...ROUTINGS, ...jsRoutings(p.routing || "")].filter(([id]) => !window.bootPrefs?.intranet || id !== "free" || p.routing === id);
 // as on the Routing page's list of these (routing/client.js AFF_OPTS)
 const STAYS = [
   ["", "Auto", "A conversation stays with the account or key that answered it while what the vendor cached of it is worth keeping — within a turn always, across turns while it's fresh."],
@@ -23196,7 +23196,11 @@ async function show(v) {
     magpie.call(view, "leave");
   }
   if (v !== view && !jump) backTo = null;
-  if (v !== view && window.bootPrefs?.intranet) import("./agentconnections.js").then((m) => m.leave());
+  if (window.bootPrefs?.intranet) {
+    const m = await import("./agentconnections.js");
+    if (v !== view) m.leave();
+    if (v === "agents") queueMicrotask(() => m.enter());
+  }
   view = v;
   renderBack();
   window.hideAccounts?.page();

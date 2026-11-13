@@ -3161,3 +3161,27 @@ go test -tags nogui ./internal/provider -run 'TestGroup|TestCodexCreditsSwitch|T
 
 The gateway's `TestMain` gives the package a home of its own, so these tests
 never read real providers or accounts.
+
+## Internal routing choices
+
+The internal template picker offers plan, smart (Balanced first), thrifty and
+steady only. Models are selected using the existing catalog prices, release
+metadata and capabilities, without binding templates to model IDs. The group's
+advanced picker omits free-first and expiring-free-quota strategies; existing
+saved strategies are not rewritten. TIG Coding Plan defaults to plan billing,
+while an explicit user billing value still wins.
+
+A known zero output price is distinct from unknown pricing. Zero-priced models
+are eligible as the cheap member and classifier; a changed price removes that
+eligibility when templates are regenerated through the same algorithm. Saved
+groups remain explicit user configuration, not live subscriptions to a template.
+A classifier still prefers a decision
+API, else the cheapest known-price non-reasoning/non-tiny model, else the cheap
+member. No promotion is permanently encoded by model name.
+
+Pricing multipliers and peak/off-peak billing rules belong on the accounting
+server. They must not change quota-rest/reset timestamps or imply remaining
+allowance. Existing 429 classification reads natural-language quota/rate/credit
+messages as well as structured error codes and reset headers. Vendor-specific
+formats still need representative sanitized responses before new parsers are
+asserted to support them.
