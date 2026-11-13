@@ -2,7 +2,7 @@
 // are supplied by build/sub2agent-providers.mjs from the authorized checkout.
 import { createCodeBuddySubscriptionAdapter } from 'sub2agent/core/source-adapters/codebuddy-subscription-adapter';
 import { loginNetwork } from './login-network.mjs';
-import { createWorkBuddySubscriptionAdapter } from 'sub2agent/core/source-adapters/workbuddy-subscription-adapter';
+import {workBuddyAdapter,workBuddyModelSet} from './workbuddy-models.mjs';
 import { createTraeSubscriptionAdapter } from 'sub2agent/core/source-adapters/trae-subscription-adapter';
 import { createCodeBuddySubscriptionResolver } from 'sub2agent/core/source-resolvers/codebuddy-subscription-resolver';
 import { createWorkBuddySubscriptionResolver } from 'sub2agent/core/source-resolvers/workbuddy-subscription-resolver';
@@ -76,7 +76,9 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
     return rawFetch(url, {...init, headers:Object.fromEntries(headers.values())}, context);
   };
   const cb = kind === 'codebuddy' ? (deps.codebuddyAdapter || codeBuddyAdapter(fetchImpl)) : null;
-  const wb = deps.workbuddyAdapter || createWorkBuddySubscriptionAdapter({fetchImpl});
+  const wb = deps.workbuddyAdapter || workBuddyAdapter(loginNetwork(fetchImpl,()=>undefined));
+  const catalogs=new Map();
+  const catalogNow=deps.now || Date.now;
   const trae = deps.traeAdapter || createTraeSubscriptionAdapter({fetchImpl});
   const initial = cb ? await cb.inspectLocalState() : {models:[]};
 
@@ -97,7 +99,7 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
         }); }};
     }
     if (kind === 'workbuddy') {
-      const adapter = deps.workbuddyAdapter || createWorkBuddySubscriptionAdapter({fetchImpl:network});
+      const adapter = deps.workbuddyAdapter || workBuddyAdapter(network);
       const login = await adapter.requestLoginLink();
       let pendingToken = null;
       let tokenRequest = null;
@@ -181,7 +183,21 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
     },
     provider:{id,async models(provider,{auth}={}) {
       if(!auth?.access)return provider.models;
-      return modelSet(modelsFor(readBundle(auth)));
+      const bundle=readBundle(auth);
+      if(kind!=='workbuddy')return modelSet(modelsFor(bundle));
+      const key=JSON.stringify([bundle.userId,bundle.enterpriseId]);
+      let cached=catalogs.get(key);
+      if(!cached || cached.until<catalogNow()) {
+        const previous=cached?.promise;
+        if(catalogs.size>=64)catalogs.delete(catalogs.keys().next().value);
+        cached={until:catalogNow()+5*60_000,promise:Promise.resolve().then(()=>wb.listModels(bundle)).catch(()=>{cached.until=catalogNow()+60_000;return previous || {};})};
+        catalogs.set(key,cached);
+      }
+      const latest=await cached.promise;
+      // Model-list refresh never rewrites authentication: a token renewal can
+      // run concurrently. Keep the account's last list if discovery fails.
+      const current={...bundle,...latest};
+      return workBuddyModelSet(current,modelsFor(current));
     }},
     auth:{provider:id,methods:[{type:'oauth',label:kind==='workbuddy'?'企业 SSO 扫码登录':'浏览器授权登录',authorize}],
       loader:async getAuth => {

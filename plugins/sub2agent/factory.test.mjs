@@ -7,6 +7,41 @@ const client={auth:{set:async()=>{throw new Error('Unexpected credential write')
 const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
 const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
 
+test('WorkBuddy keeps deployment limits from authenticated model discovery and coalesces accounts',async()=>{
+ let calls=0,now=0,offline=false;
+ const auth={access:JSON.stringify({accessToken:'fixture',userId:'u',enterpriseId:'e',models:['old'],modelMap:{old:'old'}})};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{now:()=>now,fetchImpl:async(url)=>{
+  calls++;
+  if(offline)throw new Error('fixture outage');
+  const data=url.endsWith('/v3/config')?{agents:[{name:'craft',models:['glm-turbo']}],models:[{id:'glm-turbo',name:'GLM-5.0-Turbo',maxAllowedSize:200000,maxInputTokens:180000,maxOutputTokens:64000}]}:
+   [{id:'tenant-model',name:'glm-5.3-flash-maas-fixture',maxAllowedSize:1000000,maxInputTokens:300000,maxOutputTokens:32000}, {id:'auto',name:'auto-maas-fixture'}];
+  return Response.json({code:0,data});
+ }});
+ const [a,b]=await Promise.all([plugin.provider.models({models:{}},{auth}),plugin.provider.models({models:{}},{auth})]);
+ assert.equal(calls,2,'one pair of discovery requests per account');
+ assert.deepEqual(a,b);
+ assert.deepEqual(a['glm-5.3-flash-maas-fixture'].limit,{context:1000000,input:300000,output:32000});
+ assert.equal(a['GLM-5.0-Turbo'].limit.input,180000);
+ assert.equal(a.hy4free.limit.input,960000);
+ assert.equal(a.hy4free.limit.output,64000);
+ assert.equal(a['auto-maas-fixture'].limit,undefined,'Auto must not invent a fixed context');
+ assert.equal(a.hy4free.cost,undefined,'vendor discovery must not replace server pricing');
+ const other={access:JSON.stringify({...readBundle(auth),enterpriseId:'other'})};
+ await plugin.provider.models({models:{}},{auth:other});assert.equal(calls,4,'accounts must not share tenant limits');
+ offline=true;now=6*60_000;
+ const retained=await plugin.provider.models({models:{}},{auth});
+ assert.equal(retained['glm-5.3-flash-maas-fixture'].limit.input,300000,'outage must retain last successful tenant limits');
+});
+
+test('WorkBuddy unavailable discovery retains known metadata without writing credentials',async()=>{
+ const auth={access:JSON.stringify({userId:'u',enterpriseId:'e',models:['custom-maas-fixture','auto-maas-fixture'],modelMetadata:{'custom-maas-fixture':{limit:{context:64000,input:60000,output:4000}}}})};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{fetchImpl:async()=>{throw new Error('fixture outage');}});
+ const a=await plugin.provider.models({models:{}},{auth});
+ assert.equal(a['custom-maas-fixture'].limit.input,60000);
+ assert.equal(a.hy4free.limit.input,960000);
+ assert.equal(a['auto-maas-fixture'].limit,undefined);
+});
+
 test('WorkBuddy manual callback validates vendor and session while automatic login continues',async()=>{
  let ready=false,polls=0;
  const adapter={requestLoginLink:async()=>({url:'https://login.example.invalid',state:'fixture-state'}),

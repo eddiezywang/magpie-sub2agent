@@ -6,6 +6,16 @@ cached package cannot mask fixes shipped in an application update; newer valid
 market releases remain authoritative. Offline fallback does not overwrite the
 installed package, credentials, options or enablement state.
 
+WorkBuddy 1.0.4 preserves maxAllowedSize, maxInputTokens and maxOutputTokens from
+the authenticated enterprise discovery responses. Model names resolve through
+the vendor's exact modelMap ID; deployment caps take precedence over a build-time
+vendor model snapshot and generic catalog estimates. The plugin coalesces reads
+per account for five minutes, retaining the last successful list after failure.
+List refresh never rewrites authentication, so it cannot overwrite a concurrent
+token renewal. The bundled vendor snapshot supplies offline Hy4 limits without
+encoding prices. Auto remains unknown when its vendor gives no fixed cap. Input
+caps and whole-context windows remain separate; normal user overrides still win.
+
 The internal Sub2Agent login transport bounds each vendor authentication JSON
 request, including its body, to 12 seconds. Timeout, refused connection, DNS,
 unreachable server and HTTP 5xx/404 failures have actionable Chinese messages
