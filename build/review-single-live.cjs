@@ -20,7 +20,7 @@ const assert=require('node:assert/strict');
     await page.route('**/api/open',r=>r.fulfill({json:{}}));
     await page.goto('http://127.0.0.1:18990/?k='+encodeURIComponent(key));
     report.version=await page.evaluate(()=>window.bootPrefs.version);
-    assert.equal(report.version,'0.1.3913-sub2agent.13');
+    assert.equal(report.version,'0.1.3913-sub2agent.14');
     for(const view of ['agents','sessions','providers','routing','groups','gateway','usage','plugins','settings']) {
       await page.goto('http://127.0.0.1:18990/?view='+view);
       await page.locator('#side button[data-view="sessions"]').waitFor();
@@ -30,18 +30,21 @@ const assert=require('node:assert/strict');
       if(view==='plugins') {
         await page.locator('.pm-connection').waitFor();
         assert.equal(await page.locator('.pm-server,.pm-registry').count(),0);
-        await page.screenshot({path:path.join(output,'12-live-market.png'),fullPage:true});
+        await page.screenshot({path:path.join(output,'14-live-market.png'),fullPage:true});
         await page.getByRole('tab',{name:'内置',exact:true}).click();
         const mapping=page.locator('.feat-row[data-id="modelmap"]');
         await mapping.waitFor();
         assert.equal(await mapping.getByRole('switch').getAttribute('aria-checked'),'true');
         await mapping.scrollIntoViewIfNeeded();
-        await page.screenshot({path:path.join(output,'12-live-modelmap.png'),fullPage:true});
+        await page.screenshot({path:path.join(output,'14-live-modelmap.png'),fullPage:true});
         const managed=await page.evaluate(async()=>{
           const data=await fetch('/api/plugins').then(r=>r.json());
           return data;
         });
-        for(const entry of managed.plugins||[]) assert.equal(entry.version,'1.0.1');
+        for(const entry of managed.plugins||[]) {
+          assert.equal(entry.version,'1.0.2');
+          if (/codebuddy|trae/.test(entry.spec)) assert.equal(entry.off,true);
+        }
         report.managedPackages=JSON.stringify(managed).match(/@sub2agent\/[a-z]+/g);
         for(const name of ['codebuddy','workbuddy','trae','aiep']) assert.ok(report.managedPackages.includes('@sub2agent/'+name),name);
         const row=page.locator('.feat-row[data-id="accounting"]');
@@ -52,7 +55,7 @@ const assert=require('node:assert/strict');
         for(const theme of ['light','dark']) {
           await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
           await row.scrollIntoViewIfNeeded();
-          await page.screenshot({path:path.join(output,'12-live-reporting-'+theme+'.png'),fullPage:true});
+          await page.screenshot({path:path.join(output,'14-live-reporting-'+theme+'.png'),fullPage:true});
         }
         const metadata=await page.evaluate(async()=>{
           const list=await fetch('/api/plugins/builtin').then(r=>r.json());
@@ -65,24 +68,24 @@ const assert=require('node:assert/strict');
         assert.ok(!metadata.registry?.url);
         report.reporting={switches:1,configurationFields:0,addressesVisible:false};
       } else {
-        await page.screenshot({path:path.join(output,'12-live-'+view+'.png'),fullPage:true,mask:view==='sessions'?[page.locator('#view-sessions')]:[],maskColor:'#dfe3eb'});
+        await page.screenshot({path:path.join(output,'14-live-'+view+'.png'),fullPage:true,mask:view==='sessions'?[page.locator('#view-sessions')]:[],maskColor:'#dfe3eb'});
       }
       assert.deepEqual(errors,[],view);
       report.views.push(view);
     }
     await page.goto('http://127.0.0.1:18990/?view=providers');
     await page.locator('#addProvider').click();
-    await page.locator('#addSheet button').filter({hasText:'行内 Coding Plan'}).click();
+    await page.locator('#addSheet button').filter({hasText:'TIG Coding Plan'}).click();
     const editor=page.locator('.editor.new');
     await editor.locator('.coding-plan-notice').waitFor();
     assert.equal(await editor.locator('input.endpoint').inputValue(),'http://172.21.11.82/public');
     assert.equal(await editor.locator('input[type=password]:visible').inputValue(),'');
     assert.equal(await editor.locator('.auth-header:visible').count(),0);
     assert.doesNotMatch(await editor.innerText(),/eddiewang|真实key|172\.21\.0\.177/);
-    await editor.screenshot({path:path.join(output,'12-live-codingplan.png')});
+    await editor.screenshot({path:path.join(output,'14-live-codingplan.png')});
     report.codingPlan={baseCorrect:true,keyEmpty:true,headerSelectorHidden:true};
     report.pageErrors=errors;
-    await fs.writeFile(path.join(output,'12-live-report.json'),JSON.stringify(report,null,2));
+    await fs.writeFile(path.join(output,'14-live-report.json'),JSON.stringify(report,null,2));
     console.log(JSON.stringify(report));
   }finally{await browser.close()}
 })().catch(e=>{console.error(e.message.replace(/https?:\/\/\S+/g,'[address]'));process.exitCode=1});
