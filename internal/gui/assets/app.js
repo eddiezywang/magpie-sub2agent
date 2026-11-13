@@ -33,6 +33,7 @@ if (mode === "panel" && !document.body.classList.contains("linux")) $("header.to
 // `magpie web`: the page in a browser tab, with no window of the app's
 // around it — it opens links itself, and what is the desktop's is left out
 const web = !!window.bootPrefs?.web;
+const intranet = !!window.bootPrefs?.intranet;
 // the version that served this page, for servedAnew
 const pageVersion = window.bootPrefs?.version || "";
 // magpie web seen from another computer: localhost is the viewer's (curtinp118)
@@ -262,7 +263,7 @@ function el(tag, cls, text) {
 }
 // The intranet header has no upstream bird symbol. Shared diagram hubs use
 // the distribution's mark directly instead of depending on header markup.
-function appMark() { return window.bootPrefs?.intranet ? '<image class="app-mark" href="icons/magpie.svg" width="44" height="44"/>' : '<use href="#bird"/>'; }
+function appMark() { return intranet ? '<image class="app-mark" href="icons/magpie.svg" width="44" height="44"/>' : '<use href="#bird"/>'; }
 // replaceKeeping is parent.replaceChildren(...nodes) that leaves a node
 // already in parent where it is, rather than taking it out and putting it
 // back. A filter redrawn from its own input event is one: taken out of the
@@ -483,7 +484,7 @@ function renderAgentsLoading() {
 
 let agentArranging = false, agentRenderPending = false;
 function renderAgents() {
-  if (window.bootPrefs?.intranet) import("./agentconnections.js").then((m) => m.enter(), statusErr);
+  if (intranet) import("./agentconnections.js").then((m) => m.enter(), statusErr);
   renderCodexMemories(); // the Codex sheet's row is the same field
   renderCodexSubagentModel(); // and this one
   if (agentArranging) { agentRenderPending = true; return; }
@@ -1706,7 +1707,7 @@ function agentsLead(list) {
   lead.classList.toggle("welcome", first);
   if (!first) {
     const [pre, post] = t("Switch an agent on and the models you set up in magpie show up as the {magpie} provider in its own model list; or pick its model right here.").split("{magpie}");
-    lead.append(pre, el("b", "", window.bootPrefs?.intranet ? "Sub2Agent" : "magpie"), post || "");
+    lead.append(pre, el("b", "", intranet ? "Sub2Agent" : "magpie"), post || "");
     return;
   }
   lead.append(el("b", "ag-lead-h", t("Let your agents use the models you set up in magpie")));
@@ -2898,7 +2899,7 @@ function arrangeAgents() {
   const guiding = !anyUsed && !!guideShown();
   // what is set on it alone decides where one not hidden goes: pinned in view
   // by hand, one cleared stayed up among the set ones with nothing to say why
-  const inView = (a) => !hidden.has(a.id) && (window.bootPrefs?.intranet || (!guiding && (!anyUsed || agentUsed(a))));
+  const inView = (a) => !hidden.has(a.id) && (intranet || (!guiding && (!anyUsed || agentUsed(a))));
   return { all, shown: all.filter(inView), folded: all.filter((a) => !inView(a)) };
 }
 
@@ -3612,7 +3613,7 @@ async function openAgentModels(a, anchor, ev) {
       if (pick && !words && g.name !== pick) continue;
       const rows = g.models.filter((m) => (!onlyShown || !m.hidden || kept.has(m.id)) &&
         (!words || [m.name, m.id, g.name].some((s) => s.toLowerCase().includes(words))));
-      if (!rows.length && !(window.bootPrefs?.intranet && kind === "relay")) continue;
+      if (!rows.length && !(intranet && kind === "relay")) continue;
       const on = g.models.filter((m) => !m.hidden).length;
       const folded = !words && !pick && shut.has(g.name);
       const sec = el("section", "am-g" + (folded ? " shut" : "") + (g.name === ROUTING_GROUPS ? " routes" : ""));
@@ -7142,12 +7143,12 @@ function renderAdd() {
     }).catch(() => {});
   };
   const c = el("button", "text custom" + (editing?.custom ? " on" : ""));
-  c.append(svg(PLUS, 11, 1.8), t(window.bootPrefs?.intranet ? "Custom API key" : "Custom provider"));
+  c.append(svg(PLUS, 11, 1.8), t(intranet ? "Custom API key" : "Custom provider"));
   c.dataset.pick = "custom";
   c.title = t("any OpenAI or Anthropic compatible URL");
   c.onclick = () => { editing = { custom: true }; draft = null; renderProviders(); };
   head.append(q);
-  if (!window.bootPrefs?.intranet) head.append(c);
+  if (!intranet) head.append(c);
   const imp = el("button", "text", t("Import…"));
   imp.title = t("Bring over providers set up in other apps");
   imp.onclick = openImportApps;
@@ -7179,7 +7180,7 @@ function renderAdd() {
     // a deprecated one whose plugin is installed is that plugin's row alone
     // (ARNO on Discord: Qoder CN twice), and one with no account isn't
     const named = (x) => !f || x.name.toLowerCase().includes(f) || x.agent.includes(f) || "subscription".includes(f);
-    const privateSubs = window.bootPrefs?.intranet ? pluginSubs().filter((x) => x.pid.startsWith("sub2agent-")) : [];
+    const privateSubs = intranet ? pluginSubs().filter((x) => x.pid.startsWith("sub2agent-")) : [];
     const subs = [...privateSubs, ...SUBS.filter((x) => !(replacedSub(x.agent) || unusedSub(x.agent)) || signing?.agent === x.agent).map((x) => subOf(x.agent))].filter(named);
     const inPlugins = f && SUBS.some((x) => unusedSub(x.agent) && signing?.agent !== x.agent && named(subOf(x.agent)));
     // partners pay to be listed first, under a heading that says so; who
@@ -7206,7 +7207,7 @@ function renderAdd() {
       any = true;
       const grid = section("Subscriptions", "sign in, no key");
       for (const x of subs) grid.append(subTile(x));
-      if (!window.bootPrefs?.intranet && (!f || inPlugins)) grid.append(morePluginsTile(f));
+      if (!intranet && (!f || inPlugins)) grid.append(morePluginsTile(f));
       const w = subs.find((x) => signing?.agent === x.agent);
       if (w) tiles.append(renderSigning(w));
     }
@@ -7252,9 +7253,9 @@ function renderAdd() {
         .map((p) => [p, chinaOf(p)]).filter(([p, cn]) => hit(p) || (cn && hit(cn)));
       if (!rows.length) continue;
       any = true;
-      const grid = section(window.bootPrefs?.intranet && kind === "relay" ? "API access" : title, window.bootPrefs?.intranet && kind === "relay" ? "Configure a gateway and API key" : hint);
+      const grid = section(intranet && kind === "relay" ? "API access" : title, intranet && kind === "relay" ? "Configure a gateway and API key" : hint);
       for (const [pr, cn] of rows) grid.append(cn ? pairTile(pr, cn) : tile(pr));
-      if (window.bootPrefs?.intranet && kind === "relay") { c.className = "tile"; grid.append(c); }
+      if (intranet && kind === "relay") { c.className = "tile"; grid.append(c); }
     }
     if (!any) {
       const none = el("div", "none");
@@ -8552,7 +8553,7 @@ const IOS_EASE = "cubic-bezier(.32, .72, 0, 1)";
 // the system's Reduce Motion, or Settings' (#3813)
 function calm() { return document.documentElement.dataset.motion === "reduce" || matchMedia("(prefers-reduced-motion: reduce)").matches; }
 // Settings' Loading bird turned off: no bird on a skeleton or a README
-function birdOff() { return window.bootPrefs?.intranet || document.documentElement.dataset.bird === "off"; }
+function birdOff() { return intranet || document.documentElement.dataset.bird === "off"; }
 // magpie's bird in parts, its wing and tail free to move (the header's logo
 // holds the shapes)
 const BIRD = `<svg viewBox="0 0 44 44"><use href="#bird" clip-path="url(#bird-body)"/><g class="tail"><use href="#bird" clip-path="url(#bird-tail)"/></g><g class="wing"><use href="#bird" clip-path="url(#bird-wing)"/></g></svg>`;
@@ -9315,7 +9316,7 @@ function drawEditor(p, presetID) {
   {
     const h = el("div", "ehead");
     const copyOf = draft.copyOf && providers.providers.find((x) => x.id === draft.copyOf);
-    h.append(icon(p?.icon || (copyOf && draft.icon) || pr?.icon || "generic"), el("b", "", p ? p.name : copyOf ? t("Copy of {name}", { name: copyOf.name }) : pr ? pr.name : t(window.bootPrefs?.intranet ? "Custom API key" : "Custom provider")));
+    h.append(icon(p?.icon || (copyOf && draft.icon) || pr?.icon || "generic"), el("b", "", p ? p.name : copyOf ? t("Copy of {name}", { name: copyOf.name }) : pr ? pr.name : t(intranet ? "Custom API key" : "Custom provider")));
     if (pr?.kind === "partner") { if (partnerNote(pr)) h.append(el("span", "note", partnerNote(pr))); } else if (pr?.note) h.append(el("span", "note", t(pr.note)));
     h.append(el("span", "grow"));
     // a region's own page (Tencent Cloud's), following the region picked
@@ -9486,7 +9487,7 @@ function drawEditor(p, presetID) {
       showSearch(); showLocal(); showTLS(); showAuth(); showCompaction(); showSocket();
     };
     const urlWrap = el("div", "stack");
-    urlWrap.append(...(window.bootPrefs?.intranet ? [url] : [seg, url]));
+    urlWrap.append(...(intranet ? [url] : [seg, url]));
     // the APIs a detection found: URLs set, a 404/405 one cleared
     const useDetected = (rs) => {
       carried = null;
@@ -9509,9 +9510,9 @@ function drawEditor(p, presetID) {
       draft.onModelPrefs?.();
     };
     // Detect asks OpenAI's, Anthropic's and Gemini's APIs (#1346)
-    if (window.bootPrefs?.intranet) ed.autoDetect = import("./autogateway.js").then((m) => m.setup(ed, urlWrap, url, draft, p, useDetected, asTyped));
+    if (intranet) ed.autoDetect = import("./autogateway.js").then((m) => m.setup(ed, urlWrap, url, draft, p, useDetected, asTyped));
     else urlWrap.append(detectAPIs(p, () => url.value, useDetected));
-    ed.append(...field(window.bootPrefs?.intranet ? t("Gateway URL") : "Base URL", urlWrap));
+    ed.append(...field(intranet ? t("Gateway URL") : "Base URL", urlWrap));
   }
 
   // Cline's DeepSeek and GLM models pinned to their makers' APIs (sdytman, ARNO on Discord);
@@ -9532,7 +9533,7 @@ function drawEditor(p, presetID) {
   adv.append(advIn);
 
   const unmaskRow = (hint, urls) => {
-    if (window.bootPrefs?.intranet) return [];
+    if (intranet) return [];
     const [ltk, lcb] = tick(t("Send requests unmasked"), !!draft.unredacted);
     const row = field(t("Redaction"), ltk, hint), note = el("div", "hint unmasked-away");
     row[1].append(note);
@@ -10156,7 +10157,7 @@ function drawEditor(p, presetID) {
   }
   ed.append(adv);
 
-  if (custom && !window.bootPrefs?.intranet) {
+  if (custom && !intranet) {
     const more = edAligned(el("details", "more"));
     more.append(el("summary", "", t("More endpoints")));
     const inner = el("div", "inner");
@@ -12225,7 +12226,7 @@ function routingSegs(items, current, onPick) {
   });
   return box;
 }
-const routingsOf = (p) => [...ROUTINGS, ...jsRoutings(p.routing || "")].filter(([id]) => !window.bootPrefs?.intranet || id !== "free" || p.routing === id);
+const routingsOf = (p) => [...ROUTINGS, ...jsRoutings(p.routing || "")].filter(([id]) => !intranet || id !== "free" || p.routing === id);
 // as on the Routing page's list of these (routing/client.js AFF_OPTS)
 const STAYS = [
   ["", "Auto", "A conversation stays with the account or key that answered it while what the vendor cached of it is worth keeping — within a turn always, across turns while it's fresh."],
@@ -12419,7 +12420,7 @@ const SUBS = [
   // Anthropic has banned accounts it saw used from other tools: said before one is added
   { agent: "claude", name: "Claude", icon: "claude-color", plans: "Pro · Max · Team", importable: true, risk: true,
     riskNote: "Anthropic may suspend or ban a Claude account it sees used outside its own apps. magpie sends requests through Claude Code, but Anthropic may still act on them; you use it at your own risk. Use an account you can afford to lose." },
-  { agent: "codex", name: window.bootPrefs?.intranet ? "Codex" : "ChatGPT", icon: "openai", plans: "Plus · Pro · Business", importable: true },
+  { agent: "codex", name: intranet ? "Codex" : "ChatGPT", icon: "openai", plans: "Plus · Pro · Business", importable: true },
   // OpenAI's Sign in with ChatGPT: the plan asked on api.openai.com, with the agent's own instructions (#933)
   { agent: "chatgpt-api", name: "ChatGPT API", icon: "openai", plans: "Plus · Pro · Business", own: true,
     hint: "Sign in with ChatGPT: your plan on OpenAI's own API, with your agent's own instructions rather than Codex's." },
@@ -12454,7 +12455,7 @@ const SUBS = [
   // accounts can also come from another tool's export (Antigravity Cockpit, Antigravity Manager, CLIProxyAPI)
   { agent: "antigravity", name: "Antigravity", icon: "antigravity-color", plans: "Google AI Pro · Ultra · free", own: true, risk: true, importable: true },
 ];
-if (window.bootPrefs?.intranet) {
+if (intranet) {
   SUBS.length = 0;
 }
 const subOf = (agent) => {
@@ -12489,7 +12490,7 @@ function pluginMethod(sub, site) {
 function pluginSubs() {
   return ((providers || panelAccts)?.plugins || []).map((x) => ({
     agent: x.id, pid: x.pid, name: x.name, icon: x.icon, plugin: x, own: true, single: !!x.single,
-    get plans() { return window.bootPrefs?.intranet && x.pid.startsWith("sub2agent-") ? (x.pid.endsWith("workbuddy") ? "企业 SSO · 多账户" : "企业授权 · 多账户") : t("from the plugin {spec}", { spec: x.spec }); },
+    get plans() { return intranet && x.pid.startsWith("sub2agent-") ? (x.pid.endsWith("workbuddy") ? "企业 SSO · 多账户" : "企业授权 · 多账户") : t("from the plugin {spec}", { spec: x.spec }); },
   }));
 }
 
@@ -19606,7 +19607,7 @@ async function setGatewayPaused(on) {
 }
 async function loadSettings() {
   const since = prefsWrites;
-  if (fontList === null && !fontListError) loadFonts();
+  if (!intranet && fontList === null && !fontListError) loadFonts();
   if (window.bootPrefs?.omarchy && !barIcon) api("omarchy/widget").then((b) => { barIcon = b; renderBarIcon(); }).catch(() => {});
   const s = await api("settings");
   if (!prefsSettled(since) && prefs) return; // the save draws the page when it's in
@@ -19754,6 +19755,7 @@ const partShows = (page) => {
   });
 };
 function setSetTab(tab, remember) {
+  if (intranet) { setShown = ""; return; }
   if (remember) {
     setTab = tab;
     try { localStorage.setItem("magpie.settingsTab", tab); } catch {}
@@ -19787,7 +19789,7 @@ function setSetTab(tab, remember) {
   // held tabs (#2396): a hairline once scrolled under
   const sv = $("#view-settings"), head = sv.querySelector(":scope > .set-head");
   sv.addEventListener("scroll", () => head.classList.toggle("stuck", sv.scrollTop > 0), { passive: true });
-  import("./settingshints.js").catch(() => {});
+  if (!intranet) import("./settingshints.js").catch(() => {});
   // opened on a part (a reload, a link): that part, and remembered
   if (mode === "window" && params.get("view") === "settings" && SET_TABS.includes(params.get("tab"))) {
     setTab = params.get("tab");
@@ -19850,6 +19852,7 @@ function findSettings() {
   none.textContent = t("No setting matches “{q}”", { q: $("#setQ").value.trim() });
 }
 function searchSettings(q) {
+  if (intranet) return;
   setQuery = q.trim().toLowerCase();
   if (setQuery) return findSettings();
   const v = $("#view-settings");
@@ -19991,6 +19994,7 @@ function renderUpdateMirror(r, s) {
 }
 
 function renderSettings() {
+  if (intranet) return import("./internalsettings.js").then(m => m.render(prefs), statusErr);
   const s = prefs;
   const keep = prefsKeep(s);
   prefsBase = keep;
@@ -23196,7 +23200,7 @@ async function show(v) {
     magpie.call(view, "leave");
   }
   if (v !== view && !jump) backTo = null;
-  if (window.bootPrefs?.intranet) {
+  if (intranet) {
     const m = await import("./agentconnections.js");
     if (v !== view) m.leave();
     if (v === "agents") queueMicrotask(() => m.enter());
@@ -23243,7 +23247,7 @@ function syncURL() {
   const q = new URLSearchParams(location.search);
   if (view === "agents") q.delete("view"); else q.set("view", view);
   if (view === "providers" && typeof editing === "string") q.set("edit", editing); else q.delete("edit");
-  if (view === "settings") q.set("tab", setShown); else q.delete("tab");
+  if (view === "settings" && setShown) q.set("tab", setShown); else q.delete("tab");
   q.delete("q"); // Plugins' q is looked for once (start.js)
   const s = q.size ? "?" + q : location.pathname;
   if (s !== location.search) history.replaceState(null, "", s);
@@ -23283,7 +23287,7 @@ function applyFeatures(list) {
   if (!Array.isArray(list)) return;
   for (const f of list) if (f.schema) magpie.configure(f.id, f.config);
   const off = new Set(list.filter((f) => !f.on).map((f) => f.id));
-  if (window.bootPrefs?.intranet) for (const id of ["library", "middleware", "otel", "redact", "search", "tools", "warmups"]) off.add(id);
+  if (intranet) for (const id of ["library", "middleware", "otel", "redact", "search", "tools", "warmups"]) off.add(id);
   if (off.size === featuresOff.size && [...off].every((id) => featuresOff.has(id))) return;
   featuresOff = off;
   featureStyle();
@@ -23470,7 +23474,7 @@ function syncTitle() {
 async function refreshPage(kind) {
   switch (kind) {
     case "agents":
-      if (window.bootPrefs?.intranet) return (await import("./agentconnections.js")).refresh();
+      if (intranet) return (await import("./agentconnections.js")).refresh();
       state = await api("agents/rescan", {});
       renderAgents();
       await Promise.all([loadInstalls(), loadCLIs()]);
@@ -23814,7 +23818,7 @@ var NAV_SUBS = {
 };
 // each tab's mark, from navicons.js (loaded with the first list)
 var NAV_SUB_IC;
-function navSubItems(v) { return [...(NAV_SUBS[v]?.()?.querySelectorAll(":scope > button") || [])].filter((b) => !b.hidden); }
+function navSubItems(v) { return v === "settings" && intranet ? [] : [...(NAV_SUBS[v]?.()?.querySelectorAll(":scope > button") || [])].filter((b) => !b.hidden); }
 var navSubsAt = "";
 function navSubs() {
   if (mode !== "window") return;

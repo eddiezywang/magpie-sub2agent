@@ -200,6 +200,8 @@ const I18N = {
     "Browser access": "浏览器访问",
     "Open magpie in a browser": "在浏览器中打开 magpie",
     "Another magpie": "另一个 magpie",
+    "Available in the desktop app": "请在桌面应用中操作",
+    "Connect to another sub2agent": "连接另一个 sub2agent",
     "Type the other magpie’s address": "请输入另一个 magpie 的地址",
     "Type that magpie’s key: the k= in the link it printed, or its MAGPIE_WEB_KEY": "请输入那个 magpie 的密钥：它打印的链接里的 k=，或它的 MAGPIE_WEB_KEY",
     "That magpie turned the key away: use the key in the link it printed": "那个 magpie 拒绝了这个密钥：请用它打印的链接里的密钥",
@@ -5356,6 +5358,8 @@ const I18N = {
     "Browser access": "瀏覽器存取",
     "Open magpie in a browser": "在瀏覽器中開啟 magpie",
     "Another magpie": "另一個 magpie",
+    "Available in the desktop app": "請在桌面應用程式中操作",
+    "Connect to another sub2agent": "連線到另一個 sub2agent",
     "Type the other magpie’s address": "請輸入另一個 magpie 的位址",
     "Type that magpie’s key: the k= in the link it printed, or its MAGPIE_WEB_KEY": "請輸入那個 magpie 的金鑰：它印出的連結中的 k=，或它的 MAGPIE_WEB_KEY",
     "That magpie turned the key away: use the key in the link it printed": "那個 magpie 拒絕了這個金鑰：請用它印出的連結中的金鑰",
@@ -10497,6 +10501,8 @@ const I18N = {
     "Browser access": "ブラウザからのアクセス",
     "Open magpie in a browser": "ブラウザで magpie を開く",
     "Another magpie": "別の magpie",
+    "Available in the desktop app": "デスクトップアプリで操作してください",
+    "Connect to another sub2agent": "別の sub2agent に接続",
     "Type the other magpie’s address": "別の magpie のアドレスを入力してください",
     "Type that magpie’s key: the k= in the link it printed, or its MAGPIE_WEB_KEY": "その magpie のキーを入力してください：表示されたリンクの k=、または MAGPIE_WEB_KEY",
     "That magpie turned the key away: use the key in the link it printed": "その magpie はキーを拒否しました：表示されたリンクのキーを使ってください",
@@ -15640,6 +15646,8 @@ const I18N = {
     "Browser access": "Browserzugriff",
     "Open magpie in a browser": "magpie im Browser öffnen",
     "Another magpie": "Ein anderes magpie",
+    "Available in the desktop app": "In der Desktop-App verfügbar",
+    "Connect to another sub2agent": "Mit einem anderen sub2agent verbinden",
     "Type the other magpie’s address": "Gib die Adresse des anderen magpie ein",
     "Type that magpie’s key: the k= in the link it printed, or its MAGPIE_WEB_KEY": "Gib den Schlüssel dieses magpie ein: das k= im ausgegebenen Link oder sein MAGPIE_WEB_KEY",
     "That magpie turned the key away: use the key in the link it printed": "Dieses magpie hat den Schlüssel abgelehnt: nimm den Schlüssel aus dem ausgegebenen Link",
@@ -20814,7 +20822,7 @@ function dateFmt(opts) {
 
 function brandText(s) {
   return window.bootPrefs?.intranet && typeof s === "string"
-    ? s.replace(/sub2agent[- ]magpie/gi, "sub2agent").replace(/sub2agent/gi, "sub2agent").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "sub2agent") : s;
+    ? s.replace(/sub2agent[- ]magpie/gi, "sub2agent").replace(/sub2agent/gi, "sub2agent").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "sub2agent").replace(/\bmagpies\b/gi, "sub2agent") : s;
 }
 function t(s, vars) {
   let out = I18N[locale]?.[s] ?? s;

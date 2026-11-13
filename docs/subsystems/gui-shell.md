@@ -6,15 +6,29 @@ The shell observes only plugin pages that are mounted. Settings also skips
 renderers belonging to omitted plugins, so removing Library, Sessions, Search
 or Observability does not abort Agents or Settings initialization. The packed
 asset browser regression is `tests/intranet-shell.test.cjs`.
-The intranet build is branded Sub2Agent. Its gateway defaults to 8989 and
-browser administration to 8990; installed data uses `sub2agent-magpie` and
-the native single-instance identity uses `local.sub2agent.magpie`. Portable
+The intranet build is branded sub2agent. Its gateway defaults to 8989 and
+browser administration to 8990; installed data uses `sub2agent` (with migration
+from the old internal directory) and the single-instance identity is `local.sub2agent`. Portable
 bundles keep their own adjacent `data` directory. Its Windows URL handler
 and startup entry are independent of Magpie, allowing both apps to run.
 Diagram hubs use `appMark()` rather than the upstream header's bird symbol.
 Intranet routing animates unbranded packets without flying bird carriers;
 loading keeps the skeleton shimmer and ordinary progress spinners. The bird
 loader also guards its entry point, including direct calls.
+
+Internal Settings is one flat page rendered by lazily loaded internalsettings.js:
+gateway port/pause, login startup, lightweight mode, data folder, logs, command
+line, another sub2agent, and uninstall. The upstream nine-tab settings renderer,
+search, font discovery and hint loader do not run in this profile. Packed assets
+hide the original panels before first paint; old tab/query links cannot expose
+them. Sidebar settings sub-navigation is suppressed. Writes reuse existing APIs
+and preserve unrelated saved values. Omitted settings are not reset or deleted;
+this limits the product surface, not every programmatic settings API. Browser
+pages disable desktop-only open/uninstall actions and explain where to use them.
+Existing consent for Sessions remains on the Sessions page. Licenses remain
+embedded and available through /api/notices. Internal services stay managed by
+the distribution. Review: build/review-internal-settings.cjs, five locales and
+two browser engines at desktop and narrow widths with intercepted mutations.
 
 The desktop app has a tray (menu bar) icon whose click drops a compact
 panel, and a regular window. Both show one small web UI served from
