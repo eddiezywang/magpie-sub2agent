@@ -17,6 +17,8 @@ if ((Get-FileHash -LiteralPath $BunArchive -Algorithm SHA256).Hash.ToLowerInvari
 New-Item -ItemType Directory -Path (Join-Path $bundle 'runtime') -Force | Out-Null
 Push-Location $repoRoot
 try {
+    $sourceCommit = git rev-parse HEAD
+    $sourceChanges = @(git status --porcelain)
     $env:CGO_ENABLED = '0'
     if (!$Sub2AgentSource) { $Sub2AgentSource = Join-Path (Split-Path -Parent $repoRoot) 'sub2agent' }
     node build/sub2agent-providers.mjs $Sub2AgentSource
@@ -49,7 +51,7 @@ try {
     $fileRecords = @(Get-ChildItem -LiteralPath $bundle -Recurse -File | ForEach-Object {
         [ordered]@{ path = $_.FullName.Substring($bundle.Length + 1).Replace('\', '/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
     })
-    [ordered]@{ version = $Version; sourceCommit = (git rev-parse HEAD); workingTreeChanges = $true; profile = 'intranet'; market = 'http://172.21.0.177/magpie/plugins/registry.json'; registry = 'http://172.21.0.177/npm'; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $bundle 'manifest.json') -Encoding utf8
+    [ordered]@{ version = $Version; sourceCommit = $sourceCommit; workingTreeChanges = ($sourceChanges.Count -gt 0); profile = 'intranet'; market = 'http://172.21.0.177/magpie/plugins/registry.json'; registry = 'http://172.21.0.177/npm'; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $bundle 'manifest.json') -Encoding utf8
     $archive = $bundle + '.zip'
     [IO.Compression.ZipFile]::CreateFromDirectory($bundle, $archive, [IO.Compression.CompressionLevel]::Optimal, $true)
     $exe = Get-Item -LiteralPath (Join-Path $bundle 'Sub2Agent.exe')
