@@ -40,3 +40,12 @@ func codingPlanDefinition() PresetDef {
 	}
 	return pr
 }
+
+// CIB ZHT accepts either compatible protocol; the OpenAI URL is a base,
+// because the request path is appended by the existing transport.
+var zhtPreset = PresetDef{
+	ID: "cib-zht-apikey", Name: "CIB-智汇通-APIKEY", Icon: "cib-zht",
+	Kind:      KindRelay,
+	Anthropic: "http://10.32.33.46:11288/efllmas-agw/anthropicproxy",
+	Chat:      "http://10.32.33.46:11288/efllmas-agw/v1",
+}

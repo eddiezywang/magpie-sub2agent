@@ -1511,6 +1511,7 @@ func moveContext(r *http.Request) (context.Context, context.CancelFunc) {
 var appLink = agent.OpenAppLink
 
 func providerRoutes(mux *http.ServeMux, w Windows) {
+	zhtRoutes(mux)
 	importAppsRoutes(mux)
 	pluginRoutes(mux, w)
 	traceRoutes(mux)

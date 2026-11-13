@@ -493,3 +493,23 @@ License texts are embedded and accessible through `licenses` and About. The
 build manifest is kept beside the release archive, outside the user package.
 Without a portable marker/data directory, existing appdir rules use the user's
 application directories; replacing an old portable EXE retains its current data.
+
+### CIB ZHT API key source
+
+The intranet provider picker includes `cib-zht-apikey` with the bundled CIB
+logo and both protocol bases. Chat appends `/chat/completions` to its `/v1`
+base; Anthropic appends `/v1/messages` to `/anthropicproxy`. The normal key
+editor and provider persistence own credentials; no key is preconfigured.
+
+`internal/gui/zht.go` invokes an already installed `zht-dt-cli api-key`
+(or `zht-cli apikey` when only that executable exists) after the user clicks
+Get Key. The CLI owns browser login. The app does not install or upgrade a
+CLI automatically: the editor displays the approved internal npm command.
+CLI stdout is bounded to 1 MiB and parsed in memory despite banners before
+or after the JSON result; neither stdout nor stderr is logged or returned.
+Only nonempty, unexpired credentials whose `apiKeyId` contains `8899` are
+returned over the authenticated, no-store local API. One is filled into the
+masked key field; several require selection; none produces an explicit error.
+Errors never contain CLI output. The original key remains until the user
+chooses a returned credential and saves the provider. Actual enterprise CLI
+login and gateway inference require internal-network verification.
