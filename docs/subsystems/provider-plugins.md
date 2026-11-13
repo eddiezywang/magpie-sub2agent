@@ -1,5 +1,11 @@
 # Provider and plugin ownership
 
+Internal marketplace packages override the embedded baseline after manifest
+verification, provided their version is at least the embedded version. An older
+cached package cannot mask fixes shipped in an application update; newer valid
+market releases remain authoritative. Offline fallback does not overwrite the
+installed package, credentials, options or enablement state.
+
 The internal Sub2Agent login transport bounds each vendor authentication JSON
 request, including its body, to 12 seconds. Timeout, refused connection, DNS,
 unreachable server and HTTP 5xx/404 failures have actionable Chinese messages

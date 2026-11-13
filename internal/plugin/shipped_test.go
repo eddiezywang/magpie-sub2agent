@@ -98,6 +98,13 @@ func TestShippedMarketVersionWinsAndFallsBackWithoutDuplicates(t *testing.T) {
 	if Target(pkg) != target || Installed(pkg) != "1.0.1" {
 		t.Fatal("verified market version did not override baseline")
 	}
+	// Upgrading the application must also deliver its provider fixes while
+	// offline, rather than allowing an older marketplace cache to mask them.
+	os.WriteFile(filepath.Join(baseline, "package.json"), []byte(`{"name":"@sub2agent/workbuddy","version":"1.0.2"}`), 0600)
+	if Target(pkg) != baseline || Installed(pkg) != "1.0.2" {
+		t.Fatal("stale marketplace cache masks the upgraded provider baseline")
+	}
+	os.WriteFile(filepath.Join(baseline, "package.json"), []byte(`{"name":"@sub2agent/workbuddy","version":"1.0.0"}`), 0600)
 	if len(shipped(l).Plugins) != 1 {
 		t.Fatal("market update duplicated provider")
 	}

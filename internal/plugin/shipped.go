@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/yetone/magpie/internal/distribution"
+	"github.com/yetone/magpie/internal/update"
 )
 
 // Single-file releases materialize an embedded immutable baseline in app cache;
@@ -122,10 +123,21 @@ func shippedTarget(pkg string) string {
 		return ""
 	}
 	target := packageTarget(pkg)
+	baseline := filepath.Join(shippedDirectory(), kind)
 	if verifiedBundle(target, pkg) {
-		return target
+		version := func(dir string) string {
+			var manifest struct{ Name, Version string }
+			raw, err := os.ReadFile(filepath.Join(dir, "package.json"))
+			if err != nil || json.Unmarshal(raw, &manifest) != nil || manifest.Name != pkg {
+				return ""
+			}
+			return manifest.Version
+		}
+		if !update.Newer(version(baseline), version(target)) {
+			return target
+		}
 	}
-	return filepath.Join(shippedDirectory(), kind)
+	return baseline
 }
 
 type bundleReceipt struct {
