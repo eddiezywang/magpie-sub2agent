@@ -4,6 +4,12 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+    "Model mapping": "模型映射",
+    "Map model aliases locally before routing; no network or additional model requests": "在本地将模型别名映射后再路由，无需联网或额外模型请求",
+    "Model mappings (JSON)": "模型映射（JSON）",
+    "Map requested names to provider/model IDs. Example: {\"fast\":\"aiep-coding-plan/model-id\"}. Empty rules leave requests unchanged.": "将请求模型名映射到供应商/模型 ID，例如 {\"fast\":\"aiep-coding-plan/model-id\"}。空规则保持请求不变。",
+    "Keep upstream model names": "保留上游模型名称",
+    "Return the actual model name instead of the requested alias in replies": "响应返回实际模型名称，而不是请求使用的别名",
     "Search intranet plugins…": "搜索内网插件…",
     "Connecting to the plugin server…": "正在连接插件服务器…",
     "Intranet plugin marketplace": "内网插件广场",
@@ -5165,6 +5171,12 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "这份报告已经不在了：magpie 只保留最近 5 份。",
   },
   "zh-TW": {
+    "Model mapping": "模型映射",
+    "Map model aliases locally before routing; no network or additional model requests": "在本機映射模型別名後再路由，無需連網或額外模型請求",
+    "Model mappings (JSON)": "模型映射（JSON）",
+    "Map requested names to provider/model IDs. Example: {\"fast\":\"aiep-coding-plan/model-id\"}. Empty rules leave requests unchanged.": "將請求模型名映射到供應商/模型 ID，例如 {\"fast\":\"aiep-coding-plan/model-id\"}。空規則保持請求不變。",
+    "Keep upstream model names": "保留上游模型名稱",
+    "Return the actual model name instead of the requested alias in replies": "回應傳回實際模型名稱，而非請求使用的別名",
     "Telemetry reporting": "遙測回報",
     "Report application activity and usage statistics without conversation content": "回報應用程式運作與用量統計，不含對話內容",
     "Cards": "卡片",
@@ -10290,6 +10302,12 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "這份報告已經不在了：magpie 只保留最近 5 份。",
   },
   ja: {
+    "Model mapping": "モデルマッピング",
+    "Map model aliases locally before routing; no network or additional model requests": "ルーティング前にローカルでモデル別名を変換します。追加の通信はありません",
+    "Model mappings (JSON)": "モデルマッピング（JSON）",
+    "Map requested names to provider/model IDs. Example: {\"fast\":\"aiep-coding-plan/model-id\"}. Empty rules leave requests unchanged.": "モデル名を provider/model ID に変換します。例: {\"fast\":\"aiep-coding-plan/model-id\"}。空のルールでは変更しません。",
+    "Keep upstream model names": "上流モデル名を保持",
+    "Return the actual model name instead of the requested alias in replies": "応答に別名ではなく実際のモデル名を返します",
     "Telemetry reporting": "利用統計の送信",
     "Report application activity and usage statistics without conversation content": "会話内容を含めず、アプリの稼働状況と使用量を送信します",
     "Cards": "カード",
@@ -15417,6 +15435,12 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "このレポートはもう残っていません。magpie は最新の 5 件だけを保存します。",
   },
   de: {
+    "Model mapping": "Modellzuordnung",
+    "Map model aliases locally before routing; no network or additional model requests": "Modellnamen lokal vor dem Routing zuordnen, ohne zusätzliche Netzwerkanfragen",
+    "Model mappings (JSON)": "Modellzuordnung (JSON)",
+    "Map requested names to provider/model IDs. Example: {\"fast\":\"aiep-coding-plan/model-id\"}. Empty rules leave requests unchanged.": "Modellnamen auf Anbieter/Modell-IDs abbilden. Beispiel: {\"fast\":\"aiep-coding-plan/model-id\"}. Leere Regeln ändern nichts.",
+    "Keep upstream model names": "Ursprüngliche Modellnamen behalten",
+    "Return the actual model name instead of the requested alias in replies": "Den tatsächlichen Modellnamen statt des angefragten Alias zurückgeben",
     "Telemetry reporting": "Telemetrie melden",
     "Report application activity and usage statistics without conversation content": "Anwendungsaktivität und Nutzungsstatistiken ohne Gesprächsinhalte melden",
     "Cards": "Karten",

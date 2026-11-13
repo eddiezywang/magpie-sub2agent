@@ -69,3 +69,16 @@ node --test internal/gui/tests/plugin-middleware.test.cjs
 # in magpie-community/plugins: each package runs its cases.json through the hooks
 bun test packages/think-tags packages/model-map packages/param-override packages/system-prompt packages/word-guard packages/antigravity-cloak
 ```
+
+## Intranet built-in model mapping
+
+`plugins/modelmap` is registered in the intranet build and enabled by default,
+including Essentials. Empty rules are a no-op. Its JSON name mappings and
+keep-upstream-name option are managed with built-in plugin settings. It embeds
+the community model-map implementation (pinned commit and MIT license beside
+the source), compiled through `middleware.Embedded`. That immutable chain uses
+the same isolated request runtimes, stream and response handling as external
+middleware. It requires no downloaded package or general middleware registration.
+Explicitly disabling it disposes its gateway contribution; configuration changes
+recompile it. Invalid JSON produces a visible failed plugin instead of guessing
+a mapping. Exact, regex, chained and cycle-bounded mappings are supported.
