@@ -21,7 +21,7 @@ const assert = require('node:assert/strict');
     await row.waitFor();
     const form = page.locator('.feat-set[data-of="accounting"]');
     assert.equal(await form.count(), 4);
-    for (const name of ['兼容旧版埋点','逐请求用量上报']) {
+    for (const name of ['兼容旧版埋点','按分钟汇总用量']) {
       const toggle = form.getByRole('switch', {name,exact:true});
       assert.equal(await toggle.isVisible(), true, name);
       const style = await toggle.evaluate(e => ({background:getComputedStyle(e).backgroundColor,thumb:getComputedStyle(e.firstElementChild).position}));

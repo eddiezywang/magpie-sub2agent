@@ -49,12 +49,12 @@ func TestRuntimeDoesNotWaitForCollectorOrCaptureBodies(t *testing.T) {
 		t.Fatal("numeric reporting captured model requests")
 	}
 	r.Ledger(usage.Record{Time: time.Now(), Model: "m", Provider: "test", Input: 10, Output: 2, Status: 200, BodyIn: "SECRET"})
-	if got := r.queue.Pending("usage", 200); len(got) != 1 {
-		t.Fatal("collector blocked local usage enqueue")
+	if got := r.queue.Pending("usage", 200); len(got) != 0 || r.minutes.Count() != 1 {
+		t.Fatal("request did not remain in the memory aggregate")
 	}
 	stop()
-	if r.Snapshot().Pending == 0 {
-		t.Fatal("shutdown discarded undelivered events")
+	if len(r.queue.Pending("summary", 200)) != 1 || r.minutes.Count() != 0 {
+		t.Fatal("shutdown discarded the partial minute summary")
 	}
 }
 

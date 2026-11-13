@@ -52,7 +52,7 @@ func validID(id string) bool {
 	}
 	return true
 }
-func validKind(kind string) bool { return kind == "legacy" || kind == "usage" }
+func validKind(kind string) bool { return kind == "legacy" || kind == "usage" || kind == "summary" }
 
 // The queue owns this dedicated folder. Only completely renamed JSON items
 // are loaded; interrupted temporary writes never become deliverable events.

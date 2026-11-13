@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,7 +19,7 @@ import (
 
 type Options struct {
 	LegacyEnabled bool   `json:"legacyEnabled" title:"Legacy telemetry" description:"Keep startup and gateway uptime events. Turning off clears pending legacy events."`
-	UsageEnabled  bool   `json:"usageEnabled" title:"Per-request usage reporting" description:"Send model and numeric usage without message bodies. Requires server v2. Turning off clears pending usage."`
+	UsageEnabled  bool   `json:"usageEnabled" title:"Minute usage summaries" description:"Aggregate by username, model and context tier each minute. Current minute may be lost on a crash. Requires server v3. Turning off clears pending usage."`
 	LegacyURL     string `json:"legacyURL" title:"Legacy telemetry endpoint"`
 	UsageURL      string `json:"usageURL" title:"Usage collector endpoint"`
 }
@@ -52,6 +53,9 @@ type Status struct {
 	QueueFailures uint64    `json:"queue_failures"`
 	LastError     string    `json:"last_error,omitempty"`
 	LastSuccess   time.Time `json:"last_success,omitempty"`
+	MemoryGroups  int       `json:"memory_groups"`
+	DroppedCalls  uint64    `json:"dropped_calls"`
+	RulesRevision string    `json:"rules_revision,omitempty"`
 }
 
 type Runtime struct {
@@ -61,7 +65,6 @@ type Runtime struct {
 	identity     Identity
 	version, dir string
 	mu           sync.Mutex
-	runID        string
 	running      bool
 	started      time.Time
 	uptime       time.Duration
@@ -73,6 +76,10 @@ type Runtime struct {
 	statusWrite  sync.Mutex
 	status       Status
 	tokens       atomic.Uint64
+	minutes      minuteBuffer
+	sealMu       sync.Mutex
+	rules        *AggregationRules
+	wake         chan struct{}
 }
 
 var appStarts sync.Map
@@ -92,7 +99,7 @@ func New(dir string, options Options, version string) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
-	for kind, on := range map[string]bool{"legacy": options.LegacyEnabled, "usage": options.UsageEnabled} {
+	for kind, on := range map[string]bool{"legacy": options.LegacyEnabled, "usage": options.UsageEnabled, "summary": options.UsageEnabled} {
 		if !on {
 			if err = q.Clear(kind); err != nil {
 				return nil, err
@@ -103,9 +110,14 @@ func New(dir string, options Options, version string) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &Runtime{queue: q, options: options, identity: id, dir: dir, version: version, sender: Sender{LegacyURL: options.LegacyURL, UsageURL: options.UsageURL, Reject: q.Reject}}
+	r := &Runtime{queue: q, options: options, identity: id, dir: dir, version: version, wake: make(chan struct{}, 1), sender: Sender{LegacyURL: options.LegacyURL, UsageURL: options.UsageURL, Reject: q.Reject}}
 	r.status.LegacyEnabled = options.LegacyEnabled
 	r.status.UsageEnabled = options.UsageEnabled
+	if rules, err := readRules(filepath.Join(dir, "accounting-rules.json")); err == nil {
+		r.rules = rules
+	} else if !os.IsNotExist(err) {
+		r.noteError(err, false)
+	}
 	r.writeStatus()
 	return r, nil
 }
@@ -154,8 +166,7 @@ func (*Runtime) Begin(usage.Request) usage.Watch { return nil }
 func (r *Runtime) Ledger(rec usage.Record) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	running, runID := r.running, r.runID
-	if !running || rec.IsProbe() || rec.IsRejected() || rec.Source != "" || rec.Computer != "" {
+	if !r.running || rec.IsProbe() || rec.IsRejected() || rec.Source != "" || rec.Computer != "" {
 		return
 	}
 	for _, n := range []int{rec.Input, rec.Output, rec.CacheRead, rec.CacheWrite} {
@@ -166,21 +177,38 @@ func (r *Runtime) Ledger(rec usage.Record) {
 	if !r.options.UsageEnabled {
 		return
 	}
-	e, err := FromRecord(rec, r.identity.InstallID, runID, NewID())
-	if err != nil {
+	if err := r.minutes.Add(rec, time.Now(), r.rules); err != nil {
+		r.statusMu.Lock()
+		r.status.DroppedCalls++
+		r.statusMu.Unlock()
 		r.noteError(err, false)
-		return
 	}
-	r.enqueue("usage", e.ID, e)
 }
 
-func (r *Runtime) enqueue(kind, id string, payload any) {
+func (r *Runtime) enqueue(kind, id string, payload any) bool {
 	b, err := json.Marshal(payload)
 	if err == nil {
 		err = r.queue.Put(Item{ID: id, Kind: kind, Identity: r.identity, Payload: b})
 	}
 	if err != nil {
 		r.noteError(err, true)
+		return false
+	}
+	return true
+}
+
+// Only this background/stop path touches disk for new usage. Failed puts keep
+// immutable packets in bounded memory with the same ID for a later retry.
+func (r *Runtime) persistMinutes(now time.Time, all bool) {
+	r.sealMu.Lock()
+	defer r.sealMu.Unlock()
+	r.minutes.Seal(now, all)
+	for {
+		packet, ok := r.minutes.First()
+		if !ok || !r.enqueue("summary", packet.ID, packet) {
+			return
+		}
+		r.minutes.Saved(packet.ID)
 	}
 }
 
@@ -205,7 +233,6 @@ func (r *Runtime) Serve() func() {
 	r.running = true
 	r.started = time.Now()
 	r.tokens.Store(0)
-	r.runID = NewID()
 	ctx, cancel := context.WithCancel(context.Background())
 	r.cancel = cancel
 	r.done = make(chan struct{})
@@ -220,17 +247,24 @@ func (r *Runtime) Serve() func() {
 	started, last := time.Now(), time.Now()
 	go func() {
 		defer close(done)
-		send := time.NewTicker(30 * time.Second)
-		defer send.Stop()
+		var workers sync.WaitGroup
+		workers.Go(func() { r.deliver(ctx) })
+		defer workers.Wait()
+		seal := time.NewTimer(time.Until(time.Now().UTC().Truncate(time.Minute).Add(time.Minute)))
+		defer seal.Stop()
 		active := time.NewTicker(10 * time.Minute)
 		defer active.Stop()
-		r.Flush(ctx)
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-send.C:
-				r.Flush(ctx)
+			case now := <-seal.C:
+				r.persistMinutes(now, false)
+				select {
+				case r.wake <- struct{}{}:
+				default:
+				}
+				seal.Reset(time.Until(time.Now().UTC().Truncate(time.Minute).Add(time.Minute)))
 			case now := <-active.C:
 				r.legacy("desktop_proxy_usage_flushed", "--proxy-usage-ms="+strconv.FormatInt(now.Sub(last).Milliseconds(), 10), "--proxy-flush-reason=interval")
 				last = now
@@ -246,6 +280,7 @@ func (r *Runtime) Serve() func() {
 			r.mu.Unlock()
 			cancel()
 			<-done
+			r.persistMinutes(time.Now(), true)
 			// No HTTP on shutdown or disable; durable final events retry next run.
 			now := time.Now()
 			r.legacy("desktop_proxy_usage_flushed", "--proxy-usage-ms="+strconv.FormatInt(now.Sub(last).Milliseconds(), 10), "--proxy-flush-reason=stop")
@@ -276,13 +311,17 @@ func (r *Runtime) AppQuit() {
 // Each plane gets a bounded batch independently; a failed usage collector
 // must never prevent old lifecycle events from continuing to arrive.
 func (r *Runtime) Flush(ctx context.Context) {
+	r.flush(ctx, true)
+}
+
+func (r *Runtime) flush(ctx context.Context, sendUsage bool) (usageFailed bool) {
 	r.flushMu.Lock()
 	defer r.flushMu.Unlock()
 	for _, plane := range []struct {
 		kind    string
 		enabled bool
 		batch   int
-	}{{"legacy", r.options.LegacyEnabled, 1}, {"usage", r.options.UsageEnabled, 200}} {
+	}{{"legacy", r.options.LegacyEnabled, 1}, {"summary", r.options.UsageEnabled && sendUsage, 16}, {"usage", r.options.UsageEnabled && sendUsage, 200}} {
 		if !plane.enabled || ctx.Err() != nil {
 			continue
 		}
@@ -299,6 +338,9 @@ func (r *Runtime) Flush(ctx context.Context) {
 				if ctx.Err() != nil {
 					break
 				}
+				if plane.kind != "legacy" {
+					usageFailed = true
+				}
 				r.noteError(err, false)
 				break
 			}
@@ -311,6 +353,47 @@ func (r *Runtime) Flush(ctx context.Context) {
 		}
 	}
 	r.writeStatus()
+	return usageFailed
+}
+
+// One HTTP worker serves both planes. Collector failures back off only usage;
+// legacy telemetry keeps its own delivery opportunities. Minute sealing runs
+// independently, including while a collector is hanging or unavailable.
+func (r *Runtime) deliver(ctx context.Context) {
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+	var nextUsage, nextRules time.Time
+	backoff := 30 * time.Second
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-r.wake:
+			if !time.Now().Before(nextUsage) {
+				timer.Reset(time.Duration(rand.Int64N(int64(5 * time.Second))))
+			}
+		case <-timer.C:
+			now := time.Now()
+			if r.options.UsageEnabled && !now.Before(nextRules) {
+				if err := r.refreshRules(ctx); err != nil && ctx.Err() == nil {
+					r.noteError(err, false)
+				}
+				nextRules = time.Now().Add(5 * time.Minute)
+			}
+			if ctx.Err() != nil {
+				return
+			}
+			allowed := !time.Now().Before(nextUsage)
+			if r.flush(ctx, allowed) {
+				nextUsage = time.Now().Add(backoff + time.Duration(rand.Int64N(int64(5*time.Second))))
+				backoff = min(backoff*2, 5*time.Minute)
+			} else if allowed {
+				nextUsage = time.Time{}
+				backoff = 30 * time.Second
+			}
+			timer.Reset(30*time.Second + time.Duration(rand.Int64N(int64(5*time.Second))))
+		}
+	}
 }
 
 func (r *Runtime) noteError(err error, queueFailure bool) {
@@ -331,6 +414,12 @@ func (r *Runtime) Snapshot() Status {
 	out := r.status
 	r.statusMu.Unlock()
 	out.Pending, out.PendingBytes = r.queue.Count()
+	out.MemoryGroups = r.minutes.Count()
+	r.mu.Lock()
+	if r.rules != nil {
+		out.RulesRevision = r.rules.Revision
+	}
+	r.mu.Unlock()
 	return out
 }
 

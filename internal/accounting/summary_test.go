@@ -145,6 +145,7 @@ func TestMinuteBufferConcurrentAndBounded(t *testing.T) {
 func TestRulesRejectAmbiguousOrInvalidBoundaries(t *testing.T) {
 	for _, rules := range []AggregationRules{
 		{},
+		{Revision: "v", Models: []ModelRule{{Provider: "p", Model: "m"}}},
 		{Revision: "v", Models: []ModelRule{{Provider: "p", Model: "m", Above: []int64{200, 100}}}},
 		{Revision: "v", Models: []ModelRule{{Provider: "p", Model: "m", Above: []int64{0}}}},
 		{Revision: "v", Models: []ModelRule{{Provider: "p", Model: "m"}, {Provider: "p", Model: "m"}}},
@@ -161,7 +162,7 @@ func TestRulesRejectAmbiguousOrInvalidBoundaries(t *testing.T) {
 func TestSummaryPacketsFitDurableQueueWithMaximumLabels(t *testing.T) {
 	var b minuteBuffer
 	now := time.Now()
-	label := strings.Repeat("x", 255)
+	label := strings.Repeat("\\", 255)
 	for i := range groupsPerSummary + 1 {
 		r := usage.Record{Agent: label, Provider: label, Model: label, Served: label + string(rune('a'+i)), TierServed: label, Input: 1}
 		if err := b.Add(r, now, nil); err != nil {

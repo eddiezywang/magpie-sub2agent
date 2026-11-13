@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/yetone/magpie/internal/usage"
 )
@@ -31,7 +32,7 @@ type ModelRule struct {
 }
 
 func safeLabel(s string, max int) bool {
-	return len(s) <= max && !strings.ContainsAny(s, "\r\n\t") && !strings.Contains(s, "://")
+	return len(s) <= max && utf8.ValidString(s) && !strings.ContainsFunc(s, func(r rune) bool { return r < 32 || r == 127 }) && !strings.Contains(s, "://")
 }
 
 func (r AggregationRules) Validate() error {
@@ -41,7 +42,7 @@ func (r AggregationRules) Validate() error {
 	seen := map[[3]string]bool{}
 	for _, m := range r.Models {
 		key := [3]string{m.Provider, m.Model, m.ServiceTier}
-		if m.Provider == "" || m.Model == "" || !safeLabel(m.Provider, 256) || !safeLabel(m.Model, 256) || !safeLabel(m.ServiceTier, 256) || seen[key] || len(m.Above) > 32 {
+		if m.Provider == "" || m.Model == "" || !safeLabel(m.Provider, 256) || !safeLabel(m.Model, 256) || !safeLabel(m.ServiceTier, 256) || seen[key] || m.Above == nil || len(m.Above) > 32 {
 			return fmt.Errorf("invalid or duplicate aggregation model")
 		}
 		seen[key] = true
@@ -160,7 +161,7 @@ func (b *minuteBuffer) Add(r usage.Record, completed time.Time, rules *Aggregati
 	if r.Input == 0 && r.Output == 0 && r.CacheRead == 0 && r.CacheWrite == 0 {
 		c.ZeroTokenCalls = 1
 	}
-	if r.CacheUnknown || usage.CountsNoCache(r.Provider) {
+	if r.CacheUnknown || c.CacheRead+c.CacheWrite5m+c.CacheWrite1h == 0 && usage.CountsNoCache(r.Provider) {
 		c.CacheUnknownCalls = 1
 		c.CacheUnknownInput = c.Input + c.CacheRead + c.CacheWrite5m + c.CacheWrite1h
 	}

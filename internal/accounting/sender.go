@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -91,8 +92,15 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 		}
 		return []string{first.ID}, nil
 	}
-	if first.Kind != "usage" || len(items) > 200 {
+	if (first.Kind != "usage" && first.Kind != "summary") || len(items) > 200 {
 		return nil, fmt.Errorf("invalid usage batch")
+	}
+	schema := UsageSchema
+	if first.Kind == "summary" {
+		schema = SummarySchema
+		if strings.TrimSpace(first.Identity.Username) == "" {
+			return nil, fmt.Errorf("minute summaries require a username")
+		}
 	}
 	u, err := endpoint(s.UsageURL)
 	if err != nil {
@@ -105,8 +113,8 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 	if err = s.request(ctx, "GET", u.String(), nil, &capabilities); err != nil {
 		return nil, err
 	}
-	if !slices.Contains(capabilities.Schemas, UsageSchema) {
-		return nil, fmt.Errorf("collector does not advertise usage v2")
+	if !slices.Contains(capabilities.Schemas, schema) {
+		return nil, fmt.Errorf("collector does not advertise %s", schema)
 	}
 	events := make([]json.RawMessage, 0, len(items))
 	sent := map[string]bool{}
@@ -119,6 +127,13 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 		Identity
 		Events []json.RawMessage `json:"events"`
 	}{UsageSchema, first.Identity, events})
+	if first.Kind == "summary" {
+		body, err = json.Marshal(struct {
+			Schema string `json:"schema"`
+			Identity
+			Summaries []json.RawMessage `json:"summaries"`
+		}{schema, first.Identity, events})
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +147,8 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 	if err = s.request(ctx, "POST", s.UsageURL, body, &ack); err != nil {
 		return nil, err
 	}
-	if !ack.OK || ack.Schema != UsageSchema {
-		return nil, fmt.Errorf("usage v2 acknowledgement required")
+	if !ack.OK || ack.Schema != schema {
+		return nil, fmt.Errorf("%s acknowledgement required", schema)
 	}
 	ids := append(ack.Accepted, ack.Duplicate...)
 	seen := map[string]bool{}
