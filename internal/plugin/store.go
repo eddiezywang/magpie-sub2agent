@@ -746,7 +746,8 @@ func Called(pkg, name string) bool {
 // left unrun as OpenCode leaves them.
 func install(ctx context.Context, spec string) error {
 	if distribution.Internal {
-		return fmt.Errorf("network plugin installation is unavailable in this offline trial; use a local bundled plugin folder")
+		version := strings.TrimPrefix(spec, Name(spec))
+		return installInternalBundle(ctx, Name(spec), strings.TrimPrefix(version, "@"))
 	}
 
 	bun, err := Bun(ctx)
@@ -827,7 +828,7 @@ func bunAdd(ctx context.Context, bun, spec string) error {
 // says why it can't install it.
 func installAt(ctx context.Context, pkg, version string) error {
 	if distribution.Internal {
-		return fmt.Errorf("network plugin installation is unavailable in this offline trial; use a local bundled plugin folder")
+		return installInternalBundle(ctx, pkg, version)
 	}
 
 	if err := install(ctx, pkg+"@"+version); err != nil {

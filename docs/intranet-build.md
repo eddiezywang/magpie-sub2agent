@@ -49,9 +49,11 @@ Shared backend masking types are still compiled where upstream callers need them
 Directory, npm metadata, dist tarballs, README and icon endpoints are fixed to
 172.21.0.177. Public discovery is disabled, and an unavailable directory yields
 its internal cache or an empty list rather than the built-in community list.
-Scoped user npm configuration cannot override metadata lookups. Network plugin
-installation is deliberately refused until a curated complete-bundle protocol
-exists; local plugin folders containing all dependencies remain supported.
+Scoped user npm configuration cannot override metadata lookups. Curated complete
+ESM bundles can be installed from the internal catalog: mandatory SHA-256 and
+byte count, bounded download, strict three-file ZIP layout, staged validation
+and replacement, no install scripts or dependency downloads. Local complete
+plugin folders remain supported for packages outside this v1 bundle format.
 `GET /api/plugins/listings` and the combined market response include a `market`
 status: `online`, `cached` or `unavailable`, with `reason`, optional HTTP status,
 check time and cache time. A healthy `{"plugins":[]}` is an empty directory;
@@ -60,7 +62,9 @@ emptiness. Failed reads retain the last valid cache and retry at most once per
 minute; the UI's Retry connection explicitly refreshes the directory. Error
 details sent to the UI exclude raw network URLs and credentials. Discover keeps
 offline import available and does not offer public npm/GitHub installation.
-No server-side deployment is performed by this build.
+The build does not modify servers. The separate
+[market deployment kit](../deploy/plugin-market/README.zh-CN.md) provides the
+read-only service, publisher, health/artifact checker, deployment and rollback.
 
 ## Build and verify
 

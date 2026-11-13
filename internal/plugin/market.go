@@ -51,6 +51,7 @@ const MarketURL = "https://raw.githubusercontent.com/magpie-community/plugins/ma
 // shows it to a search alone, under its publisher; it is never browsed,
 // suggested as an agent or called by a short name.
 type Listing struct {
+	Bundle    *InternalBundle   `json:"bundle,omitempty"` // curated, complete offline artifact
 	Package   string            `json:"package"`
 	Name      string            `json:"name"`
 	Icon      string            `json:"icon,omitempty"`
