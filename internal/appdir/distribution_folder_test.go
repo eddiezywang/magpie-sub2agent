@@ -37,3 +37,17 @@ func TestInternalDirectoryRenameKeepsConfiguration(t *testing.T) {
 		t.Fatal("old directory merged into existing new directory")
 	}
 }
+
+func TestInternalDirectoryLookupSettlesWithoutAllocations(t *testing.T) {
+	root := t.TempDir()
+	next := filepath.Join(root, "sub2agent")
+	if err := os.Mkdir(next, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if got := distributionFolder(root, true); got != next {
+		t.Fatal(got)
+	}
+	if n := testing.AllocsPerRun(20, func() { distributionFolder(root, true) }); n != 0 {
+		t.Fatalf("settled path allocates %.0f times", n)
+	}
+}
