@@ -14,9 +14,11 @@ import (
 	"github.com/yetone/magpie/internal/distribution"
 )
 
-// Shipped providers are complete offline local plugins, resolved relative to
-// this executable rather than a developer's checkout or another app's data.
-var shippedDirectory = func() string {
+// Single-file releases materialize an embedded immutable baseline in app cache;
+// directory releases retain the executable-relative baseline for compatibility.
+var shippedDirectory = defaultShippedDirectory
+
+func legacyShippedDirectory() string {
 	exe, err := os.Executable()
 	if err != nil {
 		return ""
@@ -40,7 +42,9 @@ func shipped(l List) List {
 		if _, err := os.Stat(filepath.Join(legacy, "package.json")); err != nil {
 			continue
 		}
-		if i := slices.IndexFunc(l.Plugins, func(e Entry) bool { return e.Bundled == kind || Name(e.Spec) == pkg || e.Spec == legacy }); i >= 0 {
+		if i := slices.IndexFunc(l.Plugins, func(e Entry) bool {
+			return e.Bundled == kind || Name(e.Spec) == pkg || e.Spec == legacy || e.Spec == filepath.Join(legacyShippedDirectory(), kind)
+		}); i >= 0 {
 			old := l.Plugins[i].Spec
 			l.Plugins[i].Spec, l.Plugins[i].Bundled = pkg, kind
 			for id, chosen := range l.Prefer {
@@ -207,7 +211,7 @@ func canonicalShippedSpec(spec string) string {
 		}
 	}
 	for _, kind := range shippedKinds {
-		if spec == filepath.Join(shippedDirectory(), kind) {
+		if spec == filepath.Join(shippedDirectory(), kind) || spec == filepath.Join(legacyShippedDirectory(), kind) {
 			return "@sub2agent/" + kind
 		}
 	}

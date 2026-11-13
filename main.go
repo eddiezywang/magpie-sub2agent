@@ -23,6 +23,6 @@ var version = "dev"
 var thirdParty string
 
 func main() {
-	notices.Text = thirdParty
+	notices.Text = thirdParty + extraNotices()
 	cli.Main(version)
 }

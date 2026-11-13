@@ -7,6 +7,10 @@ local usage reporting. The full portable package includes Bun, not WebView2.
 `build/intranet.ps1 -WithoutBun` produces a light package: Windows x64 downloads
 the pinned Bun from the managed internal npm mirror on first plugin startup,
 then reuses the validated cache offline. Neither package includes WebView2.
+`build/intranet.ps1 -SingleFile` additionally embeds the four private provider
+baselines and license texts, distributes only the EXE, and keeps build metadata
+outside the user archive. This mode does not require a Bun archive on the build
+command line. Existing portable data detection remains unchanged.
 Sessions is retained, including its navigation, assets, history consent,
 read/search/resume/export interactions and gateway conversation projection.
 Library remains removed. Retaining Sessions does not enable reading private

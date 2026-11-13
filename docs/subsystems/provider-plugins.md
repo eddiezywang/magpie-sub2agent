@@ -439,7 +439,15 @@ retaining Off, Options and provider preferences. Cached provider specs are
 projected too; account IDs and auth entries remain unchanged.
 
 `Target` resolves a verified installation in the user's plugin data directory
-first, then the executable-relative offline baseline. Only installs with the
+first, then the distribution's offline baseline. Directory releases use the
+executable-relative providers folder. Single-file releases (`embeddedproviders`)
+embed a privately generated ZIP and materialize its eight declared files in a
+content-addressed application cache generation. Complete generations are published
+by rename, verified with per-file receipts, and repaired from embedded bytes if
+damaged. A changed embedded archive gets a different generation; marketplace
+installations and existing account/configuration files are never replaced.
+Legacy executable-relative specs are projected onto the same canonical package
+identities, retaining Off, Options and preferences. Only installs with the
 installer's receipt and matching per-file SHA-256 hashes are selected over the
 baseline. Hashes are cached while the receipt/file metadata stay unchanged.
 The installer always writes to the data directory, never into the portable
@@ -478,3 +486,10 @@ The versioned application cache is reused offline and validated before execution
 Download, parsing and checksum failures preserve prior files and show a sanitized
 network/retry message. The shared Bun lock serializes concurrent installation.
 Other platforms still require a bundled runtime in this internal distribution.
+
+`build/intranet.ps1 -SingleFile` emits a ZIP containing only `Sub2Agent.exe`,
+without portable markers, provider folders, Bun or external license files.
+License texts are embedded and accessible through `licenses` and About. The
+build manifest is kept beside the release archive, outside the user package.
+Without a portable marker/data directory, existing appdir rules use the user's
+application directories; replacing an old portable EXE retains its current data.
