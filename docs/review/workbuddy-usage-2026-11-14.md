@@ -108,3 +108,41 @@ No production limits, thresholds, binaries or user settings were changed.
 Removing a local safety cap requires checking the upstream's real byte limit,
 and exposing a 1M model window requires a compatible Claude Code model/window
 configuration. Existing usage estimation alone solves neither boundary.
+
+## Follow-up: provenance of 1M and 900KiB
+
+A fresh authenticated enterprise catalog read on 2026-11-14 matched the exact
+GLM-5.3-Flash MaaS upstream ID. Its row had only `id`, `name`, `vendor`,
+`supportsToolCall`, `supportsImages`, `disabledMultiModel` and `tags`; it provided
+no input/output/context limits. The saved account also had no override for
+this model. The displayed 1M therefore comes from the bundled vendor snapshot
+`codebuddy-models.json` (snapshot timestamp 2026-11-12T02:33:33.439Z), matched
+to the base `glm-5.3-flash` record. That record contains maxAllowedSize=1000000,
+maxInputTokens=1000000 and maxOutputTokens=131072. It is nominal model metadata,
+not a measured enterprise transport capacity. Earlier references to this
+particular MaaS limit as live enterprise metadata should be read with this
+correction; the adapter does preserve deployment limits when supplied.
+
+The 900KiB value is an inherited private resolver constant. Its originating
+checkpoint does not establish an upstream-enforced byte limit. Direct 1035000-
+and 1050000-character requests were also rejected with the explicit local
+921600-byte message. Thus this work has not established an upstream 1MiB or
+32MiB cap. The earlier synthetic summary's generic 32MB wording is not evidence
+of a real upstream limit.
+
+900KiB means 921600 UTF-8 bytes in the final serialized request, including
+messages, tool definitions/results, JSON overhead and binary encoding. 1M
+means nominal tokens; the figures cannot be subtracted or substituted. The
+effective operating capacity is bounded separately by the model's input/output
+token budget, the transport's byte budget and the client's recognized window.
+The successful 880000-character probe reported 253019 estimated input tokens;
+that illustrates why 900KiB cannot be advertised as a 900K-token window, not a
+universal conversion ratio.
+
+Until a controlled isolated upstream probe establishes the true transport
+limit, retain the existing byte guard as a conservative local policy rather
+than relabelling it as the model's capacity. A prospective operational policy
+needs an earlier byte soft threshold with room for the next turn and the
+summary request, and a token compaction budget that the installed client
+actually honors. The current 700KiB warning is not an automatic compaction
+trigger. It does not by itself prevent the failed-summary case above.
