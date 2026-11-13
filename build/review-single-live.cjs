@@ -75,6 +75,14 @@ const assert=require('node:assert/strict');
     }
     await page.goto('http://127.0.0.1:18990/?view=providers');
     await page.locator('#addProvider').click();
+    const scope=await page.evaluate(async()=>fetch('/api/providers').then(r=>r.json()));
+    assert.deepEqual(scope.plugins.map(p=>p.pid),['sub2agent-workbuddy']);
+    assert.deepEqual(scope.presets.map(p=>p.id),['aiep-coding-plan','cib-zht-apikey']);
+    const sheet=page.locator('#addSheet');
+    for(const name of ['WorkBuddy 企业','TIG Coding Plan','CIB-智汇通-APIKEY']) assert.ok((await sheet.innerText()).includes(name));
+    assert.doesNotMatch(await sheet.innerText(),/CodeBuddy|Trae 企业|ChatGPT|Claude Code/);
+    await page.screenshot({path:path.join(output,'14-live-provider-scope.png'),fullPage:true});
+    report.providerScope={workbuddy:true,tig:true,zht:true,otherSubscriptions:false};
     await page.locator('#addSheet button').filter({hasText:'TIG Coding Plan'}).click();
     const editor=page.locator('.editor.new');
     await editor.locator('.coding-plan-notice').waitFor();

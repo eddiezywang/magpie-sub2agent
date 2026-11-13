@@ -1,19 +1,19 @@
 {
-  "version": "0.1.3913-sub2agent.13",
+  "version": "0.1.3913-sub2agent.14",
   "platform": "windows-x64",
   "file": "Sub2Agent-windows-x64-latest.zip",
-  "bytes": 32221065,
-  "sha256": "fc85954f984ed61d2d9b83dcb1d69545f1b99ae2ea601045fabae034c3da2246",
-  "applicationSourceCommit": "614b5c488e7ed31add04584ae1be84e8e2312c6c",
+  "bytes": 32270487,
+  "sha256": "6d24345238ef82292147a4dbedccda1e9eb7739cd33e358a2e5ceaf43f6bd000",
+  "applicationSourceCommit": "0233e3b133f77beffaa13a46b3b7a2760280c858",
   "containsUserData": false,
   "singleFile": true,
   "archiveContents": [
     "Sub2Agent.exe"
   ],
-  "exeBytes": 79569408,
-  "exeSha256": "5aa31fd79b8c4453444115115b528323db764a6440d0943bc9376bb82c7fa0c9",
+  "exeBytes": 79637504,
+  "exeSha256": "86d69d10c488697ae02fffe9c23391b2b7961c8b75f1d24d70a394cc3a298c4a",
   "bundledBun": false,
   "bunVersion": "1.4.2",
-  "providerVersion": "1.0.1",
+  "providerVersion": "1.0.2",
   "runtimeDownload": "internal-npm"
 }
