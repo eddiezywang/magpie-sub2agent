@@ -460,6 +460,10 @@ func npmNames(es []plugin.Entry) []string {
 // without waiting on npm.
 func pluginListings(ctx context.Context) []pluginListingJSON {
 	ls := plugin.Market(ctx)
+	return pluginListingRows(ls)
+}
+
+func pluginListingRows(ls []plugin.Listing) []pluginListingJSON {
 	names := make([]string, 0, len(ls))
 	for _, l := range ls {
 		names = append(names, l.Package)
@@ -546,6 +550,7 @@ func npmIcons(ns []*plugin.NPM, wait time.Duration) {
 type pluginMarketJSON struct {
 	Listings []pluginListingJSON `json:"listings"`
 	State    pluginsJSON         `json:"state"`
+	Market   plugin.MarketStatus `json:"market"`
 }
 
 type pluginListingJSON struct {
@@ -558,7 +563,7 @@ func pluginMarketState(ctx context.Context, w Windows) pluginMarketJSON {
 	var st pluginsJSON
 	done := make(chan struct{})
 	go func() { st = pluginsState(ctx, w); close(done) }()
-	ls = plugin.Market(ctx)
+	ls, status := plugin.MarketWithStatus(ctx)
 	names := []string{}
 	for _, l := range ls {
 		names = append(names, l.Package)
@@ -570,7 +575,7 @@ func pluginMarketState(ctx context.Context, w Windows) pluginMarketJSON {
 		}
 	}
 	info := plugin.Info(ctx, names)
-	m := pluginMarketJSON{Listings: []pluginListingJSON{}, State: st}
+	m := pluginMarketJSON{Listings: []pluginListingJSON{}, State: st, Market: status}
 	for _, l := range ls {
 		j := pluginListingJSON{Listing: l}
 		// npm not answered for (or the dist branch unread) is unknown:
@@ -607,7 +612,11 @@ func pluginRoutes(mux *http.ServeMux, w Windows) {
 	// the market in parts, as the page draws it (#488): the plugins
 	// suggested, at once, then what npm says of the packages named
 	mux.HandleFunc("GET /api/plugins/listings", func(rw http.ResponseWriter, r *http.Request) {
-		writeJSON(rw, map[string]any{"listings": pluginListings(r.Context())})
+		if r.URL.Query().Get("again") == "1" {
+			plugin.RefreshMarket()
+		}
+		ls, status := plugin.MarketWithStatus(r.Context())
+		writeJSON(rw, map[string]any{"listings": pluginListingRows(ls), "market": status})
 	})
 	// the agents a suggested plugin adds that aren't installed here: the
 	// Agents page's Install another agent says Plugins has them

@@ -35,6 +35,14 @@ its internal cache or an empty list rather than the built-in community list.
 Scoped user npm configuration cannot override metadata lookups. Network plugin
 installation is deliberately refused until a curated complete-bundle protocol
 exists; local plugin folders containing all dependencies remain supported.
+`GET /api/plugins/listings` and the combined market response include a `market`
+status: `online`, `cached` or `unavailable`, with `reason`, optional HTTP status,
+check time and cache time. A healthy `{"plugins":[]}` is an empty directory;
+timeout/refused/HTTP/invalid JSON failures are never represented as healthy
+emptiness. Failed reads retain the last valid cache and retry at most once per
+minute; the UI's Retry connection explicitly refreshes the directory. Error
+details sent to the UI exclude raw network URLs and credentials. Discover keeps
+offline import available and does not offer public npm/GitHub installation.
 No server-side deployment is performed by this build.
 
 ## Build and verify
