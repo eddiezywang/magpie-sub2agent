@@ -546,3 +546,28 @@ while automatic polling continues. Callback addresses are never persisted.
 Trae's existing nonce-scoped loopback callback remains supported while its
 provider is disabled by distribution policy. TIG and ZHT use API keys and
 do not present a browser OAuth callback form.
+
+### Read-only migration from the old Sub2Agent profile
+
+Startup runs `provider.ImportSub2AgentAuth` after settings migration and before
+provider discovery or services start. The source is the original user's
+`~/.sub2agent/data/proxy.json` version 1 desktop source manifest plus the
+referenced `data/secrets/*.json` entries. Windows CurrentUser DPAPI decrypts
+the original null-entropy format directly, without spawning a helper. No
+legacy file is changed. Other operating systems cannot decrypt Windows keys.
+Only ready, enabled WorkBuddy enterprise subscriptions and ready custom key
+endpoints are eligible. Disabled subscription credentials remain untouched.
+Legacy `auth_profiles`/`tokens` belong to CodeBuddy and are not relabelled as
+WorkBuddy or TIG now that CodeBuddy is disabled.
+
+WorkBuddy credentials retain tenant identity, models and private model map;
+`plugin.EditAuth` merges them atomically under the shared host auth lock.
+Existing credentials for the same user and enterprise win. Endpoints retain
+protocol, models and enabled state; an existing endpoint at the same bases
+wins. The known Coding Plan base maps to the unchanged AIEP preset ID with
+the TIG label and Bearer auth. No legacy telemetry settings are imported.
+Successful imports (including a newer credential already present) are marked
+by a hash of source identity in `sub2agent-auth-import.json`. Deleted imported
+accounts are never resurrected. Partial failures retry on the next launch;
+malformed sources or migration markers never overwrite existing files.
+Only generic, credential-free errors reach startup output.
