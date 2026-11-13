@@ -3,7 +3,10 @@
 This fork's `intranet` build tag selects a separate internal distribution;
 ordinary upstream builds retain their original behavior. The executable keeps
 the upstream provider UI, local gateway, routing, accounts, agent wiring and
-local usage reporting. The portable package includes Bun, not WebView2.
+local usage reporting. The full portable package includes Bun, not WebView2.
+`build/intranet.ps1 -WithoutBun` produces a light package: Windows x64 downloads
+the pinned Bun from the managed internal npm mirror on first plugin startup,
+then reuses the validated cache offline. Neither package includes WebView2.
 Sessions is retained, including its navigation, assets, history consent,
 read/search/resume/export interactions and gateway conversation projection.
 Library remains removed. Retaining Sessions does not enable reading private

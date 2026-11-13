@@ -467,3 +467,14 @@ compatible. `build/prepare-plugin-market.py` prepares all four provider packages
 and the pinned optional upstream notify package; it does not deploy a server.
 Notify retains its upstream hooks and settings page, with empty channels and
 message bodies disabled by default. See the internal marketplace deployment guide.
+
+Windows x64 light packages omit Bun. When no explicit or bundled runtime exists,
+the internal build downloads the pinned `@oven/bun-windows-x64-baseline@1.4.2`
+package from `http://wnpm.weoa.com:8001`. It requests npm metadata and tarball
+directly without npm, install scripts or public fallback. Tarball URLs are routed
+through that mirror, and redirects cannot leave it. Only the fixed executable
+entry is extracted; its independent SHA-256 pin must match before installation.
+The versioned application cache is reused offline and validated before execution.
+Download, parsing and checksum failures preserve prior files and show a sanitized
+network/retry message. The shared Bun lock serializes concurrent installation.
+Other platforms still require a bundled runtime in this internal distribution.

@@ -259,7 +259,7 @@ func Bun(ctx context.Context) (string, error) {
 		if fi, err := os.Stat(bundled); err == nil && !fi.IsDir() {
 			return bundled, nil
 		}
-		return "", fmt.Errorf("bundled plugin runtime is missing: %s", bundled)
+		return internalNPMBun(ctx)
 	}
 
 	if b := os.Getenv("MAGPIE_BUN"); b != "" {
@@ -291,7 +291,11 @@ func HasBun() bool {
 			return false
 		}
 		fi, err := os.Stat(filepath.Join(filepath.Dir(exe), "runtime", bunExe()))
-		return err == nil && !fi.IsDir()
+		if err == nil && !fi.IsDir() {
+			return true
+		}
+		fi, err = os.Stat(internalBunCache())
+		return err == nil && fi.Mode().IsRegular()
 	}
 
 	if os.Getenv("MAGPIE_BUN") != "" {

@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory = $true)][string]$BunArchive,
     [string]$OutputRoot = '',
     [string]$Version = '0.1.3913-sub2agent.1',
-    [string]$Sub2AgentSource = ''
+    [string]$Sub2AgentSource = '',
+    [switch]$WithoutBun
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -37,25 +38,32 @@ try {
         Copy-Item -LiteralPath (Join-Path $repoRoot "build/sub2agent-runtime/$kind") -Destination (Join-Path $bundle 'providers') -Recurse
     }
     Copy-Item -LiteralPath build/sub2agent-runtime/source.json -Destination (Join-Path $bundle 'providers/source.json')
+    if (!$WithoutBun) {
     $zip = [IO.Compression.ZipFile]::OpenRead([IO.Path]::GetFullPath($BunArchive))
     try {
         $bunEntry = $zip.Entries | Where-Object FullName -eq 'bun-windows-x64-baseline/bun.exe'
         if (!$bunEntry) { throw 'Bun archive has no expected runtime' }
         [IO.Compression.ZipFileExtensions]::ExtractToFile($bunEntry, (Join-Path $bundle 'runtime\bun.exe'), $false)
     } finally { $zip.Dispose() }
+    }
     New-Item -ItemType File -Path (Join-Path $bundle '.portable') | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $bundle 'licenses') | Out-Null
     Copy-Item -LiteralPath LICENSE,THIRD_PARTY_NOTICES -Destination (Join-Path $bundle 'licenses')
     Copy-Item -LiteralPath plugins/modelmap/LICENSE -Destination (Join-Path $bundle 'licenses/model-map-LICENSE')
     Copy-Item -LiteralPath build\intranet\BUN-LICENSE.md -Destination (Join-Path $bundle 'licenses\BUN-LICENSE.md')
     Copy-Item -LiteralPath build\intranet\README.zh-CN.md -Destination (Join-Path $bundle 'README.txt')
+    if ($WithoutBun) {
+        $lightReadme = Get-Content -LiteralPath (Join-Path $bundle 'README.txt') -Raw -Encoding utf8
+        $lightReadme = $lightReadme.Replace('本包附带 Bun 1.4.2 插件运行时', '本轻量包不附带 Bun；首次使用供应商插件时从行内 npm 仓库下载固定版本 1.4.2，校验后缓存并复用，无需安装 npm')
+        $lightReadme | Set-Content -LiteralPath (Join-Path $bundle 'README.txt') -Encoding utf8
+    }
     $fileRecords = @(Get-ChildItem -LiteralPath $bundle -Recurse -File | ForEach-Object {
         [ordered]@{ path = $_.FullName.Substring($bundle.Length + 1).Replace('\', '/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
     })
-    [ordered]@{ version = $Version; sourceCommit = $sourceCommit; workingTreeChanges = ($sourceChanges.Count -gt 0); profile = 'intranet'; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $bundle 'manifest.json') -Encoding utf8
+    [ordered]@{ version = $Version; sourceCommit = $sourceCommit; workingTreeChanges = ($sourceChanges.Count -gt 0); profile = 'intranet'; bundledBun = !$WithoutBun; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $bundle 'manifest.json') -Encoding utf8
     $archive = $bundle + '.zip'
     [IO.Compression.ZipFile]::CreateFromDirectory($bundle, $archive, [IO.Compression.CompressionLevel]::Optimal, $true)
     $exe = Get-Item -LiteralPath (Join-Path $bundle 'Sub2Agent.exe')
-    $runtime = Get-Item -LiteralPath (Join-Path $bundle 'runtime\bun.exe')
-    [ordered]@{ bundle = $bundle; archive = $archive; exeBytes = $exe.Length; bunBytes = $runtime.Length; unpackedBytes = (Get-ChildItem -LiteralPath $bundle -Recurse -File | Measure-Object Length -Sum).Sum; zipBytes = (Get-Item -LiteralPath $archive).Length; zipSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $OutputRoot ($bundleName + '.sizes.json'))
+    $runtimeBytes = if ($WithoutBun) { 0 } else { (Get-Item -LiteralPath (Join-Path $bundle 'runtime\bun.exe')).Length }
+    [ordered]@{ bundle = $bundle; archive = $archive; exeBytes = $exe.Length; bunBytes = $runtimeBytes; unpackedBytes = (Get-ChildItem -LiteralPath $bundle -Recurse -File | Measure-Object Length -Sum).Sum; zipBytes = (Get-Item -LiteralPath $archive).Length; zipSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $OutputRoot ($bundleName + '.sizes.json'))
 } finally { Pop-Location }
