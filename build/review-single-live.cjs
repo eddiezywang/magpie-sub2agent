@@ -20,7 +20,7 @@ const assert=require('node:assert/strict');
     await page.route('**/api/open',r=>r.fulfill({json:{}}));
     await page.goto('http://127.0.0.1:18990/?k='+encodeURIComponent(key));
     report.version=await page.evaluate(()=>window.bootPrefs.version);
-    assert.equal(report.version,'0.1.3913-sub2agent.17');
+    assert.equal(report.version,'0.1.3913-sub2agent.18');
     for(const view of ['agents','sessions','providers','routing','groups','gateway','usage','plugins','settings']) {
       await page.goto('http://127.0.0.1:18990/?view='+view);
       await page.locator('#side button[data-view="sessions"]').waitFor();
@@ -35,19 +35,19 @@ const assert=require('node:assert/strict');
       if(view==='plugins') {
         await page.locator('.pm-connection').waitFor();
         assert.equal(await page.locator('.pm-server,.pm-registry').count(),0);
-        await page.screenshot({path:path.join(output,'17-live-market.png'),fullPage:true});
+        await page.screenshot({path:path.join(output,'18-live-market.png'),fullPage:true});
         await page.getByRole('tab',{name:'内置',exact:true}).click();
         const mapping=page.locator('.feat-row[data-id="modelmap"]');
         await mapping.waitFor();
         assert.equal(await mapping.getByRole('switch').getAttribute('aria-checked'),'true');
         await mapping.scrollIntoViewIfNeeded();
-        await page.screenshot({path:path.join(output,'17-live-modelmap.png'),fullPage:true});
+        await page.screenshot({path:path.join(output,'18-live-modelmap.png'),fullPage:true});
         const managed=await page.evaluate(async()=>{
           const data=await fetch('/api/plugins').then(r=>r.json());
           return data;
         });
         for(const entry of managed.plugins||[]) {
-          assert.equal(entry.version,'1.0.2');
+          assert.equal(entry.version,'1.0.3');
           if (/codebuddy|trae/.test(entry.spec)) assert.equal(entry.off,true);
         }
         report.managedPackages=JSON.stringify(managed).match(/@sub2agent\/[a-z]+/g);
@@ -60,7 +60,7 @@ const assert=require('node:assert/strict');
         for(const theme of ['light','dark']) {
           await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
           await row.scrollIntoViewIfNeeded();
-          await page.screenshot({path:path.join(output,'17-live-reporting-'+theme+'.png'),fullPage:true});
+          await page.screenshot({path:path.join(output,'18-live-reporting-'+theme+'.png'),fullPage:true});
         }
         const metadata=await page.evaluate(async()=>{
           const list=await fetch('/api/plugins/builtin').then(r=>r.json());
@@ -73,7 +73,7 @@ const assert=require('node:assert/strict');
         assert.ok(!metadata.registry?.url);
         report.reporting={switches:1,configurationFields:0,addressesVisible:false};
       } else {
-        await page.screenshot({path:path.join(output,'17-live-'+view+'.png'),fullPage:true,mask:view==='sessions'?[page.locator('#view-sessions')]:[],maskColor:'#dfe3eb'});
+        await page.screenshot({path:path.join(output,'18-live-'+view+'.png'),fullPage:true,mask:view==='sessions'?[page.locator('#view-sessions')]:[],maskColor:'#dfe3eb'});
       }
       assert.deepEqual(errors,[],view);
       report.views.push(view);
@@ -88,7 +88,7 @@ const assert=require('node:assert/strict');
     assert.doesNotMatch(await sheet.innerText(),/CodeBuddy|Trae 企业|ChatGPT|Claude Code/);
     assert.ok(await sheet.locator('[data-pick=custom]').evaluate(e=>e.previousElementSibling.textContent.includes('CIB-智汇通-APIKEY')));
     assert.equal(await sheet.locator('[data-pick=custom]').innerText(),'自定义 API Key');
-    await page.screenshot({path:path.join(output,'17-live-provider-scope.png'),fullPage:true});
+    await page.screenshot({path:path.join(output,'18-live-provider-scope.png'),fullPage:true});
     report.providerScope={workbuddy:true,tig:true,zht:true,otherSubscriptions:false};
     await page.locator('#addSheet button').filter({hasText:'TIG Coding Plan'}).click();
     const editor=page.locator('.editor.new');
@@ -97,10 +97,10 @@ const assert=require('node:assert/strict');
     assert.equal(await editor.locator('input[type=password]:visible').inputValue(),'');
     assert.equal(await editor.locator('.auth-header:visible').count(),0);
     assert.doesNotMatch(await editor.innerText(),/eddiewang|真实key|172\.21\.0\.177/);
-    await editor.screenshot({path:path.join(output,'17-live-codingplan.png')});
+    await editor.screenshot({path:path.join(output,'18-live-codingplan.png')});
     report.codingPlan={baseCorrect:true,keyEmpty:true,headerSelectorHidden:true};
     report.pageErrors=errors;
-    await fs.writeFile(path.join(output,'17-live-report.json'),JSON.stringify(report,null,2));
+    await fs.writeFile(path.join(output,'18-live-report.json'),JSON.stringify(report,null,2));
     console.log(JSON.stringify(report));
   }finally{await browser.close()}
 })().catch(e=>{console.error(e.message.replace(/https?:\/\/\S+/g,'[address]'));process.exitCode=1});
