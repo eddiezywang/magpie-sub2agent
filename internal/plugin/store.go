@@ -393,7 +393,14 @@ func Target(spec string) string {
 		}
 		return p
 	}
-	return filepath.Join(Dir(), "node_modules", filepath.FromSlash(Name(spec)))
+	if target := shippedTarget(Name(spec)); target != "" {
+		return target
+	}
+	return packageTarget(Name(spec))
+}
+
+func packageTarget(pkg string) string {
+	return filepath.Join(Dir(), "node_modules", filepath.FromSlash(pkg))
 }
 
 // Add installs a plugin and adds it to the list, in place of one of the

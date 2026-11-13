@@ -706,6 +706,7 @@ func Cached() []Provider {
 		}
 	}
 	for _, p := range ps {
+		p.Spec = canonicalShippedSpec(p.Spec)
 		if !on[p.Spec] {
 			continue
 		}

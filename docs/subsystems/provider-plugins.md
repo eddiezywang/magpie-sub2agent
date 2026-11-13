@@ -429,3 +429,30 @@ personal-key entry for it; ordinary API methods still require a key.
 its account slot and the account action says Sign in again. Existing records
 are not deleted. Other plugins keep multiple accounts. OpenCode ignores
 these optional fields; no provider id is special-cased in magpie.
+
+## Intranet managed baselines
+
+The four distribution adapters have stable package identities:
+`@sub2agent/codebuddy`, `@sub2agent/workbuddy`, `@sub2agent/trae`, and
+`@sub2agent/aiep`. `shipped` projects legacy portable paths onto these IDs,
+retaining Off, Options and provider preferences. Cached provider specs are
+projected too; account IDs and auth entries remain unchanged.
+
+`Target` resolves a verified installation in the user's plugin data directory
+first, then the executable-relative offline baseline. Only installs with the
+installer's receipt and matching per-file SHA-256 hashes are selected over the
+baseline. Hashes are cached while the receipt/file metadata stay unchanged.
+The installer always writes to the data directory, never into the portable
+baseline. Updating the executable cannot overwrite a marketplace plugin.
+All four adapters have explicit semantic versions and receive automatic
+newer-version checks from the managed internal registry. Failed downloads and
+validation keep the prior installed package; unavailable registry keeps local
+operation. Explicit Off and options survive both projection and update.
+
+AIEP deliberately retains the native key-based editor, existing providers.json
+credentials, model picks and IDs. Its small packaged adapter declares
+`magpie.nativeProvider` defaults. New configurations read the selected adapter's
+Anthropic base and links; saved addresses remain user-owned. Native Anthropic
+transport and mandatory Bearer signing remain host-owned; installing the
+adapter creates no second login provider or credential copy. The three other
+adapters keep their private subscription implementations and account store.

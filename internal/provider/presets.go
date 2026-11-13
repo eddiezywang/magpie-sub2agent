@@ -829,7 +829,7 @@ func mantleRegions(ids ...string) []Region {
 // Presets lists every preset, sponsored ones first within their kind.
 func Presets() []PresetDef {
 	if distribution.Internal {
-		return []PresetDef{codingPlanPreset}
+		return []PresetDef{codingPlanDefinition()}
 	}
 	out := make([]PresetDef, 0, len(presets))
 	for _, p := range presets {
@@ -934,7 +934,8 @@ func Preset(id string) *PresetDef {
 // aside.
 func builtinPreset(id string) *PresetDef {
 	if distribution.Internal && id == codingPlanPreset.ID {
-		return &codingPlanPreset
+		pr := codingPlanDefinition()
+		return &pr
 	}
 	if a, ok := presetAliases[id]; ok {
 		id = a.preset

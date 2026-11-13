@@ -33,7 +33,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     New-Item -ItemType Directory -Path (Join-Path $bundle 'providers') | Out-Null
-    foreach ($kind in 'codebuddy','workbuddy','trae') {
+    foreach ($kind in 'codebuddy','workbuddy','trae','aiep') {
         Copy-Item -LiteralPath (Join-Path $repoRoot "build/sub2agent-runtime/$kind") -Destination (Join-Path $bundle 'providers') -Recurse
     }
     Copy-Item -LiteralPath build/sub2agent-runtime/source.json -Destination (Join-Path $bundle 'providers/source.json')

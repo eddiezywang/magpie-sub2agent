@@ -9337,7 +9337,7 @@ function drawEditor(p, presetID) {
     }
   }
 
-  if (pr?.id === "aiep-coding-plan") import("./codingplan.js").then((m) => m.notice(ed), statusErr);
+  if (pr?.id === "aiep-coding-plan") import("./codingplan.js").then((m) => m.notice(ed, pr), statusErr);
 
   // a vendor's global and China endpoints: one row in the add sheet, picked here
   const pair = isNew && pr ? (globalOf(pr) ? [globalOf(pr), pr] : chinaOf(pr) ? [pr, chinaOf(pr)] : null) : null;

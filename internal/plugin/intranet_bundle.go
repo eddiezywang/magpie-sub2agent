@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -70,7 +71,7 @@ func installInternalBundle(ctx context.Context, pkg, version string) error {
 	}
 	installMu.Lock()
 	defer installMu.Unlock()
-	target := Target(pkg)
+	target := packageTarget(pkg)
 	parent := filepath.Dir(target)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return err
@@ -81,6 +82,36 @@ func installInternalBundle(ctx context.Context, pkg, version string) error {
 	}
 	defer os.RemoveAll(stage)
 	if err := extractInternalBundle(b, stage, pkg, bundle.Version); err != nil {
+		return err
+	}
+	receipt := bundleReceipt{Package: pkg, Version: bundle.Version, Files: map[string]string{}}
+	err = filepath.WalkDir(stage, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		name, err := filepath.Rel(stage, path)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(data)
+		receipt.Files[filepath.ToSlash(name)] = hex.EncodeToString(sum[:])
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(receipt)
+	if err != nil {
+		return err
+	}
+	if err = os.WriteFile(filepath.Join(stage, ".internal-bundle.json"), raw, 0600); err != nil {
 		return err
 	}
 	backup := stage + ".previous"
@@ -169,4 +200,22 @@ func internalServiceError(reason string, code int) error {
 	default:
 		return fmt.Errorf("无法连接内网插件服务器，请检查内网或 VPN 后重试")
 	}
+}
+
+var bundlePath = regexp.MustCompile(`^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$`)
+
+func safeBundlePath(name string) bool {
+	if !bundlePath.MatchString(name) {
+		return false
+	}
+	for _, part := range strings.Split(name, "/") {
+		if part == "." || part == ".." || strings.HasSuffix(part, ".") || strings.HasPrefix(part, ".internal-") {
+			return false
+		}
+		base := strings.ToUpper(strings.SplitN(part, ".", 2)[0])
+		if base == "CON" || base == "PRN" || base == "AUX" || base == "NUL" || len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) && base[3] >= '0' && base[3] <= '9' {
+			return false
+		}
+	}
+	return true
 }

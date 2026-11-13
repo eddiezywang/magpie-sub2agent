@@ -1,11 +1,19 @@
 package plugin
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/yetone/magpie/internal/distribution"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -103,6 +111,9 @@ func TestAddKeepsAnOffPluginOff(t *testing.T) {
 // on by it either.
 func TestUpdateKeepsAnOffPluginOff(t *testing.T) {
 	offSandbox(t)
+	if distribution.Internal {
+		mockOffBundle(t, "1.2.4")
+	}
 	// pinned, and older than the newest, which is the case where Update
 	// installs the newest version and unpins (ba0e2a8a) — through add,
 	// which is where the entry is rebuilt
@@ -157,3 +168,44 @@ func TestUpgradeKeepsAnOffPluginOff(t *testing.T) {
 		t.Fatalf("after Upgrade: %+v, want the plugin still off", l.Plugins)
 	}
 }
+
+// The internal distribution installs complete artifacts rather than asking the
+// fake Bun. Keep this lifecycle test isolated under either installation path.
+func mockOffBundle(t *testing.T, version string) {
+	t.Helper()
+	var buffer bytes.Buffer
+	archive := zip.NewWriter(&buffer)
+	for name, content := range map[string]string{"package.json": `{"name":"` + pkg + `","version":"` + version + `","main":"index.js","type":"module"}`, "index.js": "export default async()=>({})"} {
+		w, err := archive.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		io.WriteString(w, content)
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	payload := buffer.Bytes()
+	digest := sha256.Sum256(payload)
+	previous := http.DefaultClient
+	oldList, oldUpdated, oldChecked, oldErr := marketList, marketUpdated, marketChecked, marketErr
+	t.Cleanup(func() {
+		http.DefaultClient = previous
+		marketList, marketUpdated, marketChecked, marketErr = oldList, oldUpdated, oldChecked, oldErr
+	})
+	marketList = nil
+	marketUpdated = time.Time{}
+	marketChecked = time.Time{}
+	marketErr = nil
+	http.DefaultClient = &http.Client{Transport: offBundleTransport(func(r *http.Request) (*http.Response, error) {
+		body := payload
+		if strings.HasSuffix(r.URL.Path, "registry.json") {
+			body, _ = json.Marshal(registry{Plugins: []Listing{{Package: pkg, Bundle: &InternalBundle{Version: version, URL: "http://172.21.0.177/magpie/plugins/dist/off.zip", SHA256: hex.EncodeToString(digest[:]), Bytes: int64(len(payload))}}}})
+		}
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(body)), Request: r}, nil
+	})}
+}
+
+type offBundleTransport func(*http.Request) (*http.Response, error)
+
+func (f offBundleTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
