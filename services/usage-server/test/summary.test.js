@@ -7,6 +7,14 @@ const http=require('node:http');
 const fetch=(url,options={})=>new Promise((resolve,reject)=>{const req=http.request(url,{method:options.method||'GET',headers:options.headers},res=>{let body='';res.setEncoding('utf8');res.on('data',s=>body+=s);res.on('end',()=>resolve({status:res.statusCode,text:async()=>body,json:async()=>JSON.parse(body)}));});req.on('error',reject);req.end(options.body);});
 const {createSummaryStore,SCHEMA,counters}=require('../src/summary-store');
 const {renderReportCardSvg}=require('../src/card');
+const {hitRate}=require('../src/magpie-day');
+
+test('cache hit rate accepts the report view with an omitted zero unknown counter',()=>{
+ const view={input:100,cacheRead:300,cacheWrite:0};
+ assert.equal(hitRate(view),0.75);
+ assert.equal(hitRate({...view,cacheUnknown:400}),null);
+ assert.equal(hitRate({...view,cacheUnknown:100}),1);
+});
 
 test('receipt distinguishes unpriced usage, plan tokens and points from zero USD',()=>{
  const base={user:{name:'fixture-user'},period:{type:'daily',start:'2026-11-13',end:'2026-11-13',generated_at:'2026-11-13T12:00:00Z'},totals:{requests:2,input_tokens:100,output_tokens:10,cost_usd:0,unpriced_requests:2},stats:{},by_agent_model:[]};
@@ -75,7 +83,7 @@ test('real HTTP accepts explicit IDs, preserves old telemetry and generates weig
  assert.equal(report.totals.requests,196);assert.equal(report.totals.input_tokens,2000);assert.equal(report.day.calls,196);
  assert.equal(report.billing.amounts_by_currency.POINTS,3640);assert.equal(report.totals.cost_usd,0);
  assert.equal(report.by_model[0].requests,196);assert.equal(report.day.ttftMs,50000);assert.equal(report.day.timed,200);
- const svg=await fetch(base+'/reports/fixture-user/daily.svg?date=2026-11-13');assert.equal(svg.status,200);assert.match(await svg.text(),/<svg/);
+ const svg=await fetch(base+'/reports/fixture-user/daily.svg?date=2026-11-13');assert.equal(svg.status,200);const svgText=await svg.text();assert.match(svgText,/<svg/);assert.ok(!svgText.includes('NaN%'),'cache rate must be numeric or unavailable');
  const weekly=await fetch(base+'/reports/fixture-user/weekly.json?date=2026-11-13').then(r=>r.json());assert.equal(weekly.totals.requests,196);
  const bad=summary('bad');bad.groups[0].input_tokens=-1;assert.deepEqual((await post({...payload,summaries:[bad]})).body.rejected_ids,['bad']);
  assert.equal((await post({...payload,summaries:[summary(),summary()]})).status,400);

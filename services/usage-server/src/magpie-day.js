@@ -146,7 +146,7 @@ function addRecord(totals, event, pricingTable) {
 // usage.go Totals.HitRate (#3464): read / (input + read + write - unknown),
 // null when no vendor-counted prompt remains.
 function hitRate(t) {
-  const prompt = t.input + t.cacheRead + t.cacheWrite - t.cacheUnknown;
+  const prompt = t.input + t.cacheRead + t.cacheWrite - (t.cacheUnknown || 0);
   if (prompt <= 0) return null;
   return Math.min(1, t.cacheRead / prompt);
 }

@@ -26,8 +26,8 @@ const INK = '#1f1d20';
 const MUTED = '#76736e';
 const PAPER = '#f7f4ed';
 const DASH = '#a8a49c';
-const MONO = "'JetBrains Mono','Noto Sans CJK SC','Microsoft YaHei',monospace";
-const CJK = "'Noto Sans CJK SC','Microsoft YaHei',sans-serif";
+const MONO = "'JetBrains Mono','Noto Sans CJK SC','Microsoft YaHei','JinbiaoSong',monospace";
+const CJK = "'Noto Sans CJK SC','Microsoft YaHei','JinbiaoSong',sans-serif";
 const MONO_ADVANCE = 0.6; // JetBrains Mono: 600 units / 1000 em
 
 const PW = 440;
