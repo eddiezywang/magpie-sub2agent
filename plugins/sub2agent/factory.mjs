@@ -59,7 +59,18 @@ async function poll(signal, run) {
 export async function createSub2AgentPlugin(kind, input, deps = {}) {
   if (!names[kind]) throw new Error('Unknown Sub2Agent provider');
   const id = 'sub2agent-' + kind;
-  const fetchImpl = deps.fetchImpl || globalThis.fetch;
+  const rawFetch = deps.fetchImpl || globalThis.fetch;
+  // Private resolvers replace credentials after a 401 using canonical header
+  // names; the protocol executor may already have lowercased them. HTTP names
+  // are case-insensitive: keep the last value instead of combining two tokens.
+  const fetchImpl = (url, init, context) => {
+    if (!init?.headers) return rawFetch(url, init, context);
+    const headers = new Map();
+    const entries = init.headers instanceof Headers || Array.isArray(init.headers)
+      ? init.headers : Object.entries(init.headers);
+    for (const [name, value] of entries) headers.set(name.toLowerCase(), [name, value]);
+    return rawFetch(url, {...init, headers:Object.fromEntries(headers.values())}, context);
+  };
   const cb = kind === 'codebuddy' ? (deps.codebuddyAdapter || codeBuddyAdapter(fetchImpl)) : null;
   const wb = deps.workbuddyAdapter || createWorkBuddySubscriptionAdapter({fetchImpl});
   const trae = deps.traeAdapter || createTraeSubscriptionAdapter({fetchImpl});

@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import http from 'node:http';
 import {createSub2AgentPlugin,readBundle} from '../../build/sub2agent-runtime/factory-test.mjs';
 
 const client={auth:{set:async()=>{throw new Error('Unexpected credential write');}}};
@@ -34,6 +35,42 @@ test('WorkBuddy concurrent requests share refresh and retain private request hea
  assert.equal(renewals,1);assert.equal(writes,1);
  for(const request of sent){assert.equal(request.body.model,'vendor-model');assert.equal(request.body.stream,true);
   assert.equal(request.headers['X-User-Id'],'u1');assert.equal(request.headers['X-Enterprise-Id'],'e1');assert.equal(request.headers.Authorization,'Bearer fresh');}
+});
+
+test('WorkBuddy sends exactly one authorization value over real HTTP, including after 401 refresh',async()=>{
+ let auth={type:'oauth',access:JSON.stringify({...models,accessToken:'old',refreshToken:'refresh',expiresAt:Date.now()+3600000,userId:'test-user',enterpriseId:'test-enterprise'})};
+ const seen=[];
+ const server=http.createServer(async(req,res)=>{
+  let data='';for await(const chunk of req)data+=chunk;
+  seen.push({headers:req.headers,body:JSON.parse(data)});
+  if(req.headers.authorization!=='Bearer fresh') {
+   res.writeHead(401,{'Content-Type':'text/html'});res.end('<h1>401 Authorization Required</h1>');return;
+  }
+  res.writeHead(200,{'Content-Type':'text/event-stream'});res.end(await sse().text());
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ let refreshed=0;
+ try {
+  const plugin=await createSub2AgentPlugin('workbuddy',{client:{auth:{set:async({body})=>{auth=body;}}}}, {
+   workbuddyAdapter:{async refresh(bundle){refreshed++;return {...bundle,accessToken:'fresh',expiresAt:Date.now()+3600000};}},
+   fetchImpl:async(url,options)=>{
+    assert.equal(url,'https://copilot.tencent.com/v2/chat/completions');
+    return fetch('http://127.0.0.1:'+server.address().port,options);
+   },
+  });
+  const loader=await plugin.auth.loader(async()=>auth);
+  const response=await loader.fetch('https://sub2agent.invalid/v1/chat/completions',{body:JSON.stringify({model:'Enterprise Model',messages:[{role:'user',content:'hello'}],stream:true})});
+  assert.equal(response.status,200);
+  assert.match(await response.text(),/ok/);
+  assert.equal(refreshed,1);assert.equal(seen.length,2);
+  assert.deepEqual(seen.map(request=>request.headers.authorization),['Bearer old','Bearer fresh']);
+  for(const request of seen) {
+   assert.equal(request.headers['x-user-id'],'test-user');
+   assert.equal(request.headers['x-enterprise-id'],'test-enterprise');
+   assert.equal(request.headers['x-tenant-id'],'test-enterprise');
+   assert.equal(request.body.model,'vendor-model');
+  }
+ }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
 
 test('cancelled browser login does not save an account',async()=>{
