@@ -4,7 +4,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const {spawn}=require('node:child_process'),path=require('node:path');
 const {chromium,webkit}=require('playwright');
 
-test('provider and routing group interactions preserve behavior under the retro skin',async t=>{
+test('provider, routing group and session interactions preserve behavior under the retro skin',async t=>{
  const child=spawn(process.execPath,[path.join(__dirname,'retro-preview-server.cjs')],{env:{...process.env,RETRO_PREVIEW_PORT:'0'},stdio:['ignore','pipe','pipe']});
  t.after(()=>child.kill());
  const url=await new Promise((resolve,reject)=>{let s='';child.stdout.on('data',b=>{s+=b;const m=s.match(/Preview (http:\/\/127\.0\.0\.1:\d+)/);if(m)resolve(m[1])});child.on('error',reject);child.on('exit',code=>reject(new Error('preview exited: '+code)))});
@@ -34,6 +34,13 @@ test('provider and routing group interactions preserve behavior under the retro 
     await head.focus();await page.keyboard.press('Enter');await page.locator('.rt-gedit').waitFor({state:'detached'});
     state.groupFolded=await group.isVisible();
     assert.equal(state.groupFolded,true);
+    await page.goto(url+'/?view=sessions&desktop=1&theme='+theme);
+    const search=page.locator('#view-sessions .sm-filter');await search.waitFor();
+    const session=page.locator('#view-sessions .sm-sess',{hasText:'示例会话：整理项目任务'});await session.waitFor();
+    await search.fill('no-such-demo-session');await session.waitFor({state:'hidden'});
+    await search.press('Escape');await session.waitFor({state:'visible'});
+    state.sessionSearchCleared=await search.inputValue();
+    assert.equal(state.sessionSearchCleared,'');
     assert.equal(state.overflow,false,`${engine.name()} ${theme} ${width}: overflow`);assert.deepEqual(errors,[]);
     states.push(state);await page.close();
    }
