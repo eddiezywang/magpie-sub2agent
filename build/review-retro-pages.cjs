@@ -31,7 +31,7 @@ const lang=process.env.LANG_CASE||'zh';
       if(u.pathname==='/api/providers')return json({providers:[
         {id:'demo-glm',name:'Demo GLM',on:true,kind:'subscription',agents:[],models:[{id:'glm-4-demo',name:'GLM 4 Demo',on:true}],key:{set:false},account:{user:'demo@example.test',agentName:'Demo GLM',plan:'Pro',logins:[{user:'demo@example.test',plan:'Pro',on:true,active:true}],usage:{requests:12,tokens:4500}}},
         {id:'demo-api',name:'Demo API Key',on:false,off:true,agents:[],models:[{id:'demo-mini',name:'Demo Mini',on:true}],key:{set:false}}
-       ],presets:[],excluded:[],gateway:{running:true,url:'http://127.0.0.1:8989'}});
+       ],presets:[],excluded:[],gateway:{running:true,window:true,mine:true,calls:[],groups:[],url:'http://127.0.0.1:8989'}});
       if(u.pathname==='/api/gateway/trace')return json({seq:2,totals:{requests:3,rerouted:1,errors:0},routes:[
         {id:'r1',model:'glm-4-demo',provider:'Demo GLM',account:'demo@example.test',requests:3,ok:3,errors:0}
       ]});
@@ -62,6 +62,7 @@ const lang=process.env.LANG_CASE||'zh';
     // page didn't apply the fixture's saved choice on its own
     await page.evaluate(t=>{if(document.documentElement.dataset.theme!==t)document.documentElement.dataset.theme=t;},theme);
     await page.waitForTimeout(300);
+    assert.equal(await page.locator('#view-'+view+' .slot-error:visible').count(),0,`${view} ${engine} ${theme} ${width}: page error boundary is visible`);
     assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme||'(none)'),theme,`${view} ${engine} ${theme} ${width}: theme not applied`);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
     assert.ok(!overflow,`${view} ${engine} ${theme} ${width}: horizontal overflow`);

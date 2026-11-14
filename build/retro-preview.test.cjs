@@ -28,6 +28,9 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  await page.locator('#view-plugins .pm-row').filter({hasText:'示例插件'}).waitFor();
  await page.goto(url+'/?view=groups&desktop=1');
  await page.getByText('示例路由组',{exact:true}).first().waitFor();
+ await page.goto(url+'/?view=gateway&desktop=1');
+ await page.locator('#gateway').waitFor({state:'visible'});
+ assert.equal(await page.locator('#view-gateway .slot-error:visible').count(),0);
  await page.goto(url+'/?view=providers');await page.waitForTimeout(1000);
  await page.getByRole('status').filter({hasText:'视觉预览 · 模拟数据'}).waitFor();
  await page.locator('#addProvider').click();
