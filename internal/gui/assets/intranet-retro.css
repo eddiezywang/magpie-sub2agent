@@ -47,7 +47,11 @@ body { background-color:var(--retro-page); background-image:radial-gradient(var(
   --line:var(--retro-line); --line-2:var(--retro-line-2);
   --muted:var(--retro-muted); --faint:var(--retro-faint);
 }
-:root body.panel .list { border-radius:5px; border-color:var(--line); }
+:root body.panel .list {
+  border-radius:5px; border-color:var(--retro-ink);
+  box-shadow:2px 2px 0 var(--retro-ink);
+}
+:root body.panel .seg { border-color:var(--retro-ink); }
 body.side-nav .sidebar { background:var(--card); border-right:2px solid var(--retro-ink); }
 body.side-nav :is(#nav button[data-view],#prefs) { border-radius:4px; }
 body.side-nav #nav > .nav-top-hl:not([hidden]), body.side-nav #prefs.on { background:var(--accent-soft); box-shadow:var(--seg-edge); border-radius:4px; }
