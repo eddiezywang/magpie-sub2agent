@@ -95,7 +95,9 @@ function routingPage(part) {
   logo.setAttribute("class", "rt-bird");
   logo.innerHTML = appMark();
   const hubSub = el("small"), chip = el("i");
-  hub.append(logo, el("b", "", "magpie"), hubSub, chip);
+  const hubName = el("b");
+  hubName.textContent = intranet ? "Sub2Agent" : "magpie";
+  hub.append(logo, hubName, hubSub, chip);
   const list = el("ol", "rt-accts");
   // the magpies fly over the nodes, the wires run under them
   const sky = document.createElementNS(NS, "svg");

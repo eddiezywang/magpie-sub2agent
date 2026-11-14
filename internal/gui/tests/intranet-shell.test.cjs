@@ -44,7 +44,7 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.goto('http://intranet.test/?view=agents');
   await page.locator('.row.agent[data-id="codex"]').waitFor();
   await page.waitForTimeout(400); // the header's delayed animation used to assume a bird
-  assert.equal(await page.title(), 'sub2agent');
+  assert.equal(await page.title(), 'Sub2Agent');
   assert.equal(await page.locator('#view-library').count(), 0);
   assert.equal(await page.locator('#view-sessions').count(), 1);
   assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true);

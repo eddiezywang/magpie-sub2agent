@@ -50,7 +50,7 @@ const lang=process.env.LANG_CASE||'zh';
       if(u.pathname==='/'){
        body=body.toString();
        if(!body.includes('href="intranet-retro.css"'))body=body.replace('</head>','<link rel="stylesheet" href="intranet-retro.css"></head>');
-       body=body.replaceAll('<title>magpie</title>','<title>sub2agent</title>').replaceAll('<span>magpie</span>','<span>sub2agent</span>');
+       body=body.replaceAll('<title>magpie</title>','<title>Sub2Agent</title>').replaceAll('<span>magpie</span>','<span>Sub2Agent</span>');
       }
       return route.fulfill({body,contentType:{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(u.pathname)]||'text/html'});
      }catch{return route.fulfill({status:404,body:''});}
