@@ -253,5 +253,22 @@
     "markerRetainedAfterResume": true,
     "durationMs": 29906,
     "usageSource": "estimated; upstream omitted usage"
+  },
+  "deployedVerification": {
+    "version": "0.1.3913-sub2agent.22",
+    "gatewayPort": 8989,
+    "agent": "Claude Code 2.1.119",
+    "incomingAnthropicBytes": 1037582,
+    "http": 200,
+    "preTokensAgentEstimate": 254847,
+    "postTokensAgentEstimate": 641,
+    "durationMs": 25201,
+    "markerRetainedAfterResume": true,
+    "usageSource": "estimated; upstream omitted usage",
+    "isolatedAgentConfig": true,
+    "compactionWindowOverride": 1000000,
+    "retainedPagesChecked": 9,
+    "missingVisibleIcons": 0,
+    "javascriptErrors": 0
   }
 }

@@ -51,3 +51,31 @@ all consume byte-budget hints or refresh model metadata during a session.
 Model capacity cannot be promised as end-to-end capacity without testing the
 transport and the Agent. Image bytes and large tool schemas can overflow at far
 fewer tokens than a text-only test. Do not silently drop text/tool history.
+
+## Deployed application verification
+
+Version `0.1.3913-sub2agent.22` was rebuilt, started with the existing local
+data directory and tested through the production gateway on port 8989.
+Claude Code 2.1.119 sent a 1,037,582-byte Anthropic summary request, which the
+gateway accepted with HTTP 200. Automatic compaction reported 254,847 to 641
+estimated tokens in 25.2 seconds; resuming returned `ORCHID-7429`. This run used
+an isolated Claude configuration with a deliberately enlarged compaction
+window, not the generated 272K default, so it verifies near-boundary transport
+and successful native compaction rather than every default configuration.
+
+All nine retained pages passed Playwright checks without JavaScript errors or
+missing visible icons. The model settings retain the supplier's declared
+capacity and explain the separate approximate 1 MiB request-size constraint.
+Cheap-first ordering still starts with hy4free, then MaaS, then other models.
+
+The released byte guard is 1020 KiB (1,044,480 bytes), with a warning at 900 KiB.
+It measures the normalized final request and converts explicit nested size
+errors into Agent-readable 413 errors. It does not synthesize a summary, change
+the meaning of billed usage or guarantee that every Agent retries by compacting.
+The 272K generated Claude window is a working default, not a measured universal
+safe context: content encoding, tools and images can reach the byte cap sooner.
+Adaptive byte-pressure compaction would require an Agent-specific integration
+and separate validation; it is not implemented by these changes.
+
+Archive: 32,043,069 bytes; SHA-256
+`f4f090cc01ee0cb270a4c23e323781d01a97419da4f534c2ddde499cd988e563`.
