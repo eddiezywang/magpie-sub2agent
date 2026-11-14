@@ -685,7 +685,12 @@ function routingPage(part) {
   // reads by the name the account has now, one from before a rename too
   // (plugins#310: a renamed Kiro account kept its old name on requests
   // made after). Requests are still told apart by that vendor's name.
-  const userShown = (provider, user) => user && accountShownOf(providers?.providers?.find((p) => p.id === provider), user) || user;
+  const userShown = (provider, user) => {
+    const p = providers?.providers?.find((p) => p.id === provider);
+    const shown = user && accountShownOf(p, user) || user;
+    return provider === "sub2agent-workbuddy" && shown === user && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(user || "")
+      ? p?.name || "WorkBuddy 企业" : shown;
+  };
   // whoShown is the account or key a weighed one is: an account by its
   // name of the user's own; a key's name is already the user's
   const whoShown = (w) => w.kind === "account" ? userShown(w.provider, w.who) : w.who;
@@ -2552,7 +2557,7 @@ function routingPage(part) {
     f.w = w;
     f.pk = openKey(w) + (w.kind === "account" ? "@" : "");
     const name = w.fallback ? w.name : w.name || w.provider;
-    const head = [icon(w.icon || (w.preset ? w.preset : "generic")), el("span", "who", name), " ", f.n,
+    const head = [icon(logoOf(w)), el("span", "who", name), " ", f.n,
       el("code", "mdl", w.fixed ? `${w.model}:${w.fixed}` : w.model)];
     if (w.fallback) head.push(el("small", "fb", t("fallback")));
     if (f.b.dataset.head !== openKey(w) + (w.fallback ? "|fb" : "")) { f.b.replaceChildren(...head); f.b.dataset.head = openKey(w) + (w.fallback ? "|fb" : ""); }
@@ -2569,7 +2574,7 @@ function routingPage(part) {
 
   function makeRow(w) {
     const li = el("li"), b = el("b");
-    b.append(icon(w.icon || (w.preset ? w.preset : "generic")));
+    b.append(icon(logoOf(w)));
     const name = el("span", "who", who(w));
     // the provider's name heads the card; a row names what differs
     const sub = el("span", "", rowSub(w, false));
@@ -3446,7 +3451,7 @@ function routingPage(part) {
   // logoed puts the provider's logo before the first account, key or
   // provider a line of the story names, so who it is about reads at a
   // glance (the owner: 这里在前面显示对应的 provider 图标会不会更直观一点)
-  const logoOf = (w) => w.icon || w.preset || "generic";
+  const logoOf = (w) => w.icon || (w.provider === "sub2agent-workbuddy" ? "workbuddy-color" : "") || w.preset || "generic";
   // A line names an order member, one skipped before it was tried (r.left,
   // #3953: a skipped OpenCode Zen Free's line had no logo, or another
   // member's), or both. Where two share the name at the same place (a key

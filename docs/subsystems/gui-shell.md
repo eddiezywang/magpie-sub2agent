@@ -1,5 +1,11 @@
 # GUI app shell
 
+WorkBuddy routing rows retain account semantics. Missing trace icons fall back
+to the WorkBuddy brand, including historical traces. A raw UUID with no user
+nickname is displayed as the WorkBuddy provider name, while explicit account
+names and meaningful usernames remain intact. UUIDs remain internal identity
+keys and are not changed in authentication or trace matching.
+
 Internal builds select `icons_intranet.go`: the header, EXE, window icon and
 tray share the pixel S from `build/pixel-icons/custom.py`. Regenerate native
 frames with `native.py`; `winres-intranet.json` embeds those same PNG frames.
