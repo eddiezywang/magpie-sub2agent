@@ -3785,6 +3785,9 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 		var asking, asked, wrote atomic.Int64
 		var nt netTrace // where the try's time went (TryNet)
 		attemptBody := body
+		if c.compactRescue {
+			attemptBody = workBuddyCompactBudget(from, attemptBody)
+		}
 		if from == provider.Responses {
 			// what another sealed, which this one refused earlier in the
 			// conversation, isn't sent to be refused again; its own is
@@ -4729,12 +4732,8 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 		if !hw.passing && !hw.refused && hw.code() == http.StatusRequestEntityTooLarge && workBuddyMaasCompaction(c, call.Kind) {
 			var rescues []candidate
 			tried := slices.Clone(cands[:i+1])
-			for range 2 {
-				rescue, ok := workBuddyCompactRescue(c, call.Kind, hw.code(), from, plain, tried)
-				if !ok {
-					break
-				}
-				rescues, tried = append(rescues, rescue), append(tried, rescue)
+			if rescue, ok := workBuddyCompactRescue(c, call.Kind, hw.code(), from, plain, tried); ok {
+				rescues = append(rescues, rescue)
 			}
 			if len(rescues) > 0 {
 				// Add it only after an actual size rejection, ahead of other

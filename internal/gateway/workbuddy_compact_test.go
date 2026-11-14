@@ -129,35 +129,48 @@ func TestWorkBuddyCompactRescueGateway(t *testing.T) {
 	}
 }
 
-func TestWorkBuddyCompactRescueReasoningOnly(t *testing.T) {
+func TestWorkBuddyCompactRescueBudget(t *testing.T) {
 	fresh(t)
 	var seen []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var ask struct {
-			Model string `json:"model"`
+			Model     string `json:"model"`
+			MaxTokens int    `json:"max_tokens"`
 		}
 		json.NewDecoder(r.Body).Decode(&ask)
 		seen = append(seen, ask.Model)
+		w.Header().Set("Content-Type", "application/json")
 		if ask.Model == rescueMaas {
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(413)
 			io.WriteString(w, `{"error":{"type":"request_too_large","message":"body too large"}}`)
 			return
 		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		if ask.Model == "hy4free" {
-			io.WriteString(w, `data: {"choices":[{"index":0,"delta":{"reasoning_content":"analysis only"},"finish_reason":null}]}`+"\n\n"+`data: {"choices":[{"index":0,"delta":{},"finish_reason":"length"}],"usage":{"prompt_tokens":100,"completion_tokens":4096}}`+"\n\ndata: [DONE]\n\n")
-			return
+		if ask.Model != "hy4free" || ask.MaxTokens != 32768 {
+			t.Errorf("summary rescue needs room for thinking: %+v", ask)
 		}
-		io.WriteString(w, chatStreamSaid("ORCHID-7429"))
+		io.WriteString(w, chatOK)
 	}))
 	defer up.Close()
-	if err := provider.Save(provider.Provider{ID: "sub2agent-workbuddy", Name: "WorkBuddy", Key: "fixture", Chat: up.URL + "/v1", Models: []string{rescueMaas, "hy4free", "Deepseek-V4-Flash"}}); err != nil {
+	if err := provider.Save(provider.Provider{ID: "sub2agent-workbuddy", Key: "fixture", Chat: up.URL + "/v1", Models: []string{rescueMaas, "hy4free", "Deepseek-V4-Flash"}}); err != nil {
 		t.Fatal(err)
 	}
-	s := New()
-	code, out := postAs(t, s, "rescue-reasoning", `{"model":"sub2agent-workbuddy/`+rescueMaas+`","stream":true,"max_tokens":4096,"messages":[`+rescueSummary+`]}`)
-	if code != 200 || !strings.Contains(out, "ORCHID-7429") || !slices.Equal(seen, []string{rescueMaas, "hy4free", "Deepseek-V4-Flash"}) {
-		t.Fatalf("reasoning-only rescue: %d %s, models %v, route %+v", code, out, seen, lastRoute(s))
+	code, out := postAs(t, New(), "rescue-budget", `{"model":"sub2agent-workbuddy/`+rescueMaas+`","max_tokens":1500,"messages":[`+rescueSummary+`]}`)
+	if code != 200 || !slices.Equal(seen, []string{rescueMaas, "hy4free"}) {
+		t.Fatalf("compact: %d %s, models %v", code, out, seen)
+	}
+}
+
+func TestWorkBuddyCompactRescueNoPaidFallback(t *testing.T) {
+	fresh(t)
+	c := candidate{p: provider.Provider{ID: "sub2agent-workbuddy", Models: []string{rescueMaas, "hy4free", "Deepseek-V4-Flash"}}, model: rescueMaas}
+	body := []byte(`{"messages":[` + rescueSummary + `]}`)
+	if _, ok := workBuddyCompactRescue(c, KindCompact, 413, provider.Chat, body, []candidate{{p: c.p, model: "hy4free"}}); ok {
+		t.Fatal("must not insert a paid fallback after hy4free")
+	}
+	for _, proto := range []provider.Protocol{provider.Chat, provider.Responses, provider.Anthropic} {
+		high := []byte(`{"max_tokens":64000,"max_completion_tokens":64000,"max_output_tokens":64000}`)
+		if string(workBuddyCompactBudget(proto, high)) != string(high) {
+			t.Fatal("larger output budgets must be preserved")
+		}
 	}
 }

@@ -1,28 +1,19 @@
 # Gateway routing and fallback
 
-The Sub2Agent WorkBuddy provider has a compaction-only size fallback. When an
-Agent's recognized summary request to MaaS returns 413 (including the private
-resolver's normalized nested 413 or local byte guard), the gateway tries
-hy4free and then ordinary WorkBuddy Deepseek-V4-Flash on the same account.
-Each must be selected and allowed on that account and not known to be too
-small. Ordinary turns, 429s, authentication
-errors and other failures do not activate this path. It uses the existing
-compaction recognizer, retry trace, protocol conversion and usage records;
-Each summary attempt is billed under its actual model, while the requested model and
-main conversation affinity stay unchanged. Plugins' default model selections
-are read from the live served catalog rather than assumed to exist in the
-provider's explicit Models field. Compaction is verified on the original
-client body, before protocol conversion merges or rewrites its text blocks.
-Image fitting for MaaS and these rescue models is delegated to the private transport:
-these models have different byte limits and must not share a provider-wide
-learned image cap. The fallback receives the complete request.
-If rescue also fails, the existing error/fallback path applies without a cycle.
-No gateway-generated summary or hidden replacement of the Agent's history is
-performed. Both rescue transports accepted ~1.22 MB requests with three
-beginning/middle/end markers in upstream probes. Hy4free can exhaust an 8K
-native summary output budget entirely on reasoning; that empty result must
-reach the next candidate without becoming a valid summary. Tests cover this
-handoff. Other models are not guessed from their advertised token capacities.
+The Sub2Agent WorkBuddy provider has a compaction-only size fallback. A
+recognized MaaS compact request first runs on its original model. Only after
+413 does the gateway send the Agent's original summary prompt and complete
+history to hy4free on the same account. No DeepSeek fallback is inserted.
+Ordinary turns, 429, authentication errors and other failures do not trigger
+this path. Hy4free must be selected in the explicit list or live plugin catalog
+and allowed for the account. The main model and conversation affinity remain
+unchanged; trace and usage attribute the rescued summary to hy4free.
+Rescued summaries get at least 32,768 output tokens because smaller budgets
+exhausted hy4free's reasoning without producing a summary in native Claude
+Code probes. Larger requested budgets are preserved; ordinary request budgets
+are untouched. The gateway does not replace or rewrite conversation history.
+The private transport owns each model's byte budget, avoiding a shared learned
+image cap. Failure of hy4free follows the existing error path without a cycle.
 
 The internal cheap template prefers WorkBuddy's hy4free, then MaaS deployments,
 then other WorkBuddy models even when the managed relative-price service is

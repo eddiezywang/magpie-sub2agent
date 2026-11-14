@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tidwall/gjson"
 	"github.com/yetone/magpie/internal/provider"
 )
 
@@ -20,7 +21,7 @@ func workBuddyPrivateByteBudget(p provider.Provider, body []byte) bool {
 		return false
 	}
 	model := strings.ToLower(p.OwnModelID(modelOf(body)))
-	return strings.Contains(model, "-maas") || model == "hy4free" || model == "deepseek-v4-flash"
+	return strings.Contains(model, "-maas") || model == "hy4free"
 }
 
 func workBuddyRescueSelected(p provider.Provider, model string) bool {
@@ -44,10 +45,8 @@ func workBuddyCompactRescue(c candidate, kind string, status int, from provider.
 	if err != nil || !compacting(req) {
 		return candidate{}, false // a kind/header alone must not reroute a turn
 	}
-	// Both transports accepted >1 MiB in controlled upstream tests. Hy4
-	// can spend its entire output on reasoning under a native summary
-	// prompt, so keep a verified non-MaaS Flash behind it as well.
-	for _, model := range []string{"hy4free", "Deepseek-V4-Flash"} {
+	// Only hy4free may rescue a size-rejected MaaS compaction.
+	for _, model := range []string{"hy4free"} {
 		if !workBuddyRescueSelected(c.p, model) || !c.p.AccountServes(c.p.PluginAccountKey(), model) {
 			continue
 		}
@@ -65,4 +64,26 @@ func workBuddyCompactRescue(c candidate, kind string, status int, from provider.
 		}
 	}
 	return candidate{}, false
+}
+
+// Hy4free shares its output allowance between reasoning and the summary.
+// Small Agent budgets exhausted it on reasoning in native compact probes.
+// This floor is internal to rescued summaries, never ordinary inference.
+func workBuddyCompactBudget(from provider.Protocol, body []byte) []byte {
+	key := "max_tokens"
+	switch from {
+	case provider.Chat:
+		if gjson.GetBytes(body, "max_completion_tokens").Exists() {
+			key = "max_completion_tokens"
+		}
+	case provider.Responses:
+		key = "max_output_tokens"
+	case provider.Anthropic:
+	default:
+		return body
+	}
+	if gjson.GetBytes(body, key).Int() >= 32768 {
+		return body
+	}
+	return withFields(body, map[string]any{key: 32768})
 }
