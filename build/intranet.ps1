@@ -37,7 +37,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Asset packing failed' }
     go build -trimpath -buildvcs=false -ldflags='-s -w' -o internal/update/launcher-amd64.com ./internal/update/launcher
     if ($LASTEXITCODE -ne 0) { throw 'Console launcher build failed' }
-    go run github.com/tc-hib/go-winres@v0.3.3 make --in build/windows/winres.json --arch amd64 --out rsrc
+    go run github.com/tc-hib/go-winres@v0.3.3 make --in build/windows/winres-intranet.json --arch amd64 --out rsrc
     if ($LASTEXITCODE -ne 0) { throw 'Windows resources failed' }
     go build -tags $buildTags -trimpath -buildvcs=false "-ldflags=-s -w -H windowsgui -X main.version=$Version" -o (Join-Path $bundle 'sub2agent.exe') .
     if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }

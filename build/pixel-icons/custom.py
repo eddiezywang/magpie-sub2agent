@@ -1,6 +1,20 @@
 """Original internal marks, using the same 32px palette/outline as OmaPix."""
 from vendor.pix import Canvas
 
+def sub2agent():
+    c = Canvas()
+    # One connected, stepped S; highlights and a hard lower-right shade.
+    c.poly([(9,3),(25,3),(27,5),(27,10),(14,10),(14,12),
+            (23,16),(26,19),(26,24),(23,27),(6,27),(4,25),
+            (4,20),(17,20),(17,18),(9,14),(6,11),(6,6)], 'B')
+    c.hline(10,24,4,'b')
+    c.hline(7,16,21,'b')
+    c.hline(7,22,26,'6')
+    c.rect(25,6,26,9,'6')
+    c.hline(24,25,20,'6')
+    c.outline().finalize()
+    return c.rows()
+
 def tig():
     c = Canvas()
     # TIG's blue/cyan folded ribbon and its open central square.

@@ -1,5 +1,11 @@
 # GUI app shell
 
+Internal builds select `icons_intranet.go`: the header, EXE, window icon and
+tray share the pixel S from `build/pixel-icons/custom.py`. Regenerate native
+frames with `native.py`; `winres-intranet.json` embeds those same PNG frames.
+Upstream icons remain under `icons_default.go`. Internal tray clicks do not
+play bird frames. `TestInternalNativeBrand` checks frame identity and palette.
+
 The `intranet` distribution changes boot feature visibility and embedded assets;
 its exclusions and validation are in [internal build contracts](../intranet-build.md).
 The shell observes only plugin pages that are mounted. Settings also skips

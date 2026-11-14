@@ -55,22 +55,14 @@ def main():
     out = ROOT/'build/intranet/pixel-icons'
     out.mkdir(exist_ok=True)
     manifest = {}
-    product = sampled(raster['sub2agent.svg'])
-    # Retain the S silhouette, with a blue face and the same dark outline.
-    mark = Canvas()
-    for y in range(32):
-        for x in range(32):
-            if product[y*2][x*2] not in '.%':
-                mark.px(x, y, 'b' if y < 8 else ('6' if y > 23 else 'B'))
-    mark.outline().finalize()
-    product = double(mark.rows())
+    product = double(custom.sub2agent())
     for original in sorted((ROOT/'internal/gui/assets/icons').iterdir()):
         name = original.stem.removesuffix('-color')
         key = ALIASES.get(name, name)
         source = 'derived: '+original.name
         if name in ('sub2agent', 'magpie', 'favicon', 'icon-512', 'apple-touch-icon'):
             rows = product
-            source = 'derived: sub2agent.svg'
+            source = 'original: custom.py/sub2agent'
         elif name in ('tig', 'cib-zht'):
             rows = double(custom.tig() if name == 'tig' else custom.cib())
             source = 'original: custom.py/'+name
