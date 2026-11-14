@@ -26,6 +26,7 @@ export function workBuddyModelSet(bundle, ids) {
       const limit={...metadata.limit};
       limit.context=Math.min(limit.context || MAAS_WORKING_WINDOW,MAAS_WORKING_WINDOW);
       limit.input=Math.min(limit.input || MAAS_WORKING_WINDOW,limit.context,MAAS_WORKING_WINDOW);
+      limit.output=Math.min(limit.output || 32000,32000);
       metadata.limit=limit;
     }
     return [id,{name:id,...metadata}];

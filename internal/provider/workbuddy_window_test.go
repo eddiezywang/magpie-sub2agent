@@ -21,7 +21,7 @@ func TestWorkBuddyOperationalCompactWindow(t *testing.T) {
 			t.Fatal("explicit full-window preference must win")
 		}
 	}
-	for _, id := range []string{"other/glm-maas", "sub2agent-workbuddy/hy4free", "sub2agent-workbuddy/Deepseek-V4-Flash"} {
+	for _, id := range []string{"other/glm-maas", "sub2agent-workbuddy/hy4free", "sub2agent-workbuddy/auto-maas-fixture", "sub2agent-workbuddy/Deepseek-V4-Flash"} {
 		if got := workBuddyCompactWindow(id, mixed); got != 0 {
 			t.Fatalf("unrelated %s=%d", id, got)
 		}

@@ -31,5 +31,5 @@ func workBuddyCompactWindow(id string, find func(string) (Group, []Member, bool)
 }
 
 func workBuddyMaasModel(pid, model string) bool {
-	return pid == "sub2agent-workbuddy" && strings.Contains(strings.ToLower(model), "-maas")
+	return pid == "sub2agent-workbuddy" && !strings.HasPrefix(strings.ToLower(model), "auto-") && strings.Contains(strings.ToLower(model), "-maas")
 }

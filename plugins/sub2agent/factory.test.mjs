@@ -85,7 +85,7 @@ test('WorkBuddy mapped MaaS aliases retain snapshot capacity without an arbitrar
  const listed=await plugin.provider.models({models:{}},{auth});
  assert.equal(listed['tenant-alias'].limit.context,256000);
  assert.equal(listed['tenant-alias'].limit.input,256000);
- assert.ok(listed['tenant-alias'].limit.output>32000);
+ assert.equal(listed['tenant-alias'].limit.output,32000);
  assert.equal(listed.ordinary.limit.input,900000);
  assert.equal(listed['tenant-alias'].cost,undefined,'a safe context budget is not a pricing change');
 });
@@ -273,7 +273,7 @@ test('WorkBuddy fallback is listed once and hy4free is sent as the actual upstre
   const auth={access:JSON.stringify({userId:'u',enterpriseId:'e',models:['new-maas-tenant','small-maas-tenant','ordinary'],modelMetadata:{'small-maas-tenant':{limit:{context:64000,input:60000,output:4000}},ordinary:{limit:{context:1000000,input:900000,output:64000}}}})};
   const plugin=await createSub2AgentPlugin('workbuddy',{client},{fetchImpl:async()=>{throw new Error('offline fixture');}});
   const listed=await plugin.provider.models({models:{}},{auth});
-  assert.deepEqual(listed['new-maas-tenant'].limit,{context:256000,input:256000});
+  assert.deepEqual(listed['new-maas-tenant'].limit,{context:256000,input:256000,output:32000});
   assert.deepEqual(listed['small-maas-tenant'].limit,{context:64000,input:60000,output:4000});
   assert.equal(listed.ordinary.limit.input,900000);
   assert.equal(listed.hy4free.limit.input,960000);
