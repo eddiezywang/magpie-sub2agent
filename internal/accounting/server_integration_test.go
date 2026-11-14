@@ -28,7 +28,7 @@ func TestSenderAgainstRealSummaryServer(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	cmd := proc.CommandContext(ctx, node, "-e", `const {createUsageServer}=require(process.argv[1]);const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:process.argv[2]});app.start().then(p=>console.log(p));`, source, t.TempDir())
+	cmd := proc.CommandContext(ctx, node, "-e", `const {createUsageServer}=require(process.argv[1]);const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:process.argv[2],billingSigningKey:'11'.repeat(32)});app.start().then(p=>console.log(p));`, source, t.TempDir())
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +80,14 @@ func TestSenderAgainstRealSummaryServer(t *testing.T) {
 			t.Fatalf("real server acknowledgement: %v %v", ack, err)
 		}
 	}
-	res, err = http.Get(base + "/reports/fixture-user/daily.json?date=" + at.Format("2006-01-02"))
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/reports/fixture-user/daily.json?date="+at.Format("2006-01-02"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = SignBillingRequest(request, strings.Repeat("11", 32), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	res, err = http.DefaultClient.Do(request)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -121,3 +121,8 @@ Deployment status and real production verification are recorded separately.
 Run `go test ./internal/accounting`. No tests reach a real telemetry endpoint.
 
 Migration design: [minute-summary contract](../proposals/minute-usage.md), which supersedes the per-request transport in the older [server billing proposal](../proposals/server-billing.md).
+
+
+## Signed billing queries
+
+`/users` and `/reports/<user>/{daily,weekly}.{json,svg,png}` require HMAC-SHA256 over the HTTP method, exact request target, millisecond timestamp and a 16-byte random nonce. The server rejects requests outside a five-minute clock window, bad signatures, replays and requests without a configured key; its bounded replay cache is shared by both listeners and resets on restart. `/healthz`, usage ingestion, aggregation rules, and legacy telemetry retain their prior contracts. Admin endpoints retain their separate admin token. The client obtains the key only at build time from an administrator-controlled file; the server reads the same key from a restricted file. The browser gets neither the key nor the upstream signature: `GET /api/accounting/report` proxies only the local OS user's daily or weekly report. An embedded shared key is extractable and does not establish user identity or protect against a user with access to an app binary; transport encryption and per-user authorization would be needed for stronger protection. See `internal/accounting/billing_auth.go` and `services/usage-server/src/billing-auth.js`.

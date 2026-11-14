@@ -43,6 +43,12 @@ const DEFAULT_PORT = 17890;
 const DEFAULT_KEEP_DAYS = 400;
 const DEFAULT_MAX_BODY_BYTES = 2 * 1024 * 1024; // 200-event batches are ~100KB.
 
+const { billingVerifier } = require('./billing-auth');
+const fs = require('node:fs');
+function billingKeyFromFile() {
+ try { return fs.readFileSync(process.env.USAGE_SERVER_BILLING_KEY_FILE, 'utf8').trim(); } catch { return ''; }
+}
+
 function createUsageServer(options = {}) {
   const {
     // Legacy python collector's env names are still honored so this service
@@ -54,6 +60,7 @@ function createUsageServer(options = {}) {
       path.resolve(__dirname, '..', 'data'),
     token = process.env.USAGE_SERVER_TOKEN || '',
     adminToken = process.env.USAGE_SERVER_ADMIN_TOKEN || '',
+    billingSigningKey = billingKeyFromFile(),
     keepDays = Number(process.env.USAGE_SERVER_KEEP_DAYS) || DEFAULT_KEEP_DAYS,
     telemetryKeepDays = Number(process.env.USAGE_SERVER_TELEMETRY_KEEP_DAYS) || 90,
     logDir = process.env.USAGE_SERVER_LOG_DIR || process.env.TELEMETRY_LOG_DIR || path.join(dataDir, 'logs'),
@@ -66,6 +73,7 @@ function createUsageServer(options = {}) {
     logger = null,
   } = options;
 
+  const verifyBilling = billingVerifier(billingSigningKey, () => now().getTime());
   const legacyStore = createUsageStore({ dataDir, keepDays, now });
   const summaries = createSummaryStore({dataDir,keepDays,now});
   const store = withSummaries(legacyStore,summaries);
@@ -400,6 +408,7 @@ function createUsageServer(options = {}) {
       return;
     }
     if (pathname === '/users' && req.method === 'GET') {
+      if (!verifyBilling(req)) { sendJson(res, 401, {error:'unauthorized'}); return; }
       sendJson(res, 200, { users: store.users() });
       return;
     }
@@ -409,6 +418,7 @@ function createUsageServer(options = {}) {
     }
     const reportMatch = /^\/reports\/([^/]+)\/(daily|weekly)\.(json|svg|png)$/.exec(pathname);
     if (reportMatch && req.method === 'GET') {
+      if (!verifyBilling(req)) { sendJson(res, 401, {error:'unauthorized'}); return; }
       handleReport(req, res, url, reportMatch[1], `${reportMatch[2]}.${reportMatch[3]}`);
       return;
     }

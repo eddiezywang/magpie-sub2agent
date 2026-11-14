@@ -77,3 +77,7 @@ manifest) and retain the MIT notice from `build/pixel-icons/vendor/LICENSE`.
 Pixel SVGs keep their original palette and crisp edges in receipts; traditional
 SVGs retain the existing monochrome/two-tone rendering. PNG fallbacks remain
 available, while generated SVG counterparts are preferred by the renderer.
+
+## Signed report access
+
+The service reads a 64-character lowercase hex HMAC key from the root-owned file named by `USAGE_SERVER_BILLING_KEY_FILE`. Missing or invalid keys fail closed for `/users` and `/reports/...`; the ingestion and legacy telemetry endpoints are unchanged. The application must be built with the corresponding key file using `build/intranet.ps1 -BillingKeyFile <path>`. See the accounting subsystem reference for the signature format, replay behavior and shared-key limitations. Do not put the key in the repository, logs, URLs or screenshots.
