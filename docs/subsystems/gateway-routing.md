@@ -1,5 +1,20 @@
 # Gateway routing and fallback
 
+The Sub2Agent WorkBuddy provider has a compaction-only size fallback. When an
+Agent's recognized summary request to MaaS returns 413 (including the private
+resolver's normalized nested 413 or local byte guard), the gateway tries
+hy4free on the same account once. It must be selected and allowed on that
+account and not known to be too small. Ordinary turns, 429s, authentication
+errors and other failures do not activate this path. It uses the existing
+compaction recognizer, retry trace, protocol conversion and usage records;
+hy4free is the billed model for the summary, while the requested model and
+main conversation affinity stay unchanged. Image fitting is bypassed for
+these WorkBuddy compactions so the fallback receives the complete request.
+If rescue also fails, the existing error/fallback path applies without a cycle.
+No gateway-generated summary or hidden replacement of the Agent's history is
+performed. Only hy4free has been verified as a rescue transport; other models
+are not guessed from their advertised token capacities.
+
 The internal cheap template prefers WorkBuddy's hy4free, then MaaS deployments,
 then other WorkBuddy models even when the managed relative-price service is
 unreachable. This is an offline ordering preference, not a free-price or balance

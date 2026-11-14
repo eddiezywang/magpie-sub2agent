@@ -3697,7 +3697,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 		// agent has the headers of already is held, to be told in it
 		pass := c.p.PassesErrors()
 		hw := newHoldWriter(w, kept.sent || !pass && (!last || again < max(lastRetries, rateRetries) || other != nil || autoPicks(c) && repicked < 2 ||
-			patience > 0 && rounds < replanRounds && (waitFrom.IsZero() || time.Since(waitFrom) < patience) || wantWhole))
+			patience > 0 && rounds < replanRounds && (waitFrom.IsZero() || time.Since(waitFrom) < patience) || wantWhole || workBuddyMaasCompaction(c, call.Kind)))
 		// a compaction's summary is held to its end, for a cut or an
 		// error halfway to go to the next candidate (#2274)
 		hw.wantWhole = wantWhole && !pass
@@ -4726,6 +4726,17 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 				break
 			}
 		}
+		if !hw.passing && !hw.refused {
+			if rescue, ok := workBuddyCompactRescue(c, call.Kind, hw.code(), from, attemptBody, cands[:i+1]); ok {
+				// Add it only after an actual size rejection, ahead of other
+				// fallbacks. Keep the normal trace, usage and protocol path.
+				left := slices.DeleteFunc(slices.Clone(cands[i+1:]), func(x candidate) bool {
+					return x.p.ID == rescue.p.ID && x.who() == rescue.who() && x.model == rescue.model
+				})
+				cands = append(append(slices.Clip(cands[:i+1]), rescue), left...)
+				last = false
+			}
+		}
 		if !last && !hw.passing && !hw.refused && (hw.code() == http.StatusRequestEntityTooLarge || overflowed(hw.code(), hw.errBody())) {
 			// too long for this member's model, and as long on every
 			// account of it, but another member — another model, or this
@@ -5390,7 +5401,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 			// there is (imwhatiam123 on Discord: Stays: Strict moved a
 			// session from Qoder CN to WorkBuddy AI after a reply broke
 			// off, the stick gone and the retry routed as a new one)
-			if (hit == nil || !hit.Compact) && aff.Why != "strict" {
+			if (hit == nil || !hit.Compact) && !c.compactRescue && aff.Why != "strict" {
 				unanswered(stuck, c)
 			}
 			if hw.looped != "" {
@@ -5436,7 +5447,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 			noteTrySpeed(c, try, call.Usage.Output, call.Usage.Reasoning, ended)
 			// a compaction a rule sent to a model of its own leaves the
 			// conversation, and the turn's size, where they were
-			if hit == nil || !hit.Compact {
+			if (hit == nil || !hit.Compact) && !c.compactRescue {
 				answeredStanding(stuck, c, aff.Turn, call.Usage, standsInFor(c, plannedCs, plannedOrder))
 				// what it answered, it holds: whatever it refused as too
 				// long on the way is forgotten (#3453)
