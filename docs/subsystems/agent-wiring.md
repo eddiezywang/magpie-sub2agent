@@ -452,3 +452,11 @@ The internal browser page does not apply the server-only gateway-mode veto to
 local session discovery. The existing per-agent session-read permissions still
 apply. Codex session discovery is independent of whether its inference endpoint
 is configured for this gateway.
+
+For WorkBuddy MaaS, the default operational compact budget is 224,000 tokens
+(`provider.WorkBuddyCompactWindow`). Claude Code writes it through its existing
+per-model/default planning; Codex reads it through `provider.CompactFor`.
+Explicit user thresholds, user windows and full-context preferences keep the
+same precedence. Other agents read the provider's 256,000 working window and
+retain their own compaction scheduling. This recommendation does not guarantee
+that byte-heavy tool output fits the independent request-body cap.

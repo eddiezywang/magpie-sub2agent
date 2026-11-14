@@ -690,3 +690,14 @@ through the real provider loader with missing and reported usage. Gateway
 `TestChatTranslationKeepsUsageAfterFinish` covers final Responses counters.
 
 The intranet baseline includes the twelve retired Magpie community subscription plugins from the pinned community checkout. They start disabled, preserve user enablement, and share package identities with the intranet marketplace. Their manifest icon names resolve to the packaged pixel artwork. Native API presets and subscriptions still in core are not included in this baseline.
+
+WorkBuddy 1.0.7 advertises a transport-aware working context/input window of
+at most 256,000 tokens for MaaS deployments, including mapped aliases and
+unknown non-Auto deployments. Smaller discovered limits and ordinary models
+(including hy4free) remain unchanged. Raw discovery/snapshot metadata is kept
+separately; this is an operational window, not a newly claimed vendor limit.
+The observed ~1 MiB transport cap cannot be expressed exactly in tokens.
+Default Claude Code/Codex compact thresholds are 224,000 for MaaS and groups
+containing it, leaving room for turn growth and summary overhead. Existing
+user windows/thresholds and full-context preferences retain their precedence.
+The compact-413 hy4free rescue remains a separate second layer.

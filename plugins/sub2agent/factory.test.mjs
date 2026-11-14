@@ -66,7 +66,7 @@ test('WorkBuddy keeps model capacity separate from transport size and coalesces 
  const [a,b]=await Promise.all([plugin.provider.models({models:{}},{auth}),plugin.provider.models({models:{}},{auth})]);
  assert.equal(calls,2,'one pair of discovery requests per account');
  assert.deepEqual(a,b);
- assert.deepEqual(a['glm-5.3-flash-maas-fixture'].limit,{context:1000000,input:300000,output:32000});
+ assert.deepEqual(a['glm-5.3-flash-maas-fixture'].limit,{context:256000,input:256000,output:32000});
  assert.equal(a['GLM-5.0-Turbo'].limit.input,180000);
  assert.equal(a.hy4free.limit.input,960000);
  assert.equal(a.hy4free.limit.output,64000);
@@ -76,14 +76,15 @@ test('WorkBuddy keeps model capacity separate from transport size and coalesces 
  await plugin.provider.models({models:{}},{auth:other});assert.equal(calls,4,'accounts must not share tenant limits');
  offline=true;now=6*60_000;
  const retained=await plugin.provider.models({models:{}},{auth});
- assert.equal(retained['glm-5.3-flash-maas-fixture'].limit.input,300000,'outage retains the last discovered limit');
+ assert.equal(retained['glm-5.3-flash-maas-fixture'].limit.input,256000,'outage retains the last discovered limit');
 });
 
 test('WorkBuddy mapped MaaS aliases retain snapshot capacity without an arbitrary token clamp',async()=>{
  const auth={access:JSON.stringify({userId:'u',enterpriseId:'e',models:['tenant-alias','ordinary'],modelMap:{'tenant-alias':'glm-5.3-maas-tenant'},modelMetadata:{ordinary:{limit:{context:1000000,input:900000,output:64000}}}})};
  const plugin=await createSub2AgentPlugin('workbuddy',{client},{fetchImpl:async()=>{throw new Error('offline fixture');}});
  const listed=await plugin.provider.models({models:{}},{auth});
- assert.ok(listed['tenant-alias'].limit.context>132000);
+ assert.equal(listed['tenant-alias'].limit.context,256000);
+ assert.equal(listed['tenant-alias'].limit.input,256000);
  assert.ok(listed['tenant-alias'].limit.output>32000);
  assert.equal(listed.ordinary.limit.input,900000);
  assert.equal(listed['tenant-alias'].cost,undefined,'a safe context budget is not a pricing change');
@@ -267,3 +268,13 @@ test('WorkBuddy fallback is listed once and hy4free is sent as the actual upstre
  const duplicate={...auth,access:JSON.stringify({...readBundle(auth),models:['hy4free','hy4free','Enterprise Model']})};
  assert.equal(Object.keys(await plugin.provider.models({models:{}},{auth:duplicate})).filter(id=>id==='hy4free').length,1);
 });
+
+ test('MaaS working windows cap unknown deployments without widening smaller limits',async()=>{
+  const auth={access:JSON.stringify({userId:'u',enterpriseId:'e',models:['new-maas-tenant','small-maas-tenant','ordinary'],modelMetadata:{'small-maas-tenant':{limit:{context:64000,input:60000,output:4000}},ordinary:{limit:{context:1000000,input:900000,output:64000}}}})};
+  const plugin=await createSub2AgentPlugin('workbuddy',{client},{fetchImpl:async()=>{throw new Error('offline fixture');}});
+  const listed=await plugin.provider.models({models:{}},{auth});
+  assert.deepEqual(listed['new-maas-tenant'].limit,{context:256000,input:256000});
+  assert.deepEqual(listed['small-maas-tenant'].limit,{context:64000,input:60000,output:4000});
+  assert.equal(listed.ordinary.limit.input,900000);
+  assert.equal(listed.hy4free.limit.input,960000);
+ });

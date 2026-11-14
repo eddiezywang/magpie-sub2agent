@@ -11,7 +11,7 @@ const require=createRequire(path.join(source,'package.json'));
 const {build}=require('esbuild');
 const output=path.join(repo,'build/sub2agent-runtime');
 await fs.mkdir(output,{recursive:true});
-const version=process.env.SUB2AGENT_PROVIDER_VERSION||'1.0.6';
+const version=process.env.SUB2AGENT_PROVIDER_VERSION||'1.0.7';
 for(const kind of ['codebuddy','workbuddy','trae','aiep']) {
   await build({entryPoints:[path.join(repo,'plugins/sub2agent/'+kind+'.mjs')],bundle:true,platform:'node',format:'esm',
     outfile:path.join(output,kind,'index.js'),banner:{js:'import {createRequire as __createRequire} from "node:module";const require=__createRequire(import.meta.url);'},

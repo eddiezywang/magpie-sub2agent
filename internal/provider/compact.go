@@ -56,6 +56,14 @@ func CompactFor(s settings.Settings, e Entry, find func(string) (Group, []Member
 	if e.WindowSet && s.CompactAt == 0 {
 		return e.Context
 	}
+	if s.CompactAt == 0 && !s.FullContext {
+		if n := workBuddyCompactWindow(e.ID, find); n > 0 {
+			if e.Context > 0 {
+				n = min(n, e.Context)
+			}
+			return n
+		}
+	}
 	return 0
 }
 

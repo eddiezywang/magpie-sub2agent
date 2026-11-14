@@ -2,6 +2,9 @@ import {createWorkBuddySubscriptionAdapter} from 'sub2agent/core/source-adapters
 import snapshot from 'sub2agent/generated/codebuddy-models.json';
 
 const positive = value => Number.isSafeInteger(value) && value >= 512 ? value : undefined;
+// Measured ~1 MiB MaaS transport: advertise a working window, not the
+// underlying model's 1M-token capacity. Raw discovery stays in the bundle.
+const MAAS_WORKING_WINDOW = 256000;
 const base = id => String(id).toLowerCase().replace(/-maas(?:-[a-z0-9_.-]+)?$/, '');
 
 // Preserve the vendor's input cap separately from its full window. Never copy
@@ -19,6 +22,12 @@ export function workBuddyModelSet(bundle, ids) {
     const row=fallback.get(base(upstream)) || fallback.get(base(id));
     const saved=bundle.modelMetadata?.[id];
     const metadata={...modelMetadata(row),...(saved?.limit?{limit:{...modelMetadata(row).limit,...saved.limit}}:{})};
+    if ([upstream,id].some(name=>/-maas(?:-|\||$)/i.test(name)) && !/^auto(?:-|$)/i.test(id)) {
+      const limit={...metadata.limit};
+      limit.context=Math.min(limit.context || MAAS_WORKING_WINDOW,MAAS_WORKING_WINDOW);
+      limit.input=Math.min(limit.input || MAAS_WORKING_WINDOW,limit.context,MAAS_WORKING_WINDOW);
+      metadata.limit=limit;
+    }
     return [id,{name:id,...metadata}];
   }));
 }
