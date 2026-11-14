@@ -395,14 +395,14 @@ function icon(name, lazy) {
   // a URL: the server keeps pictures (file:…), never the page
   if (/[:/]/.test(name)) return icon("generic");
   if (name) {
-    if (name.endsWith("-color") || pngIcons.has(name)) {
+    if (intranet || name.endsWith("-color") || pngIcons.has(name)) {
       const img = el("img");
       if (lazy) img.loading = "lazy";
       img.src = `icons/${name}.${pngIcons.has(name) ? "png" : "svg"}`;
       img.alt = "";
       img.draggable = false;
       e.append(img);
-      toneCheck(img);
+      if (!intranet) toneCheck(img);
     } else {
       // a mask that fails to load draws nothing, and says nothing
       e.append(maskSpan(`icons/${name}.svg`, () => {

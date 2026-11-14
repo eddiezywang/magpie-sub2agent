@@ -32,5 +32,5 @@ func internalIndex(b []byte) []byte {
 			out = append(out, line)
 		}
 	}
-	return []byte(strings.Replace(strings.Join(out, "\n"), "</head>", `<style>#view-settings>:not(#internalSettings),#barkRow,#barkDailyRow,#updateProxyRow,#updateSourceRow,#update,#updateHide,.pm-mirror,#maskDemo,#birdRow,#setTab-sync{display:none!important}.logo img{object-fit:contain}html[data-theme=dark] .logo img{filter:invert(1)}</style></head>`, 1))
+	return []byte(strings.Replace(strings.Join(out, "\n"), "</head>", `<style>#view-settings>:not(#internalSettings),#barkRow,#barkDailyRow,#updateProxyRow,#updateSourceRow,#update,#updateHide,.pm-mirror,#maskDemo,#birdRow,#setTab-sync{display:none!important}.logo img{object-fit:contain}.ic>img{image-rendering:pixelated;width:100%!important;height:100%!important}.logo img{image-rendering:pixelated}</style></head>`, 1))
 }

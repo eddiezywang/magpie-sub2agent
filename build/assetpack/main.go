@@ -76,6 +76,9 @@ func pack(dir, out string) error {
 	zw := zip.NewWriter(f)
 	for _, n := range names {
 		b, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(n)))
+		if err == nil && distribution.Internal && strings.HasPrefix(n, "icons/") {
+			b, err = os.ReadFile(filepath.Join(dir, "..", "..", "..", "build", "intranet", "pixel-icons", strings.TrimPrefix(n, "icons/")))
+		}
 		if err == nil && distribution.Internal && n == "index.html" {
 			b = internalIndex(b)
 		}
