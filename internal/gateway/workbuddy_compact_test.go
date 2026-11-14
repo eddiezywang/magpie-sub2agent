@@ -128,3 +128,36 @@ func TestWorkBuddyCompactRescueGateway(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkBuddyCompactRescueReasoningOnly(t *testing.T) {
+	fresh(t)
+	var seen []string
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var ask struct {
+			Model string `json:"model"`
+		}
+		json.NewDecoder(r.Body).Decode(&ask)
+		seen = append(seen, ask.Model)
+		if ask.Model == rescueMaas {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(413)
+			io.WriteString(w, `{"error":{"type":"request_too_large","message":"body too large"}}`)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		if ask.Model == "hy4free" {
+			io.WriteString(w, `data: {"choices":[{"index":0,"delta":{"reasoning_content":"analysis only"},"finish_reason":null}]}`+"\n\n"+`data: {"choices":[{"index":0,"delta":{},"finish_reason":"length"}],"usage":{"prompt_tokens":100,"completion_tokens":4096}}`+"\n\ndata: [DONE]\n\n")
+			return
+		}
+		io.WriteString(w, chatStreamSaid("ORCHID-7429"))
+	}))
+	defer up.Close()
+	if err := provider.Save(provider.Provider{ID: "sub2agent-workbuddy", Name: "WorkBuddy", Key: "fixture", Chat: up.URL + "/v1", Models: []string{rescueMaas, "hy4free", "Deepseek-V4-Flash"}}); err != nil {
+		t.Fatal(err)
+	}
+	s := New()
+	code, out := postAs(t, s, "rescue-reasoning", `{"model":"sub2agent-workbuddy/`+rescueMaas+`","stream":true,"max_tokens":4096,"messages":[`+rescueSummary+`]}`)
+	if code != 200 || !strings.Contains(out, "ORCHID-7429") || !slices.Equal(seen, []string{rescueMaas, "hy4free", "Deepseek-V4-Flash"}) {
+		t.Fatalf("reasoning-only rescue: %d %s, models %v, route %+v", code, out, seen, lastRoute(s))
+	}
+}

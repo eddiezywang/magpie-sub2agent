@@ -4726,14 +4726,25 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 				break
 			}
 		}
-		if !hw.passing && !hw.refused {
-			if rescue, ok := workBuddyCompactRescue(c, call.Kind, hw.code(), from, plain, cands[:i+1]); ok {
+		if !hw.passing && !hw.refused && hw.code() == http.StatusRequestEntityTooLarge && workBuddyMaasCompaction(c, call.Kind) {
+			var rescues []candidate
+			tried := slices.Clone(cands[:i+1])
+			for range 2 {
+				rescue, ok := workBuddyCompactRescue(c, call.Kind, hw.code(), from, plain, tried)
+				if !ok {
+					break
+				}
+				rescues, tried = append(rescues, rescue), append(tried, rescue)
+			}
+			if len(rescues) > 0 {
 				// Add it only after an actual size rejection, ahead of other
 				// fallbacks. Keep the normal trace, usage and protocol path.
 				left := slices.DeleteFunc(slices.Clone(cands[i+1:]), func(x candidate) bool {
-					return x.p.ID == rescue.p.ID && x.who() == rescue.who() && x.model == rescue.model
+					return slices.ContainsFunc(rescues, func(rescue candidate) bool {
+						return x.p.ID == rescue.p.ID && x.who() == rescue.who() && x.model == rescue.model
+					})
 				})
-				cands = append(append(slices.Clip(cands[:i+1]), rescue), left...)
+				cands = append(append(slices.Clip(cands[:i+1]), rescues...), left...)
 				last = false
 			}
 		}
