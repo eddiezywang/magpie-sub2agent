@@ -13,7 +13,7 @@ export function intranetMarket({status: s, loading: marketLoading, listings, que
     if (s && s.state !== "online") {
       const reasons = {
         timeout: "Connection timed out. The server did not respond within 6 seconds. Check your intranet or VPN connection, then retry.",
-        refused: "The server refused the connection. Ask the administrator to check the plugin service and port 80.",
+        refused: "The server refused the connection. Ask the administrator to check the plugin service and port 18989.",
         dns: "The server address could not be resolved. Check your network configuration, then retry.",
         http: s.httpStatus === 404 ? "The server is reachable, but the plugin directory is missing (HTTP 404). Ask the administrator to deploy the marketplace." : "The server returned HTTP {code}. Retry later or ask the administrator to check the plugin service.",
         invalid: "The server returned an invalid plugin directory. Ask the administrator to check registry.json.",

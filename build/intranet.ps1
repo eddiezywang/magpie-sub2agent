@@ -3,10 +3,15 @@ param(
     [string]$OutputRoot = '',
     [string]$Version = '0.1.3913-sub2agent.1',
     [string]$Sub2AgentSource = '',
+    [string]$BillingKeyFile = '',
     [switch]$WithoutBun,
     [switch]$SingleFile
 )
 $ErrorActionPreference = 'Stop'
+if (!$BillingKeyFile) { $BillingKeyFile = Join-Path (Split-Path -Parent $PSScriptRoot) '..\.build-tools\sub2agent-billing-key\report-key.txt' }
+if (!(Test-Path -LiteralPath $BillingKeyFile -PathType Leaf)) { throw 'Billing signing key file is required' }
+$billingSigningKey = (Get-Content -LiteralPath $BillingKeyFile -Raw).Trim()
+if ($billingSigningKey -cnotmatch '^[0-9a-f]{64}$') { throw 'Billing signing key must be 32 bytes as lowercase hex' }
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if (!$OutputRoot) { $OutputRoot = Join-Path (Split-Path -Parent $repoRoot) 'magpie-builds' }
 $OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
@@ -39,7 +44,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Console launcher build failed' }
     go run github.com/tc-hib/go-winres@v0.3.3 make --in build/windows/winres-intranet.json --arch amd64 --out rsrc
     if ($LASTEXITCODE -ne 0) { throw 'Windows resources failed' }
-    go build -tags $buildTags -trimpath -buildvcs=false "-ldflags=-s -w -H windowsgui -X main.version=$Version" -o (Join-Path $bundle 'sub2agent.exe') .
+    go build -tags $buildTags -trimpath -buildvcs=false "-ldflags=-s -w -H windowsgui -X main.version=$Version -X github.com/yetone/magpie/internal/accounting.reportSigningKey=$billingSigningKey" -o (Join-Path $bundle 'sub2agent.exe') .
     if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     if (!$SingleFile) {

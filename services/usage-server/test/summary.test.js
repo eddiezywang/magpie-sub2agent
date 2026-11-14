@@ -4,7 +4,10 @@ const {test:nodeTest}=require('node:test');
 const test=(name,run)=>nodeTest(name,async()=>{const cleanup=[];try{await run({after:f=>cleanup.push(f)});}finally{for(const f of cleanup.reverse())await f();}});
 const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');
 const http=require('node:http');
-const fetch=(url,options={})=>new Promise((resolve,reject)=>{const req=http.request(url,{method:options.method||'GET',headers:options.headers},res=>{let body='';res.setEncoding('utf8');res.on('data',s=>body+=s);res.on('end',()=>resolve({status:res.statusCode,text:async()=>body,json:async()=>JSON.parse(body)}));});req.on('error',reject);req.end(options.body);});
+const crypto=require('node:crypto');
+const billingKey='11'.repeat(32);
+function signedHeaders(target, now) { const u=new URL(target); const ts=String(now.getTime()), nonce=crypto.randomBytes(16).toString('hex'); const data=`sub2agent-billing-v1\nGET\n${u.pathname}${u.search}\n${ts}\n${nonce}`; return {'x-sub2agent-timestamp':ts,'x-sub2agent-nonce':nonce,'x-sub2agent-signature':crypto.createHmac('sha256',Buffer.from(billingKey,'hex')).update(data).digest('hex')}; }
+const fetch=(url,options={})=>new Promise((resolve,reject)=>{const req=http.request(url,{method:options.method||'GET',headers:options.headers || (/\/(reports\/|users(?:\?|$))/.test(url) ? signedHeaders(url,fixed()) : undefined)},res=>{let body='';res.setEncoding('utf8');res.on('data',s=>body+=s);res.on('end',()=>resolve({status:res.statusCode,text:async()=>body,json:async()=>JSON.parse(body)}));});req.on('error',reject);req.end(options.body);});
 const {createSummaryStore,SCHEMA,counters}=require('../src/summary-store');
 const {renderReportCardSvg}=require('../src/card');
 const {hitRate}=require('../src/magpie-day');
@@ -75,7 +78,7 @@ test('server pricing keeps points separate, applies China weekday time and promo
  assert.equal(billing.charge(g,summary().minute).reason,'context_rules_changed');
 });
 test('real HTTP accepts explicit IDs, preserves old telemetry and generates weighted reports across devices',async t=>{
- const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:temp(t),now:fixed,adminToken:'fixture-admin'});
+ const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:temp(t),now:fixed,billingSigningKey:billingKey,adminToken:'fixture-admin'});
  const port=await app.start();t.after(()=>app.stop());const base='http://127.0.0.1:'+port;
  const post=async(body,url='/usage/events')=>{const r=await fetch(base+url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});return {status:r.status,body:await r.json()};};
  assert.deepEqual((await fetch(base+'/healthz').then(r=>r.json())).usage_schemas,[SCHEMA]);
@@ -128,7 +131,7 @@ test('maker pricing preserves cache accounting and never applies request-size ti
 });
 
 test('HTTP legacy receipt shows CNY model valuation and keeps the exchange rate server-maintained',async t=>{
- const dataDir=temp(t);const app=createUsageServer({host:'127.0.0.1',port:0,dataDir,now:fixed,adminToken:'fixture-admin'});
+ const dataDir=temp(t);const app=createUsageServer({host:'127.0.0.1',port:0,dataDir,now:fixed,billingSigningKey:billingKey,adminToken:'fixture-admin'});
  const port=await app.start();t.after(()=>app.stop());const base='http://127.0.0.1:'+port;
  const g={...group(),provider:'legacy-fixture',model:'glm-5.3-flash-zp',context_tier:'unclassified',rules_revision:''};
  const post=await fetch(base+'/usage/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({schema:SCHEMA,...identity,summaries:[summary('legacy',g)]})});assert.equal(post.status,200);
@@ -147,6 +150,6 @@ test('HTTP legacy receipt shows CNY model valuation and keeps the exchange rate 
 
 test('additional listener shares summary deduplication and closes with the service',async t=>{
  const net=require('node:net');const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const aliasPort=probe.address().port;await new Promise(r=>probe.close(r));
- const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:temp(t),now:fixed});await app.start();t.after(()=>app.stop());
+ const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:temp(t),now:fixed,billingSigningKey:billingKey});await app.start();t.after(()=>app.stop());
  await app.listenAlias(aliasPort);assert.equal((await fetch('http://127.0.0.1:'+aliasPort+'/healthz')).status,200);
 });

@@ -11,4 +11,4 @@ for name in workbuddy aiep codebuddy trae native-api community-antigravity commu
     --root /opt/sub2agent-plugin-market/www --plugin "$plugin" \
     --version "$version" --summary "内部维护的 $name 插件"
 done
-"$python_bin" /opt/sub2agent-plugin-market/bin/check.py --base http://127.0.0.1
+"$python_bin" /opt/sub2agent-plugin-market/bin/check.py --base http://127.0.0.1:18989

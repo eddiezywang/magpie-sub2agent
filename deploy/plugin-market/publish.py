@@ -98,7 +98,7 @@ def publish(root, plugin, version, summary):
     lock.mkdir()  # refuse concurrent publication rather than losing entries
     try:
         catalog = json.loads(catalog_path.read_text('utf-8')) if catalog_path.exists() else {'version': 1, 'plugins': []}
-        artifact = {'version': version, 'url': f'http://172.21.0.177/magpie/plugins/dist/{digest}.zip', 'sha256': digest, 'bytes': len(data)}
+        artifact = {'version': version, 'url': f'http://172.21.0.177:18989/magpie/plugins/dist/{digest}.zip', 'sha256': digest, 'bytes': len(data)}
         presentation = manifest.get('magpie', {})
         entry = {'package': name, 'name': presentation.get('name') or presentation.get('page', {}).get('title') or name, 'summary': {'zh': summary, 'en': manifest.get('description', summary)}, 'bundle': artifact}
         if presentation.get('icon'):

@@ -23,7 +23,7 @@ for (const engine of ['chromium', 'webkit']) test(engine + ': intranet market re
       if(u.pathname==='/api/settings') return json({lang:'zh',theme,redact:true,redactPersonal:true,redactModel:true});
       if(u.pathname==='/api/privacy-model') {maskingReads++;return json({});}
       if(u.pathname==='/api/providers') return json({providers:[],presets:[],excluded:[],gateway:{}});
-      if(u.pathname==='/api/plugins') return json({bun:true,plugins:[],registry:{url:'http://172.21.0.177/npm'}});
+      if(u.pathname==='/api/plugins') return json({bun:true,plugins:[],registry:{url:'http://172.21.0.177:18989/npm'}});
       if(u.pathname==='/api/plugins/listings') {
         replies++;
         if(replies===1) return json({listings:[],market:{state:'unavailable',reason:'timeout'}});

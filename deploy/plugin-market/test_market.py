@@ -55,6 +55,7 @@ class MarketTests(unittest.TestCase):
             (plugin / 'credentials.json').write_text('must not publish')
             first = publish(root, plugin, '1.0.0', 'Test plugin')
             self.assertEqual(first['icon'], 'kiro-color')
+            self.assertTrue(first['bundle']['url'].startswith('http://172.21.0.177:18989/'))
             artifact = root / 'magpie/plugins/dist' / (first['bundle']['sha256'] + '.zip')
             self.assertEqual(hashlib.sha256(artifact.read_bytes()).hexdigest(), first['bundle']['sha256'])
             with zipfile.ZipFile(io.BytesIO(artifact.read_bytes())) as archive:
