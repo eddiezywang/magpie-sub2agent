@@ -1,6 +1,7 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'../internal/gui/assets');
 const internalIcons=path.resolve(__dirname,'intranet/pixel-icons');
+const port=process.env.RETRO_PREVIEW_PORT?Number(process.env.RETRO_PREVIEW_PORT):4178;
 const settings={lang:'zh',theme:'light',web:true,intranet:true,version:'preview',port:8989,featuresOff:['library','middleware','otel','redact','search','tools','warmups']};
 const providers=[{id:'demo-workbuddy',name:'WorkBuddy 企业（示例）',on:true,kind:'subscription',agents:[],models:[{id:'glm-demo',name:'GLM 演示',on:true}],key:{set:false},account:{user:'demo@example.test',agentName:'WorkBuddy 企业',plan:'演示',logins:[{user:'demo@example.test',plan:'演示',on:true,active:true}]}},{id:'demo-codebuddy',name:'CodeBuddy（示例）',host:'codebuddy.example.test',on:true,agents:[],models:[],key:{set:false}},{id:'demo-api',name:'自定义 API（示例）',host:'api.example.test',on:true,agents:[],models:[],key:{set:false}}];
 let version=Date.now(), pageVersion=version;
@@ -19,4 +20,4 @@ const rel=u.pathname==='/'?'index.html':decodeURIComponent(u.pathname).replace(/
 // Match the intranet asset pack, which substitutes its pixel icon directory.
 if(rel.startsWith('icons/')){const icon=path.resolve(internalIcons,rel.slice(6));if(icon.startsWith(internalIcons+path.sep)){fs.readFile(icon,(err,data)=>{if(err){res.writeHead(404);return res.end()}res.writeHead(200,{'Content-Type':types[path.extname(icon)]||'application/octet-stream','Cache-Control':'no-store'});res.end(data)});return}}
 fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);return res.end()}let body=data;if(rel==='index.html')body=data.toString().replace('</head>','<link rel="stylesheet" href="intranet-retro.css">'+reload+'</head>').replaceAll('<title>magpie</title>','<title>Sub2Agent 视觉预览</title>').replaceAll('<span>magpie</span>','<span>sub2agent</span>').replace(/<span class="logo"[^>]*><svg[^]*?<\/svg><\/span>/,'<span class="logo" aria-hidden="true"><img src="icons/sub2agent.svg" width="22" height="22" alt=""></span>');res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(body)})
-}).listen(4178,'127.0.0.1',()=>console.log('Preview http://127.0.0.1:4178/?view=providers'));
+}).listen(port,'127.0.0.1',function(){console.log('Preview http://127.0.0.1:'+this.address().port+'/?view=providers')});
