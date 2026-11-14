@@ -1,225 +1,41 @@
 {
-  "version": "0.1.3913-sub2agent.25",
-  "sourceCommit": "0fdb041",
+  "version": "0.1.3913-sub2agent.26",
+  "sourceCommit": "dade91d",
   "behavior": {
-    "trigger": "recognized Agent compaction to WorkBuddy MaaS returns 413",
+    "trigger": "recognized WorkBuddy MaaS compact receives 413",
     "candidates": [
-      "hy4free",
-      "Deepseek-V4-Flash"
+      "hy4free"
     ],
-    "account": "same account only; selected and allowed models",
-    "preserves": "original history, Agent summary format, main-model affinity",
-    "negativeCases": [
-      "ordinary requests",
-      "401",
-      "403",
-      "429",
-      "ordinary 500"
-    ],
-    "billing": "each attempt uses its actual model"
+    "normalInference": "original MaaS model",
+    "outputBudget": "at least 32768 for rescue only"
   },
-  "validation": {
-    "focusedGatewayTests": "passed",
-    "oldGatewayRegression": "failed with 413 as expected",
-    "retainedPages": 9,
-    "uiJavascriptErrors": 0,
-    "uiMissingIcons": 0
-  },
-  "transportProbes": [
-    {
-      "model": "hy4free",
-      "variant": "needles",
-      "wireBytes": 1063467,
-      "http": 200,
-      "finish": "length",
-      "allMarkersRetained": false,
-      "reasoningTokens": 128,
-      "outputTokens": 128,
-      "durationMs": 8077
-    },
-    {
-      "model": "hy4free",
-      "variant": "needles",
-      "wireBytes": 1215341,
-      "http": 200,
-      "finish": "stop",
-      "allMarkersRetained": true,
-      "reasoningTokens": 1871,
-      "outputTokens": 1891,
-      "durationMs": 65680
-    },
-    {
-      "model": "Deepseek-V4-Flash",
-      "variant": "needles",
-      "wireBytes": 1215351,
-      "http": 200,
-      "finish": "stop",
-      "allMarkersRetained": true,
-      "reasoningTokens": 0,
-      "outputTokens": 31,
-      "durationMs": 6993
-    },
-    {
-      "model": "hy4free",
-      "variant": "native",
-      "wireBytes": 1036847,
-      "http": 200,
-      "finish": "length",
-      "allMarkersRetained": false,
-      "reasoningTokens": 4096,
-      "outputTokens": 4096,
-      "durationMs": 52574
-    }
-  ],
-  "nativeRuns": [
-    {
-      "name": "final",
-      "outputBudget": 8192,
-      "processCode": null,
-      "compaction": null,
-      "markerRetainedAfterResume": false,
-      "requests": [
-        {
-          "bytes": 1223582,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/hy4free"
-        }
-      ]
-    },
-    {
-      "name": "long",
-      "outputBudget": 4096,
-      "processCode": 1,
-      "compaction": null,
-      "markerRetainedAfterResume": false,
-      "requests": [
-        {
-          "bytes": 1223582,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/hy4free",
-          "errorType": "api_error"
-        },
-        {
-          "bytes": 1225503,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/hy4free",
-          "errorType": "api_error"
-        }
-      ]
-    },
-    {
-      "name": "multi",
-      "outputBudget": 1500,
-      "processCode": 1,
-      "compaction": null,
-      "markerRetainedAfterResume": false,
-      "requests": [
-        {
-          "bytes": 1223582,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/hy4free",
-          "errorType": "request_too_large"
-        },
-        {
-          "bytes": 1225503,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/hy4free",
-          "errorType": "request_too_large"
-        }
-      ]
-    },
-    {
-      "name": "budget",
-      "outputBudget": 32000,
-      "processCode": 0,
-      "compaction": {
-        "trigger": "auto",
-        "pre_tokens": 300847,
-        "post_tokens": 2011,
-        "duration_ms": 160757
-      },
-      "markerRetainedAfterResume": true,
-      "requests": [
-        {
-          "bytes": 1223583,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/hy4free"
-        },
-        {
-          "bytes": 9524,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/glm-5.3-flash-maas-account"
-        },
-        {
-          "bytes": 9703,
-          "status": 200,
-          "servedModel": "sub2agent-workbuddy/glm-5.3-flash-maas-account"
-        }
-      ]
-    }
-  ],
   "liveSuccess": true,
-  "successfulRoutes": [
-    {
-      "kind": "compact",
-      "status": 200,
-      "tries": [
-        {
-          "model": "glm-5.3-flash-maas-account",
-          "status": 413
-        },
-        {
-          "model": "hy4free",
-          "status": 200
-        }
-      ],
-      "usage": [
-        {
-          "provider": "sub2agent-workbuddy",
-          "model": "hy4free",
-          "in": 107,
-          "out": 8025,
-          "cache_read": 290624,
-          "reasoning": 6216,
-          "credits": 0
-        }
-      ]
+  "nativeClaudeCode": {
+    "context": {
+      "trigger": "auto",
+      "pre_tokens": 300848,
+      "post_tokens": 2168,
+      "duration_ms": 166595
     },
-    {
-      "kind": "turn",
-      "status": 200,
-      "tries": [
-        {
-          "model": "glm-5.3-flash-maas-account",
-          "status": 200
-        }
-      ],
-      "usage": [
-        {
-          "provider": "sub2agent-workbuddy",
-          "model": "glm-5.3-flash-maas-account",
-          "in": 2530,
-          "out": 5
-        }
-      ]
+    "incomingSummaryBytes": 1223681,
+    "clientOutputBudget": 1500,
+    "rescueOutputBudget": 32768,
+    "summaryUsage": {
+      "input_tokens": 290745,
+      "output_tokens": 7714,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "output_tokens_details": {
+        "thinking_tokens": 5557
+      }
     },
-    {
-      "kind": "turn",
-      "status": 200,
-      "tries": [
-        {
-          "model": "glm-5.3-flash-maas-account",
-          "status": 200
-        }
-      ],
-      "usage": [
-        {
-          "provider": "sub2agent-workbuddy",
-          "model": "glm-5.3-flash-maas-account",
-          "in": 2567,
-          "out": 23
-        }
-      ]
-    }
-  ]
+    "markerRetained": true
+  },
+  "limitation": "Synthetic test, not a guarantee of every summary quality; another run returned an acknowledgment instead of a useful summary. Only Claude Code verified.",
+  "pageVerification": {
+    "version": "0.1.3913-sub2agent.26",
+    "pages": 9,
+    "pageErrors": 0,
+    "badIcons": 0
+  }
 }

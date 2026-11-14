@@ -1,3 +1,23 @@
+## Update: hy4free-only rescue (.26)
+
+Commit dade91d removes the paid DeepSeek fallback. MaaS compaction still runs
+first; only its 413 delegates the original compact request to hy4free. Only
+that rescue receives a minimum 32,768 output-token allowance; larger limits
+and ordinary inference budgets are preserved.
+
+Native Claude Code verification with a 1,500-token client output budget:
+1,223,681-byte summary, MaaS 413 then hy4free 200; automatic compact
+300,848 → 2,168 tokens in 166,595 ms. The resumed MaaS turn returned the original
+marker ORCHID-7429. Actual summary usage: 290,745 input, 7,714 output including
+5,557 reasoning tokens. A separate run produced only an acknowledgment and
+lost the marker; transport success is not a guarantee of summary quality.
+The successful test explicitly asked the synthetic test system to preserve
+markers during summarization. No gateway prompt rewriting was introduced.
+Focused gateway tests and all nine retained pages passed. WorkBuddy identity
+in the running routing page shows the provider name and its brand icon.
+
+The earlier findings below describe .25, superseded by the policy above.
+
 # WorkBuddy MaaS compaction rescue — 2026-11-14
 
 Implemented in gateway commits 802affc, f892fd0 and 0fdb041; local application
