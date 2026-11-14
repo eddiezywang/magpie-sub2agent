@@ -29,6 +29,7 @@ const BY_AGENT = [
   ['dsh', ''],
   ['anthropic-client', 'anthropic'],
   ['openai-client', 'openai'],
+  ['openai', 'openai'],
   ['gemini', 'geminicli-color'],
   ['cursor', 'cursor'],
   ['copilot', 'githubcopilot'],

@@ -8,7 +8,17 @@ const fetch=(url,options={})=>new Promise((resolve,reject)=>{const req=http.requ
 const {createSummaryStore,SCHEMA,counters}=require('../src/summary-store');
 const {renderReportCardSvg}=require('../src/card');
 const {hitRate}=require('../src/magpie-day');
+const {agentIcon}=require('../src/icon-names');
 const {createPricingStore,computeCost}=require('../src/pricing');
+
+test('OpenAI SDK usage has the OpenAI mark without being relabeled as Codex',()=>{
+ assert.equal(agentIcon('OpenAI'),'openai');
+ assert.equal(agentIcon('openai-client'),'openai');
+ assert.equal(agentIcon('codex'),'codex-color');
+ assert.equal(agentIcon('unknown-sdk'),'');
+ const svg=renderReportCardSvg({period:{type:'daily'},totals:{requests:1},by_agent_model:[{agent:'openai',models:[]}]});
+ assert.ok(svg.includes('OPENAI'));
+});
 
 test('cache hit rate accepts the report view with an omitted zero unknown counter',()=>{
  const view={input:100,cacheRead:300,cacheWrite:0};
