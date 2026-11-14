@@ -11,7 +11,7 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  const url=await new Promise((resolve,reject)=>{let text='';child.stdout.on('data',b=>{text+=b;const m=text.match(/Preview (http:\/\/127\.0\.0\.1:\d+)/);if(m)resolve(m[1])});child.on('error',reject);child.on('exit',code=>reject(new Error('preview exited: '+code)))});
  const providers=await (await fetch(url+'/api/providers')).json();
  assert.ok(providers.providers.every(p=>p.name.includes('示例')));
- const response=await fetch(url+'/api/settings',{method:'POST',body:'{}'});assert.match((await response.json()).error,/不会保存/);
+ const response=await fetch(url+'/api/settings',{method:'POST',body:'{}'});assert.equal(response.status,403);assert.match((await response.json()).error,/不会保存/);
  const browser=await chromium.launch({channel:'chrome'});t.after(()=>browser.close());
  const page=await browser.newPage();
  await page.goto(url+'/?view=agents&desktop=1');
@@ -25,6 +25,13 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  assert.match(await page.locator('.rt-req').first().innerText(),/示例模型/);
  await page.goto(url+'/?view=providers');await page.waitForTimeout(1000);
  await page.getByRole('status').filter({hasText:'视觉预览 · 模拟数据'}).waitFor();
+ await page.locator('#addProvider').click();
+ const workbuddy=page.getByRole('button',{name:'WorkBuddy 企业',exact:true});await workbuddy.waitFor();
+ const denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/plugin-signin/prompt');
+ await workbuddy.click();assert.equal((await denied).status(),403);
+ await page.getByText('视觉预览：操作不会保存',{exact:false}).first().waitFor();
+ await page.goto(url+'/?view=providers');await page.locator('#providers .row').first().waitFor();
+ await page.waitForResponse(r=>new URL(r.url()).pathname==='/__preview_version');
  const href=await page.locator('link[href*=intranet-retro]').getAttribute('href');
  const name='preview-test-'+process.pid,css=path.resolve(__dirname,'../internal/gui/assets',name+'.css'),js=path.resolve(__dirname,'../internal/gui/assets',name+'.js');
  t.after(async()=>{await fs.rm(css,{force:true});await fs.rm(js,{force:true})});
