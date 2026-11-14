@@ -14,6 +14,7 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  const response=await fetch(url+'/api/settings',{method:'POST',body:'{}'});assert.match((await response.json()).error,/不会保存/);
  const browser=await chromium.launch({channel:'chrome'});t.after(()=>browser.close());
  const page=await browser.newPage();await page.goto(url+'/?view=providers');await page.waitForTimeout(1000);
+ await page.getByRole('status').filter({hasText:'视觉预览 · 模拟数据'}).waitFor();
  const href=await page.locator('link[href*=intranet-retro]').getAttribute('href');
  const name='preview-test-'+process.pid,css=path.resolve(__dirname,'../internal/gui/assets',name+'.css'),js=path.resolve(__dirname,'../internal/gui/assets',name+'.js');
  t.after(async()=>{await fs.rm(css,{force:true});await fs.rm(js,{force:true})});
