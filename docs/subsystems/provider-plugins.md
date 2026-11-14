@@ -688,3 +688,5 @@ Verification: `plugins/sub2agent/factory.test.mjs` exercises the bundled kernel
 through the real provider loader with missing and reported usage. Gateway
 `TestPromptUsageOnMessageStart` covers final Anthropic counters;
 `TestChatTranslationKeepsUsageAfterFinish` covers final Responses counters.
+
+The intranet baseline includes the twelve retired Magpie community subscription plugins from the pinned community checkout. They start disabled, preserve user enablement, and share package identities with the intranet marketplace. Their manifest icon names resolve to the packaged pixel artwork. Native API presets and subscriptions still in core are not included in this baseline.

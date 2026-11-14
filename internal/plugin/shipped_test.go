@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -66,6 +67,42 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 	l := shipped(List{Plugins: []Entry{{Spec: "old/path", Bundled: "workbuddy", Off: true}}})
 	if len(l.Plugins) != 4 || l.Plugins[0].Spec != "@sub2agent/workbuddy" || !l.Plugins[0].Off {
 		t.Fatalf("relocation lost settings: %+v", l.Plugins)
+	}
+}
+
+func TestCommunityShippedProvidersDefaultOffAndEnable(t *testing.T) {
+	storeSandbox(t)
+	root := t.TempDir()
+	was := shippedDirectory
+	shippedDirectory = func() string { return root }
+	t.Cleanup(func() { shippedDirectory = was; UseCached(nil) })
+	for _, kind := range shippedKinds {
+		if !strings.HasPrefix(kind, "community-") {
+			continue
+		}
+		dir := filepath.Join(root, kind)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"`+shippedPackage(kind)+`","version":"1.0.0"}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, entry := range Load().Plugins {
+		if !entry.Off {
+			t.Fatalf("%s enabled by default", entry.Spec)
+		}
+		if InstalledIcon(entry.Spec) == "" {
+			t.Fatalf("%s missing pixel icon", entry.Spec)
+		}
+		if err := SetOff(entry.Spec, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, entry := range Load().Plugins {
+		if entry.Off {
+			t.Fatalf("%s could not be enabled", entry.Spec)
+		}
 	}
 }
 

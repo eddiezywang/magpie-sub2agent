@@ -4,7 +4,7 @@ set -euo pipefail
 cd -- "$(dirname -- "$0")"
 bash install.sh
 python_bin=${PYTHON_BIN:-python3}
-for name in workbuddy aiep notify; do
+for name in workbuddy aiep codebuddy trae community-antigravity community-commandcode community-cursor community-devin community-factory community-grok community-kiro community-mimo community-qoder community-workbuddy community-zcode community-zed notify; do
   plugin="../staging/$name"
   version=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$plugin/package.json")
   "$python_bin" /opt/sub2agent-plugin-market/bin/publish.py \

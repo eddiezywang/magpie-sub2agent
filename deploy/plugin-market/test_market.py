@@ -50,10 +50,11 @@ class MarketTests(unittest.TestCase):
             base = pathlib.Path(temp)
             root, plugin = base / 'www', base / 'plugin'
             plugin.mkdir()
-            (plugin / 'package.json').write_text(json.dumps({'name': '@internal/test', 'type': 'module', 'main': 'index.js'}))
+            (plugin / 'package.json').write_text(json.dumps({'name': '@internal/test', 'type': 'module', 'main': 'index.js', 'magpie': {'icon': 'kiro-color'}}))
             (plugin / 'index.js').write_text('export const plugin = async () => ({});')
             (plugin / 'credentials.json').write_text('must not publish')
             first = publish(root, plugin, '1.0.0', 'Test plugin')
+            self.assertEqual(first['icon'], 'kiro-color')
             artifact = root / 'magpie/plugins/dist' / (first['bundle']['sha256'] + '.zip')
             self.assertEqual(hashlib.sha256(artifact.read_bytes()).hexdigest(), first['bundle']['sha256'])
             with zipfile.ZipFile(io.BytesIO(artifact.read_bytes())) as archive:

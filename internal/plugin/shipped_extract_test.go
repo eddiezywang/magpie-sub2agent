@@ -15,7 +15,7 @@ func providerArchive(t *testing.T, version string) []byte {
 	files := map[string]string{}
 	for _, kind := range shippedKinds {
 		files[kind+"/index.js"] = "export default async()=>({}); //" + version
-		files[kind+"/package.json"] = `{"name":"@sub2agent/` + kind + `","version":"` + version + `","type":"module","main":"index.js"}`
+		files[kind+"/package.json"] = `{"name":"` + shippedPackage(kind) + `","version":"` + version + `","type":"module","main":"index.js"}`
 	}
 	return internalTestZIP(t, files)
 }
@@ -32,7 +32,7 @@ func TestEmbeddedProvidersMaterializeAndKeepMarketplace(t *testing.T) {
 	shippedDirectory = func() string { return root }
 	t.Cleanup(func() { shippedDirectory = was })
 	entries := Load().Plugins
-	if len(entries) != 4 {
+	if len(entries) != len(shippedKinds) {
 		t.Fatalf("expected four embedded providers, got %d", len(entries))
 	}
 	legacy := filepath.Join(legacyShippedDirectory(), "workbuddy")
@@ -42,7 +42,7 @@ func TestEmbeddedProvidersMaterializeAndKeepMarketplace(t *testing.T) {
 	}
 	writeList(t, string(raw))
 	list := Load()
-	if len(list.Plugins) != 4 || !list.Plugins[0].Off || list.Plugins[0].Options["tenant"] != "retained" || list.Plugins[0].Spec != "@sub2agent/workbuddy" {
+	if len(list.Plugins) != len(shippedKinds) || !list.Plugins[0].Off || list.Plugins[0].Options["tenant"] != "retained" || list.Plugins[0].Spec != "@sub2agent/workbuddy" {
 		t.Fatalf("legacy preferences lost: %+v", list)
 	}
 	if canonicalShippedSpec(legacy) != "@sub2agent/workbuddy" {

@@ -14,7 +14,7 @@ for (const engine of ['chromium', 'webkit']) test(engine + ': intranet market re
     const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     let replies=0, release, maskingReads=0;
-    const listing={package:'internal-plugin',name:'Internal Plugin',community:true,summary:{zh:'内网插件'},npm:{version:'1.0.0'}};
+    const listing={package:'internal-plugin',name:'Internal Plugin',icon:'kiro-color',community:true,summary:{zh:'内网插件'},npm:{version:'1.0.0'}};
     await page.route('**/*', async route=>{
       const u=new URL(route.request().url()), json=data=>route.fulfill({json:data});
       if(u.pathname==='/boot.js') return route.fulfill({contentType:'text/javascript',body:`window.bootPrefs={lang:'zh',theme:'${theme}',web:true,intranet:true,featuresOff:['library','middleware','otel','redact','search','tools','warmups']};`});
@@ -62,12 +62,16 @@ for (const engine of ['chromium', 'webkit']) test(engine + ': intranet market re
     assert.equal(await panel.getByText(/无法连接/).count(),0);
     await panel.getByRole('button',{name:'重新连接'}).click();
     await panel.getByText(/服务器拒绝连接/).waitFor();
-    await page.locator('.pm-card').filter({hasText:'Internal Plugin'}).waitFor();
+    const card = page.locator('.pm-card').filter({hasText:'Internal Plugin'});
+    await card.waitFor();
+    const artwork = card.locator('img[src="icons/kiro-color.svg"]');
+    assert.equal(await artwork.count(), 1, 'marketplace uses the bundled pixel icon');
+    assert.ok(await artwork.evaluate(img => img.complete && img.naturalWidth > 0), 'pixel icon loads');
     await panel.getByText(/目录缓存时间/).waitFor();
     if(process.env.ARTIFACT_DIR && engine==='chromium') await page.screenshot({path:path.join(process.env.ARTIFACT_DIR,`06-market-cache-${theme}.png`)});
     assert.equal(await page.locator('#nav button[data-view="masking"]:visible').count(),0);
     await page.goto('http://magpie.test/?view=settings&tab=privacy');
-    await page.locator('#shareList .row').first().waitFor();
+    await page.locator('#internalSettings .row').first().waitFor();
     assert.equal(await page.locator('#privacyModelRow').count(),0,'removed model must not be drawn');
     assert.equal(maskingReads,0,'imported settings must not start model downloads or polling');
     assert.deepEqual(errors,[]);

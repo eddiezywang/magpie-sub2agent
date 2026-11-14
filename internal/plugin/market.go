@@ -823,7 +823,13 @@ func Installed(spec string) string {
 // gives in magpie.icon, as ownIcon takes one: the plugin's own, for its
 // row, apart from those its providers give themselves in the auth hook
 // (#1775). "" for none, or a plugin that is one file.
-func InstalledIcon(spec string) string { return ownIcon(installedOwn(spec).Icon) }
+func InstalledIcon(spec string) string {
+	if distribution.Internal && shippedKind(Name(spec)) != "" {
+		icons := map[string]string{"@sub2agent/codebuddy": "codebuddy-color", "@sub2agent/workbuddy": "workbuddy-color", "@sub2agent/trae": "trae", "@sub2agent/aiep": "tig-color", "@magpie-community/opencode-antigravity-auth": "antigravity-color", "@magpie-community/opencode-commandcode-auth": "commandcode", "@magpie-community/opencode-cursor-auth": "cursor", "@magpie-community/opencode-devin-auth": "devin", "@magpie-community/opencode-factory-auth": "factory", "@magpie-community/opencode-grok-auth": "grok", "@magpie-community/opencode-kiro-auth": "kiro-color", "@magpie-community/opencode-mimo-auth": "mimocode", "@magpie-community/opencode-qoder-auth": "qoder", "@magpie-community/opencode-workbuddy-auth": "workbuddy-color", "@magpie-community/opencode-zcode-auth": "zcode", "@magpie-community/opencode-zed-auth": "zed"}
+		return icons[Name(spec)]
+	}
+	return ownIcon(installedOwn(spec).Icon)
+}
 
 // InstalledName is the name the installed plugin spec's package.json
 // gives itself in magpie.name, for its row when the community's list

@@ -25,7 +25,7 @@ func materializeProviders(payload []byte, cache string) (string, error) {
 	defer baselineMu.Unlock()
 	valid := func() bool {
 		for _, kind := range shippedKinds {
-			if !verifiedBundle(filepath.Join(root, kind), "@sub2agent/"+kind) {
+			if !verifiedBundle(filepath.Join(root, kind), shippedPackage(kind)) {
 				return false
 			}
 		}
@@ -54,7 +54,7 @@ func materializeProviders(payload []byte, cache string) (string, error) {
 			return "", fmt.Errorf("unsafe embedded provider entry")
 		}
 		kind, name := parts[0], parts[1]
-		if shippedKind("@sub2agent/"+kind) == "" || name != "index.js" && name != "package.json" {
+		if shippedKind(shippedPackage(kind)) == "" || name != "index.js" && name != "package.json" {
 			return "", fmt.Errorf("unexpected embedded provider entry")
 		}
 		seen[file.Name] = true
@@ -69,7 +69,7 @@ func materializeProviders(payload []byte, cache string) (string, error) {
 		}
 		entry := receipts[kind]
 		if entry.Files == nil {
-			entry = bundleReceipt{Package: "@sub2agent/" + kind, Files: map[string]string{}}
+			entry = bundleReceipt{Package: shippedPackage(kind), Files: map[string]string{}}
 		}
 		if name == "package.json" {
 			var manifest struct{ Name, Version, Type, Main string }

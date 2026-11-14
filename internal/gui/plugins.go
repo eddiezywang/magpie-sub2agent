@@ -415,6 +415,9 @@ func pluginsState(ctx context.Context, w Windows) pluginsJSON {
 		said[i] = plugin.InstalledIcon(j.Spec)
 	}
 	for i, ic := range provider.RepoIcons(said, 0) {
+		if said[i] != "" && !provider.MarketPicture(said[i]) {
+			ic = said[i]
+		}
 		s.Plugins[i].Icon = ic
 	}
 	return s

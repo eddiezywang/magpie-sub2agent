@@ -4,8 +4,7 @@
 标准库，提供只读目录、npm 兼容版本元数据和完整 ZIP 包；不需要联网安装依赖。
 这不是公网 npm 的透明代理。
 
-当前发布集合为 WorkBuddy 企业、TIG Coding Plan 和 Notify。CodeBuddy/Trae
-保留兼容代码但不发布到新广场，避免提供已禁用来源。model-map 默认内置。
+当前发布集合包含 WorkBuddy 企业、TIG Coding Plan、CodeBuddy、Trae、Notify，及 12 个已迁出的 Magpie 社区供应商。新增的社区供应商随应用内置且默认禁用，广场也提供安装与更新。model-map 默认内置。
 默认 Python 太旧时设置 `PYTHON_BIN=/opt/python311/bin/python3.11`。
 
 ## 部署
@@ -153,3 +152,12 @@ zlib 构建环境的 ZIP 压缩结果可能不同；不要直接把构建机的 
 本次发布源位于 `releases/20261114-relay/market-release-20261114`；部署前目录备份
 为 `backups/before-relay-20261114.tgz`，unit 备份在同目录。真实账号登录和长上下文
 推理不属于静态广场可用性检查。
+
+### 社区供应商发布（2026-11-14）
+
+发布 CodeBuddy、Trae 和 12 个已迁出的社区供应商后，插件广场共 17 个条目。
+制品来自固定社区提交 `e90d6f011a7320372c5570600e9b267f75b34714`，
+目标机和客户端网络均核验了目录及全部制品的 SHA-256；发布前目录备份为
+`/opt/sub2agent-plugin-market/backups/before-community-providers-20261114.tgz`。
+社区供应商的真实账号登录和推理尚未验证。原生 API 预设与仍在核心中的订阅
+尚未转成内置插件。

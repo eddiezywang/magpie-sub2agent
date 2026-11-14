@@ -17,11 +17,11 @@ func TestSingleFileBaselineWithoutExternalFolders(t *testing.T) {
 	if err != nil || rel == "." || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
 		t.Fatalf("baseline outside application cache: %q %v", rel, err)
 	}
-	if len(Load().Plugins) != 4 {
-		t.Fatal("single EXE did not expose all four built-in providers")
+	if len(Load().Plugins) != len(shippedKinds) {
+		t.Fatal("single EXE did not expose all built-in providers")
 	}
 	for _, kind := range shippedKinds {
-		if !verifiedBundle(filepath.Join(root, kind), "@sub2agent/"+kind) {
+		if !verifiedBundle(filepath.Join(root, kind), shippedPackage(kind)) {
 			t.Fatal("invalid materialized baseline", kind)
 		}
 	}

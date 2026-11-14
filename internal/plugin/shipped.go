@@ -38,7 +38,7 @@ func shipped(l List) List {
 		return l
 	}
 	for _, kind := range shippedKinds {
-		pkg := "@sub2agent/" + kind
+		pkg := shippedPackage(kind)
 		legacy := filepath.Join(root, kind)
 		if _, err := os.Stat(filepath.Join(legacy, "package.json")); err != nil {
 			continue
@@ -57,7 +57,7 @@ func shipped(l List) List {
 				}
 			}
 		} else {
-			l.Plugins = append(l.Plugins, Entry{Spec: pkg, Bundled: kind, Off: kind == "codebuddy" || kind == "trae"})
+			l.Plugins = append(l.Plugins, Entry{Spec: pkg, Bundled: kind, Off: kind != "workbuddy" && kind != "aiep"})
 		}
 	}
 
@@ -89,7 +89,14 @@ func effectiveList() List {
 	return l
 }
 
-var shippedKinds = []string{"codebuddy", "workbuddy", "trae", "aiep"}
+var shippedKinds = []string{"codebuddy", "workbuddy", "trae", "aiep", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"}
+
+func shippedPackage(kind string) string {
+	if name, ok := strings.CutPrefix(kind, "community-"); ok {
+		return "@magpie-community/opencode-" + name + "-auth"
+	}
+	return "@sub2agent/" + kind
+}
 
 func cloneStringMap(in map[string]string) map[string]string {
 	if in == nil {
@@ -106,11 +113,12 @@ func shippedKind(pkg string) string {
 	if !distribution.Internal {
 		return ""
 	}
-	kind := strings.TrimPrefix(pkg, "@sub2agent/")
-	if kind == pkg || !slices.Contains(shippedKinds, kind) {
-		return ""
+	for _, kind := range shippedKinds {
+		if shippedPackage(kind) == pkg {
+			return kind
+		}
 	}
-	return kind
+	return ""
 }
 
 // Marketplace installations win over the portable baseline only after the
@@ -223,12 +231,12 @@ func canonicalShippedSpec(spec string) string {
 	}
 	for _, e := range list().Plugins {
 		if e.Spec == spec && slices.Contains(shippedKinds, e.Bundled) {
-			return "@sub2agent/" + e.Bundled
+			return shippedPackage(e.Bundled)
 		}
 	}
 	for _, kind := range shippedKinds {
 		if spec == filepath.Join(shippedDirectory(), kind) || spec == filepath.Join(legacyShippedDirectory(), kind) {
-			return "@sub2agent/" + kind
+			return shippedPackage(kind)
 		}
 	}
 	return spec

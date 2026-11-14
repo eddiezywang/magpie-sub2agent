@@ -101,6 +101,8 @@ def publish(root, plugin, version, summary):
         artifact = {'version': version, 'url': f'http://172.21.0.177/magpie/plugins/dist/{digest}.zip', 'sha256': digest, 'bytes': len(data)}
         presentation = manifest.get('magpie', {})
         entry = {'package': name, 'name': presentation.get('name') or presentation.get('page', {}).get('title') or name, 'summary': {'zh': summary, 'en': manifest.get('description', summary)}, 'bundle': artifact}
+        if presentation.get('icon'):
+            entry['icon'] = presentation['icon']
         if presentation.get('hooks'):
             entry['kind'] = 'hooks'
         same = next((item for item in catalog['plugins'] if item['package'] == name), None)
