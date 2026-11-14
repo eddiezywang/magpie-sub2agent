@@ -28,7 +28,7 @@ func TestInternalCheapFallbackWithoutManagedPrices(t *testing.T) {
 		tm("sub2agent-workbuddy", "glm-5.3-flash-maas-tenant", 3, true, "2026-11-01"),
 		tm("sub2agent-workbuddy", "hy4free", 0, false, ""),
 	}
-	ms[2].priced = false
+	ms[0].priced, ms[1].priced, ms[2].priced = true, true, false
 	g := internalTemplate(TemplateThrifty, ms, nil).Group
 	want := []string{ms[2].e.ID, ms[1].e.ID, ms[0].e.ID}
 	if !slices.Equal(g.Members, want) {
