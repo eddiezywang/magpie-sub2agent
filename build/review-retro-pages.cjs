@@ -8,7 +8,7 @@ const assert=require('node:assert/strict');
 const assets=path.resolve('internal/gui/assets');
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});
- const views=['providers','sessions','usage','plugins','agents'];
+ const views=['providers','sessions','usage','plugins','agents','routing','groups','gateway','settings'];
  let shots=0;
  for(const engine of ['chromium','webkit']) {
   const browser=await (engine==='chromium'?chromium.launch({channel:'chrome'}):webkit.launch());
@@ -52,6 +52,7 @@ const assets=path.resolve('internal/gui/assets');
      }catch{return route.fulfill({status:404,body:''});}
     });
     await page.goto('http://sub2agent.test/?view='+view);
+    await page.locator('#view-'+view).waitFor({state:'visible'});
     await page.waitForTimeout(600);
     // the theme arrives through boot.js/applyPrefs; only correct it if the
     // page didn't apply the fixture's saved choice on its own
@@ -61,7 +62,7 @@ const assets=path.resolve('internal/gui/assets');
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
     assert.ok(!overflow,`${view} ${engine} ${theme} ${width}: horizontal overflow`);
     assert.deepEqual(errors,[],`${view} ${engine} ${theme} ${width}: page errors`);
-    await page.screenshot({path:path.join(output,`${view}-${theme}-${width}.png`),fullPage:true});
+    await page.screenshot({path:path.join(output,`${view}-${engine}-${theme}-${width}.png`),fullPage:true});
     shots++;
     await page.close();
    }
