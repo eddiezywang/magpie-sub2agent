@@ -16,6 +16,9 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  const page=await browser.newPage();
  await page.goto(url+'/?view=sessions&desktop=1');
  await page.getByText('示例会话：整理项目任务').first().waitFor();
+ await page.goto(url+'/?view=routing&desktop=1');
+ await page.locator('.rt-req').first().waitFor();
+ assert.match(await page.locator('.rt-req').first().innerText(),/示例模型/);
  await page.goto(url+'/?view=providers');await page.waitForTimeout(1000);
  await page.getByRole('status').filter({hasText:'视觉预览 · 模拟数据'}).waitFor();
  const href=await page.locator('link[href*=intranet-retro]').getAttribute('href');
