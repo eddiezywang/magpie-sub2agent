@@ -41,6 +41,10 @@ Existing consent for Sessions remains on the Sessions page. Licenses remain
 embedded and available through /api/notices. Internal services stay managed by
 the distribution. Review: build/review-internal-settings.cjs, five locales and
 two browser engines at desktop and narrow widths with intercepted mutations.
+The internal Settings surface does not expose the upstream Browser access
+controls (`webPageHead` and `webPageList`). This is presentation only: it does
+not change a previously saved browser-access choice or stop its service. The
+packed-asset regression `tests/intranet-shell.test.cjs` checks visibility.
 The internal command resolver, console companion and fallback shim use
 sub2agent / sub2agent.com / sub2agent.cmd. Adding the command never installs
 or resolves a magpie-named command. The upstream distribution keeps its names;
