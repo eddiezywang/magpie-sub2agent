@@ -3,7 +3,7 @@ const root=path.resolve(__dirname,'../internal/gui/assets');
 const internalIcons=path.resolve(__dirname,'intranet/pixel-icons');
 const port=process.env.RETRO_PREVIEW_PORT?Number(process.env.RETRO_PREVIEW_PORT):4178;
 const settings={lang:'zh',theme:'light',web:true,intranet:true,version:'preview',port:8989,featuresOff:['library','middleware','otel','redact','search','tools','warmups']};
-const providers=[{id:'demo-workbuddy',name:'WorkBuddy 企业（示例）',on:true,kind:'subscription',agents:[],models:[{id:'glm-demo',name:'GLM 演示',on:true}],key:{set:false},account:{user:'demo@example.test',agentName:'WorkBuddy 企业',plan:'演示',logins:[{user:'demo@example.test',plan:'演示',on:true,active:true}]}},{id:'demo-codebuddy',name:'CodeBuddy（示例）',host:'codebuddy.example.test',on:true,agents:[],models:[],key:{set:false}},{id:'demo-api',name:'自定义 API（示例）',host:'api.example.test',on:true,agents:[],models:[],key:{set:false}}];
+const providers=[{id:'demo-workbuddy',name:'WorkBuddy 企业（示例）',icon:'workbuddy-color',on:true,kind:'subscription',agents:[],models:[{id:'glm-demo',name:'GLM 演示',on:true}],key:{set:false},account:{user:'demo@example.test',agentName:'WorkBuddy 企业',plan:'演示',logins:[{user:'demo@example.test',plan:'演示',on:true,active:true}]}},{id:'demo-codebuddy',name:'CodeBuddy（示例）',icon:'codebuddy-color',host:'codebuddy.example.test',on:true,agents:[],models:[],key:{set:false}},{id:'demo-api',name:'自定义 API（示例）',host:'api.example.test',on:true,agents:[],models:[],key:{set:false}}];
 let version=Date.now(), pageVersion=version;
 fs.watch(root,{recursive:true},(_event,name)=>{
  version=Date.now();
