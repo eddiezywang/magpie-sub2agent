@@ -5,7 +5,9 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const {chromium,webkit}=require('playwright');
 const assert=require('node:assert/strict');
-const assets=path.resolve('internal/gui/assets');
+// Prefer extracted production assets when supplied, so the review also covers
+// the intranet index transformation and packaged pixel icons.
+const assets=path.resolve(process.env.INTRANET_ASSETS||'internal/gui/assets');
 const lang=process.env.LANG_CASE||'zh';
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});
@@ -45,10 +47,11 @@ const lang=process.env.LANG_CASE||'zh';
      if(u.host!=='sub2agent.test')return route.abort();
      try{
       let body=await fs.readFile(path.join(assets,u.pathname==='/'?'index.html':u.pathname));
-      if(u.pathname==='/'){body=body.toString()
-       .replace('</head>','<link rel="stylesheet" href="intranet-retro.css"></head>')
-       .replaceAll('<title>magpie</title>','<title>sub2agent</title>')
-       .replaceAll('<span>magpie</span>','<span>sub2agent</span>');}
+      if(u.pathname==='/'){
+       body=body.toString();
+       if(!body.includes('href="intranet-retro.css"'))body=body.replace('</head>','<link rel="stylesheet" href="intranet-retro.css"></head>');
+       body=body.replaceAll('<title>magpie</title>','<title>sub2agent</title>').replaceAll('<span>magpie</span>','<span>sub2agent</span>');
+      }
       return route.fulfill({body,contentType:{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(u.pathname)]||'text/html'});
      }catch{return route.fulfill({status:404,body:''});}
     });
