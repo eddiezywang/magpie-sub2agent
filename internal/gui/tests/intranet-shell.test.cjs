@@ -76,6 +76,8 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   });
   await page.evaluate(() => show('settings'));
   await page.getByText('Share on local network', {exact:true}).waitFor();
+  assert.equal(await page.locator('#webPageHead:visible, #webPageList:visible').count(), 0,
+    'browser management settings stay hidden in the intranet distribution');
   const version = page.locator('#internalSettings [data-setting=version]');
   await version.getByText('0.1.3913-sub2agent.3').waitFor();
   assert.ok(await version.getByRole('button', {name:'Check'}).isVisible());
