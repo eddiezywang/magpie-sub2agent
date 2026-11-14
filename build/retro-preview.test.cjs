@@ -23,6 +23,9 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  await page.goto(url+'/?view=routing&desktop=1');
  await page.locator('.rt-req').first().waitFor();
  assert.match(await page.locator('.rt-req').first().innerText(),/示例模型/);
+ await page.goto(url+'/?view=plugins&desktop=1');
+ await page.locator(':is(.lib-tabs .opt, .nav-s):visible').filter({hasText:await page.evaluate(()=>t('Installed'))}).first().click();
+ await page.locator('#view-plugins .pm-row').filter({hasText:'示例插件'}).waitFor();
  await page.goto(url+'/?view=providers');await page.waitForTimeout(1000);
  await page.getByRole('status').filter({hasText:'视觉预览 · 模拟数据'}).waitFor();
  await page.locator('#addProvider').click();
