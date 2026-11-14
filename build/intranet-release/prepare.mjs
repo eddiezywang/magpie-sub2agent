@@ -13,8 +13,8 @@ const publicKey=createPublicKey(privateKey).export({type:'spki',format:'der'}).s
 if(publicKey!=='vZLjKd13KX+3te66w3nBbJRkLGwd81sJNx3UgCrqJ9Y=') throw new Error('Release signing key does not match the application public key');
 const sums=`${digest}  ${name}\n`;
 const sig=sign(null,Buffer.from(`magpie release ${version}\n${sums}`),privateKey).toString('base64');
-const url=`http://172.21.0.177/sub2agent/releases/${version}/${name}`;
-const release={version,notes:'Sub2Agent 内网版本更新',url:'http://172.21.0.177/sub2agent/releases/',assets:{[name]:{url,size:data.length,sha256:digest}},signed:{sums,sig}};
+const url=`http://172.21.0.177:18989/sub2agent/releases/${version}/${name}`;
+const release={version,notes:'Sub2Agent 内网版本更新',url:'http://172.21.0.177:18989/sub2agent/releases/',assets:{[name]:{url,size:data.length,sha256:digest}},signed:{sums,sig}};
 const dest=path.resolve(out);await mkdir(path.join(dest,version),{recursive:true});
 await copyFile(input,path.join(dest,version,name));
 await writeFile(path.join(dest,'latest.json'),JSON.stringify(release,null,2)+'\n');

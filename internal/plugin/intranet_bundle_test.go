@@ -86,7 +86,7 @@ func TestIntranetBundleInstallsAndPreservesPreviousOnFailure(t *testing.T) {
 	manifest := `{"name":"internal-test","version":"1.0.0","type":"module","main":"index.js"}`
 	payload := internalTestZIP(t, map[string]string{"package.json": manifest, "index.js": "export const plugin=async()=>({});"})
 	digest := sha256.Sum256(payload)
-	bundle := &InternalBundle{Version: "1.0.0", URL: "http://172.21.0.177/magpie/plugins/dist/test.zip", SHA256: hex.EncodeToString(digest[:]), Bytes: int64(len(payload))}
+	bundle := &InternalBundle{Version: "1.0.0", URL: "http://172.21.0.177:18989/magpie/plugins/dist/test.zip", SHA256: hex.EncodeToString(digest[:]), Bytes: int64(len(payload))}
 	http.DefaultClient = &http.Client{Transport: marketStatusTransport(func(r *http.Request) (*http.Response, error) {
 		if r.URL.Hostname() != "172.21.0.177" {
 			t.Fatalf("public request: %s", r.URL.Hostname())

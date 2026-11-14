@@ -204,7 +204,7 @@ func mockBundleFor(t *testing.T, pkg, version string) {
 	http.DefaultClient = &http.Client{Transport: offBundleTransport(func(r *http.Request) (*http.Response, error) {
 		body := payload
 		if strings.HasSuffix(r.URL.Path, "registry.json") {
-			body, _ = json.Marshal(registry{Plugins: []Listing{{Package: pkg, Bundle: &InternalBundle{Version: version, URL: "http://172.21.0.177/magpie/plugins/dist/off.zip", SHA256: hex.EncodeToString(digest[:]), Bytes: int64(len(payload))}}}})
+			body, _ = json.Marshal(registry{Plugins: []Listing{{Package: pkg, Bundle: &InternalBundle{Version: version, URL: "http://172.21.0.177:18989/magpie/plugins/dist/off.zip", SHA256: hex.EncodeToString(digest[:]), Bytes: int64(len(payload))}}}})
 		}
 		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(body)), Request: r}, nil
 	})}

@@ -8,6 +8,9 @@ import (
 )
 
 func TestAssetURL(t *testing.T) {
+	if Base != "http://172.21.0.177:18989" || !strings.HasPrefix(AppFeed, Base+"/") {
+		t.Fatal("managed services must use port 18989")
+	}
 	for _, raw := range []string{Base + "/npm/x", "http://127.0.0.1:1234/x", "http://[::1]:1234/x"} {
 		if err := AssetURL(raw); err != nil {
 			t.Errorf("%s: %v", raw, err)

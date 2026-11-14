@@ -22,17 +22,17 @@ wecli test-jump exec sub2agent-market-1113 "sudo su - root"
 ```sh
 cd /path/to/plugin-market
 bash install.sh
-python3 /opt/sub2agent-plugin-market/bin/check.py --base http://127.0.0.1
+python3 /opt/sub2agent-plugin-market/bin/check.py --base http://127.0.0.1:18989
 systemctl status sub2agent-plugin-market --no-pager
 ```
 
 安装脚本固定写入 `/opt/sub2agent-plugin-market` 与专用 systemd unit。
-首次部署遇到 80 端口被占用会退出，请将现有反向代理的
+首次部署遇到 18989 端口被占用会退出，请将现有反向代理的
 `/magpie/plugins/`、`/npm/`、`/healthz` 路径接入专用服务后再调整监听配置，
 不要覆盖已有站点。已有目录不会被清空，已有 registry 不会被空目录覆盖。
 初始目录为空是正常状态，客户端会显示“连接正常，管理员尚未发布插件”。
 
-如果使用 firewalld，应按组织内网网段放行 TCP 80；脚本不修改防火墙规则。
+如果使用 firewalld，应按组织内网网段放行 TCP 18989；脚本不修改防火墙规则。
 在另一台能访问内网的主机运行 `check.py`，才能验证跨主机连通，不能只看本机 curl。
 
 ## 发布
@@ -61,7 +61,7 @@ python3 /opt/sub2agent-plugin-market/bin/check.py
 
 ## 错误与回滚
 
-- 超时：检查用户内网/VPN、到 `172.21.0.177:80` 的路由及防火墙，客户端可重新连接。
+- 超时：检查用户内网/VPN、到 `172.21.0.177:18989` 的路由及防火墙，客户端可重新连接。
 - 拒绝连接：检查 `systemctl status sub2agent-plugin-market` 和端口监听。
 - HTTP 404：检查 `www/magpie/plugins/registry.json` 是否部署。
 - HTTP 5xx / 格式错误：查看 `journalctl -u sub2agent-plugin-market -n 100`。
@@ -108,13 +108,13 @@ cd <解压后的私有发布目录>/service
 bash deploy-release.sh
 ```
 
-部署器拒绝占用现有非本服务的 80 端口；已有反向代理时应先配置转发。
+部署器拒绝占用现有非本服务的 18989 端口；已有反向代理时应先配置转发。
 发布器依次写入制品和元数据，最后原子替换目录，保留其他已发布插件及上次目录；
 同一版本不允许覆盖修改，更新请提升语义版本。不会覆盖客户端安装或认证数据。
 多文件离线包使用格式 2，声明精确文件清单与页面/钩子入口；禁止路径越界、
 链接、Windows 设备名、重复路径、安装脚本与外部依赖。单文件旧包继续支持。
 
-从实际客户端网络再运行 `check.py --base http://172.21.0.177`，并在隔离客户端
+从实际客户端网络再运行 `check.py --base http://172.21.0.177:18989`，并在隔离客户端
 验证发现、安装、升级、离线保留与通知配置。真实企业登录和推理需可用企业账号验证。
 广场仅分发插件，供应商登录、额度查询和推理仍访问对应企业服务。
 
@@ -145,7 +145,7 @@ zlib 构建环境的 ZIP 压缩结果可能不同；不要直接把构建机的 
 ### 部署状态（2026-11-14）
 
 已按“中转服务器 → laptop → idisk → kf → test-jump → 目标机”完成部署和跨主机验证。
-`sub2agent-plugin-market.service` 已启用并运行，监听 TCP 80，healthz 返回 3 个插件。
+`sub2agent-plugin-market.service` 已启用并运行，监听 TCP 18989，healthz 返回 3 个插件。
 当前发布 WorkBuddy 企业 1.0.4、TIG Coding Plan 1.0.4、Notify 0.1.4；同版本制品
 摘要保持不变。此次未发布尚在研究的 MaaS gzip/容量调整。
 

@@ -18,7 +18,7 @@ const I18N = {
     "Connecting…": "正在连接…",
     "Retry connection": "重新连接",
     "Connection timed out. The server did not respond within 6 seconds. Check your intranet or VPN connection, then retry.": "连接超时，服务器在 6 秒内未响应。请确认已连接内网或 VPN，然后重试。",
-    "The server refused the connection. Ask the administrator to check the plugin service and port 80.": "服务器拒绝连接。请联系管理员检查插件服务是否启动，以及 80 端口是否开放。",
+    "The server refused the connection. Ask the administrator to check the plugin service and port 18989.": "服务器拒绝连接。请联系管理员检查插件服务是否启动，以及 18989 端口是否开放。",
     "The server address could not be resolved. Check your network configuration, then retry.": "无法解析服务器地址。请检查网络配置后重试。",
     "The server is reachable, but the plugin directory is missing (HTTP 404). Ask the administrator to deploy the marketplace.": "服务器已连接，但插件目录不存在（HTTP 404）。请联系管理员部署插件广场。",
     "The server returned HTTP {code}. Retry later or ask the administrator to check the plugin service.": "服务器返回 HTTP {code} 错误。请稍后重试，或联系管理员检查插件服务。",

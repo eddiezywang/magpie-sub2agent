@@ -17,7 +17,7 @@ def check(base):
     for plugin in catalog['plugins']:
         bundle = plugin['bundle']
         url = urllib.parse.urlsplit(bundle['url'])
-        assert url.hostname == '172.21.0.177' and url.path.startswith('/magpie/plugins/dist/')
+        assert url.hostname == '172.21.0.177' and url.port == 18989 and url.path.startswith('/magpie/plugins/dist/')
         data = read(url.path)
         assert len(data) == bundle['bytes']
         assert hashlib.sha256(data).hexdigest() == bundle['sha256']
@@ -28,5 +28,5 @@ def check(base):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--base', default='http://172.21.0.177')
+    parser.add_argument('--base', default='http://172.21.0.177:18989')
     check(parser.parse_args().base)
