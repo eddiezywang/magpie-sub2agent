@@ -32,7 +32,7 @@ test('WorkBuddy MaaS emits estimated usage before DONE and preserves real upstre
  }
 });
 
-test('WorkBuddy keeps smaller deployment limits, caps MaaS Agent windows and coalesces accounts',async()=>{
+test('WorkBuddy keeps model capacity separate from transport size and coalesces accounts',async()=>{
  let calls=0,now=0,offline=false;
  const auth={access:JSON.stringify({accessToken:'fixture',userId:'u',enterpriseId:'e',models:['old'],modelMap:{old:'old'}})};
  const plugin=await createSub2AgentPlugin('workbuddy',{client},{now:()=>now,fetchImpl:async(url)=>{
@@ -45,24 +45,25 @@ test('WorkBuddy keeps smaller deployment limits, caps MaaS Agent windows and coa
  const [a,b]=await Promise.all([plugin.provider.models({models:{}},{auth}),plugin.provider.models({models:{}},{auth})]);
  assert.equal(calls,2,'one pair of discovery requests per account');
  assert.deepEqual(a,b);
- assert.deepEqual(a['glm-5.3-flash-maas-fixture'].limit,{context:132000,input:100000,output:32000});
+ assert.deepEqual(a['glm-5.3-flash-maas-fixture'].limit,{context:1000000,input:300000,output:32000});
  assert.equal(a['GLM-5.0-Turbo'].limit.input,180000);
  assert.equal(a.hy4free.limit.input,960000);
  assert.equal(a.hy4free.limit.output,64000);
- assert.equal(a['auto-maas-fixture'].limit.input,100000,'Auto also needs a transport budget');
+ assert.equal(a['auto-maas-fixture'].limit,undefined,'a byte limit does not establish Auto token capacity');
  assert.equal(a.hy4free.cost,undefined,'vendor discovery must not replace server pricing');
  const other={access:JSON.stringify({...readBundle(auth),enterpriseId:'other'})};
  await plugin.provider.models({models:{}},{auth:other});assert.equal(calls,4,'accounts must not share tenant limits');
  offline=true;now=6*60_000;
  const retained=await plugin.provider.models({models:{}},{auth});
- assert.equal(retained['glm-5.3-flash-maas-fixture'].limit.input,100000,'outage must retain the safe budget');
+ assert.equal(retained['glm-5.3-flash-maas-fixture'].limit.input,300000,'outage retains the last discovered limit');
 });
 
-test('WorkBuddy MaaS budget follows wire model aliases without reducing ordinary models',async()=>{
+test('WorkBuddy mapped MaaS aliases retain snapshot capacity without an arbitrary token clamp',async()=>{
  const auth={access:JSON.stringify({userId:'u',enterpriseId:'e',models:['tenant-alias','ordinary'],modelMap:{'tenant-alias':'glm-5.3-maas-tenant'},modelMetadata:{ordinary:{limit:{context:1000000,input:900000,output:64000}}}})};
  const plugin=await createSub2AgentPlugin('workbuddy',{client},{fetchImpl:async()=>{throw new Error('offline fixture');}});
  const listed=await plugin.provider.models({models:{}},{auth});
- assert.deepEqual(listed['tenant-alias'].limit,{context:132000,input:100000,output:32000});
+ assert.ok(listed['tenant-alias'].limit.context>132000);
+ assert.ok(listed['tenant-alias'].limit.output>32000);
  assert.equal(listed.ordinary.limit.input,900000);
  assert.equal(listed['tenant-alias'].cost,undefined,'a safe context budget is not a pricing change');
 });
@@ -73,7 +74,7 @@ test('WorkBuddy unavailable discovery retains known metadata without writing cre
  const a=await plugin.provider.models({models:{}},{auth});
  assert.equal(a['custom-maas-fixture'].limit.input,60000);
  assert.equal(a.hy4free.limit.input,960000);
- assert.equal(a['auto-maas-fixture'].limit.input,100000);
+ assert.equal(a['auto-maas-fixture'].limit,undefined);
 });
 
 test('WorkBuddy manual callback validates vendor and session while automatic login continues',async()=>{

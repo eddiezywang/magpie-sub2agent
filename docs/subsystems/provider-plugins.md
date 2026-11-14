@@ -16,13 +16,12 @@ token renewal. The bundled vendor snapshot supplies offline Hy4 limits without
 encoding prices. Auto remains unknown when its vendor gives no fixed cap. Input
 caps and whole-context windows remain separate; normal user overrides still win.
 
-WorkBuddy 1.0.5 caps MaaS declarations at an operational 100,000 input tokens
-plus up to 32,000 output (132,000 total), keeping any lower deployment limits.
-The budget also applies to Auto MaaS and mapped display aliases. It is an Agent
-integration budget, not a measured model capacity or a conversion of the
-separate 900 KiB serialized-request guard. Images, tool schemas and JSON can
-still reach that byte guard sooner. Ordinary WorkBuddy models retain their
-original declarations; explicit user overrides remain authoritative.
+WorkBuddy 1.0.6 removes the 1.0.5 blanket 100K/32K clamp. Discovery and
+snapshot token capacities remain model metadata, not a conversion of the
+separate request-byte guard or a promise of end-to-end capacity. Unknown Auto
+capacity remains unknown. Byte-budget handling and Agent compaction must be
+validated separately; ordinary model declarations and explicit user overrides
+remain unchanged.
 
 The internal Sub2Agent login transport bounds each vendor authentication JSON
 request, including its body, to 12 seconds. Timeout, refused connection, DNS,
