@@ -61,3 +61,35 @@ func TestIntranetRemoteSub2Agent(t *testing.T) {
 		t.Fatalf("saved remote gateway: %+v", saved)
 	}
 }
+
+func TestNativeAPIPresetsFollowPluginSwitch(t *testing.T) {
+	azureHome(t)
+	previous := nativeAPIEnabled
+	on := false
+	nativeAPIEnabled = func() bool { return on }
+	t.Cleanup(func() { nativeAPIEnabled = previous })
+	if _, err := FromPreset("openai"); err == nil {
+		t.Fatal("disabled preset offered")
+	}
+	on = true
+	p, err := FromPreset("openai")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Key = "fixture-key"
+	if err := Save(p); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Find(p.ID); err != nil {
+		t.Fatal(err)
+	}
+	on = false
+	if _, err := Find(p.ID); err == nil {
+		t.Fatal("disabled preset still served")
+	}
+	on = true
+	kept, err := Find(p.ID)
+	if err != nil || kept.Key != "fixture-key" {
+		t.Fatalf("saved provider not restored: %+v %v", kept, err)
+	}
+}

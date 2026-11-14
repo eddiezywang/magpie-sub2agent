@@ -19,6 +19,11 @@ for(const kind of ['codebuddy','workbuddy','trae','aiep']) {
   await fs.writeFile(path.join(output,kind,'package.json'),JSON.stringify({name:'@sub2agent/'+kind,version,type:'module',main:'index.js',
     magpie:{name:kind==='workbuddy'?'WorkBuddy 企业':kind==='trae'?'Trae 企业':kind==='aiep'?'TIG Coding Plan':'CodeBuddy',icon:kind==='aiep'?'tig-color':kind==='trae'?'trae':kind+'-color',...(kind==='aiep'?{nativeProvider:{id:'aiep-coding-plan',name:'TIG Coding Plan',anthropic:'http://172.21.11.82/public',keysUrl:'https://aiep.weoa.com',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV'}}:{})}}));
 }
+// The switch gates native Magpie presets; inference stays in the Go gateway.
+const nativeDir=path.join(output,'native-api');
+await fs.mkdir(nativeDir,{recursive:true});
+await fs.writeFile(path.join(nativeDir,'index.js'),'export default async () => ({});\n');
+await fs.writeFile(path.join(nativeDir,'package.json'),JSON.stringify({name:'@sub2agent/native-api',version:'1.0.0',type:'module',main:'index.js',description:'Enable Magpie native API provider presets',magpie:{name:'Magpie API 供应商',icon:'openai',nativeProviderGroup:'magpie-presets'}},null,2));
 // The community packages retired from Magpie's core are bundled from a pinned
 // checkout so both the portable baseline and marketplace use identical code.
 const community=path.resolve(process.env.MAGPIE_COMMUNITY_SOURCE || path.join(repo,'../.build-tools/community-plugins'));
@@ -38,7 +43,7 @@ for(const kind of ['antigravity','commandcode','cursor','devin','factory','grok'
  await fs.copyFile(path.join(community,'LICENSE'),path.join(target,'LICENSE'));
 }
 await fs.writeFile(path.join(output,'source.json'),JSON.stringify({repository:'sub2agent',commit:execFileSync('git',['rev-parse','HEAD'],{cwd:source,encoding:'utf8'}).trim()},null,2));
-console.log('Built four offline Sub2Agent provider adapters.');
+console.log('Built the offline provider baseline.');
 if(process.env.SUB2AGENT_TEST_BUNDLE) {
  await build({entryPoints:[path.join(repo,'plugins/sub2agent/factory.mjs')],bundle:true,platform:'node',format:'esm',
   outfile:path.join(output,'factory-test.mjs'),banner:{js:'import {createRequire as __createRequire} from "node:module";const require=__createRequire(import.meta.url);'},

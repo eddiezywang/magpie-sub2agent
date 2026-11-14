@@ -34,3 +34,14 @@ func AIEPAdapter() *NativeProvider {
 	}
 	return manifest.Magpie.Native
 }
+
+// NativeAPIEnabled is the explicit switch for the bundled Magpie API preset
+// collection. Missing or disabled bundles must never expose saved providers.
+func NativeAPIEnabled() bool {
+	for _, entry := range Load().Plugins {
+		if Name(entry.Spec) == "@sub2agent/native-api" {
+			return !entry.Off
+		}
+	}
+	return false
+}

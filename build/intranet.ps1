@@ -44,7 +44,7 @@ try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     if (!$SingleFile) {
     New-Item -ItemType Directory -Path (Join-Path $bundle 'providers') | Out-Null
-    foreach ($kind in 'codebuddy','workbuddy','trae','aiep','community-antigravity','community-commandcode','community-cursor','community-devin','community-factory','community-grok','community-kiro','community-mimo','community-qoder','community-workbuddy','community-zcode','community-zed') {
+    foreach ($kind in 'codebuddy','workbuddy','trae','aiep','native-api','community-antigravity','community-commandcode','community-cursor','community-devin','community-factory','community-grok','community-kiro','community-mimo','community-qoder','community-workbuddy','community-zcode','community-zed') {
         Copy-Item -LiteralPath (Join-Path $repoRoot "build/sub2agent-runtime/$kind") -Destination (Join-Path $bundle 'providers') -Recurse
     }
     Copy-Item -LiteralPath build/sub2agent-runtime/source.json -Destination (Join-Path $bundle 'providers/source.json')

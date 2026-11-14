@@ -1,4 +1,4 @@
-// providerpack embeds only the four generated provider manifests and entrypoints.
+// providerpack embeds the generated provider manifests and entrypoints.
 package main
 
 import (
@@ -26,7 +26,7 @@ func pack(source, out string) error {
 	}
 	defer os.Remove(file.Name())
 	z := zip.NewWriter(file)
-	for _, kind := range []string{"codebuddy", "workbuddy", "trae", "aiep", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"} {
+	for _, kind := range []string{"codebuddy", "workbuddy", "trae", "aiep", "native-api", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"} {
 		for _, name := range []string{"index.js", "package.json"} {
 			data, err := os.ReadFile(filepath.Join(source, kind, name))
 			if err != nil {

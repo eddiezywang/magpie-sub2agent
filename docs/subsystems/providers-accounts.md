@@ -552,3 +552,5 @@ shorter-prefix guessing or image-generation capability is invented. A suffix
 can only borrow metadata when the full base model is known by the catalog.
 
 The intranet distribution offers the existing Remote magpie protocol as **Remote sub2agent**, retaining the `remote-magpie` preset ID for compatibility. Its Settings page exposes local network sharing so another installation can use its gateway address and key.
+
+The intranet `@sub2agent/native-api` bundled plugin gates Magpie native API preset discovery and saved providers. It starts disabled. Enabling it makes the original presets available with their existing protocols and fields; disabling it hides those providers from routing without deleting their records. The internal presets and Remote sub2agent remain available independently.

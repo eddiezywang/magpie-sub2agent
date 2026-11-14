@@ -84,12 +84,11 @@ func effectiveList() List {
 		l.Plugins = slices.Clone(l.Plugins)
 		l.Prefer = cloneStringMap(l.Prefer)
 		l = shipped(l)
-
 	}
 	return l
 }
 
-var shippedKinds = []string{"codebuddy", "workbuddy", "trae", "aiep", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"}
+var shippedKinds = []string{"codebuddy", "workbuddy", "trae", "aiep", "native-api", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"}
 
 func shippedPackage(kind string) string {
 	if name, ok := strings.CutPrefix(kind, "community-"); ok {

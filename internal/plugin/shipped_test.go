@@ -234,3 +234,33 @@ func TestEnabledBundledProviderStaysEnabledAfterMarketUpgrade(t *testing.T) {
 		})
 	}
 }
+
+func TestNativeAPIProviderBundleDefaultsOff(t *testing.T) {
+	storeSandbox(t)
+	root := t.TempDir()
+	old := shippedDirectory
+	shippedDirectory = func() string { return root }
+	t.Cleanup(func() { shippedDirectory = old })
+	dir := filepath.Join(root, "native-api")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"@sub2agent/native-api","version":"1.0.0"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if NativeAPIEnabled() {
+		t.Fatal("native APIs enabled by default")
+	}
+	if err := SetOff("@sub2agent/native-api", false); err != nil {
+		t.Fatal(err)
+	}
+	if !NativeAPIEnabled() {
+		t.Fatal("native APIs did not enable")
+	}
+	if err := SetOff("@sub2agent/native-api", true); err != nil {
+		t.Fatal(err)
+	}
+	if NativeAPIEnabled() {
+		t.Fatal("native APIs did not disable")
+	}
+}

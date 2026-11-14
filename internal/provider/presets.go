@@ -3,6 +3,7 @@ package provider
 import (
 	"cmp"
 	"github.com/yetone/magpie/internal/distribution"
+	"github.com/yetone/magpie/internal/plugin"
 	"slices"
 	"strings"
 )
@@ -826,10 +827,20 @@ func mantleRegions(ids ...string) []Region {
 	return out
 }
 
+var nativeAPIEnabled = plugin.NativeAPIEnabled
+
 // Presets lists every preset, sponsored ones first within their kind.
 func Presets() []PresetDef {
 	if distribution.Internal {
-		return []PresetDef{codingPlanDefinition(), zhtPreset, remoteSub2AgentPreset()}
+		out := []PresetDef{codingPlanDefinition(), zhtPreset, remoteSub2AgentPreset()}
+		if nativeAPIEnabled() {
+			for _, pr := range presets {
+				if pr.ID != RemoteMagpiePreset {
+					out = append(out, pr)
+				}
+			}
+		}
+		return out
 	}
 	out := make([]PresetDef, 0, len(presets))
 	for _, p := range presets {
@@ -945,7 +956,7 @@ func builtinPreset(id string) *PresetDef {
 		pr := codingPlanDefinition()
 		return &pr
 	}
-	if distribution.Internal {
+	if distribution.Internal && !nativeAPIEnabled() {
 		return nil
 	}
 	if a, ok := presetAliases[id]; ok {
