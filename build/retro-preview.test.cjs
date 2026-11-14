@@ -16,6 +16,8 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  const page=await browser.newPage();
  await page.goto(url+'/?view=agents&desktop=1');
  await page.getByText('Codex（示例）',{exact:true}).first().waitFor();
+ await page.locator('#agents img[src*="codex-color"]').first().waitFor();
+ await page.waitForFunction(()=>{const img=document.querySelector('#agents img[src*="codex-color"]');return img&&img.complete&&img.naturalWidth>0});
  await page.goto(url+'/?view=sessions&desktop=1');
  await page.getByText('示例会话：整理项目任务').first().waitFor();
  await page.goto(url+'/?view=routing&desktop=1');
