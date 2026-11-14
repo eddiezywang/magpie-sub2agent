@@ -60,6 +60,28 @@ body.side-nav .side-foot { border-top:1px dashed var(--line); }
 .top { background:var(--card); border-bottom:2px solid var(--retro-ink); }
 .brand { font-weight:700; letter-spacing:.01em; }
 .logo img { image-rendering:pixelated; }
+/* A small pixel-step lift on deliberate hover, with no layout movement. */
+@media (hover:hover) {
+  :root:not([data-motion="reduce"]) .brand:hover .logo img { animation:retro-logo-lift 480ms steps(1,end); }
+}
+@keyframes retro-logo-lift {
+  0%,100% { transform:translateY(0); }
+  25% { transform:translateY(-2px); }
+  50% { transform:translateY(-3px); }
+  75% { transform:translateY(-1px); }
+}
+/* The routing controller already marks a real request with .tick. Keep
+   its timing and moving wires intact; animate only the mark inside it. */
+:root:not([data-motion="reduce"]) .rt-hub.tick .rt-bird { animation:retro-route-mark 400ms steps(1,end); }
+@keyframes retro-route-mark {
+  0%,100% { transform:translateY(0); }
+  25% { transform:translateY(-2px); }
+  50% { transform:translateY(-3px); }
+  75% { transform:translateY(-1px); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .brand:hover .logo img, .rt-hub.tick .rt-bird { animation:none !important; }
+}
 body.side-nav .crumb > b { font-size:15px; font-weight:700; }
 .seg { border:1px solid var(--line); border-radius:5px; }
 .seg > .thumb { border-radius:4px; }
