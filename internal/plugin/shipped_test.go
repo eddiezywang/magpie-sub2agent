@@ -3,6 +3,7 @@
 package plugin
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -189,5 +190,47 @@ func TestAIEPAdapterReadsPackagedDefaults(t *testing.T) {
 	}
 	if !Official("@sub2agent/aiep") || Official("@sub2agent/unknown") {
 		t.Fatal("automatic update scope incorrect")
+	}
+}
+
+func TestEnabledBundledProviderStaysEnabledAfterMarketUpgrade(t *testing.T) {
+	offSandbox(t)
+	root := t.TempDir()
+	old := shippedDirectory
+	shippedDirectory = func() string { return root }
+	t.Cleanup(func() { shippedDirectory = old })
+	for _, kind := range []string{"codebuddy", "trae"} {
+		dir := filepath.Join(root, kind)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		name := shippedPackage(kind)
+		if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"`+name+`","version":"1.0.0","type":"module","main":"index.js"}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "index.js"), []byte("export default async()=>({})"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := SetOff(name, false); err != nil {
+			t.Fatal(err)
+		}
+		t.Run(kind, func(t *testing.T) {
+			mockBundleFor(t, name, "1.0.1")
+			if _, err := add(context.Background(), name, "1.0.1"); err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, entry := range Load().Plugins {
+				if entry.Spec == name {
+					found = true
+					if entry.Off || !entry.ExplicitOn {
+						t.Fatalf("upgrade lost enablement: %+v", entry)
+					}
+				}
+			}
+			if !found {
+				t.Fatal("updated provider missing")
+			}
+		})
 	}
 }

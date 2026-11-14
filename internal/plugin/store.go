@@ -493,6 +493,8 @@ func add(ctx context.Context, spec, version string) (Entry, error) {
 		return x.Spec == spec || n == name
 	}); i >= 0 {
 		e.Options = l.Plugins[i].Options
+		e.Bundled = l.Plugins[i].Bundled
+		e.ExplicitOn = l.Plugins[i].ExplicitOn
 		// whether they turned it off, which an add never changes
 		e.Off = l.Plugins[i].Off
 		// a provider id the user picked it for stays its (another version,

@@ -172,6 +172,10 @@ func TestUpgradeKeepsAnOffPluginOff(t *testing.T) {
 // The internal distribution installs complete artifacts rather than asking the
 // fake Bun. Keep this lifecycle test isolated under either installation path.
 func mockOffBundle(t *testing.T, version string) {
+	mockBundleFor(t, pkg, version)
+}
+
+func mockBundleFor(t *testing.T, pkg, version string) {
 	t.Helper()
 	var buffer bytes.Buffer
 	archive := zip.NewWriter(&buffer)
