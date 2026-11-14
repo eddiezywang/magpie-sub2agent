@@ -46,8 +46,8 @@ func TestIntranetReportingHidesInfrastructureAndRejectsOverrides(t *testing.T) {
 }
 
 func TestIntranetOmitsLibraryAndItsAssets(t *testing.T) {
-	if ps := provider.Presets(); len(ps) != 2 || ps[0].ID != "aiep-coding-plan" || ps[1].ID != "cib-zht-apikey" {
-		t.Fatal("upstream vendor presets must not appear in the internal distribution")
+	if ps := provider.Presets(); len(ps) != 3 || ps[0].ID != "aiep-coding-plan" || ps[1].ID != "cib-zht-apikey" || ps[2].ID != provider.RemoteMagpiePreset {
+		t.Fatal("internal distribution must show only the two internal presets and Remote Sub2Agent")
 	}
 	registeredSessions := false
 	registeredAccounting := false
