@@ -1,346 +1,57 @@
-/* ============================================================
-   sub2agent intranet · Retro pixel skin (approved GLM design)
-   Warm cream paper, near-black ink, bright blue accent, hard
-   offset shadows. Light mode only; dark theme (explicit or the
-   system's) keeps upstream surfaces untouched.
-
-   theme.js sets data-theme only for an explicit light/dark
-   choice; "system" leaves the attribute off and the OS's
-   prefers-color-scheme decides. So:
-   - explicit light  (:root[data-theme="light"]): unguarded;
-   - system light    (:root:not([data-theme])): guarded by
-     @media (prefers-color-scheme: light), so a system-dark
-     reader is never overridden.
-   Loaded after app.css by build/assetpack/intranet_index.go.
-   ============================================================ */
-
-/* ==== explicit light theme ================================== */
-
-:root[data-theme="light"] {
-  --bg: #f6f1e6;
-  --card: #fffdf7;
-  --card-2: #f9f3e4;
-  --pill: #f1ebdc;
-  --pill-hover: #e7dfcb;
-  --seg-track: #eae2cf;
-  --seg-thumb: #fffdf7;
-  --ctl-fg: #5c564a;
-  --line: #1f1c17;
-  --line-2: #e2d9c4;
-  --fg: #1f1c17;
-  --fg-2: #443f35;
-  --muted: #8f8778;
-  --faint: #b9b09c;
-  --accent: #3d6bff;
-  --accent-soft: #e3ebff;
-  --accent-fg: #ffffff;
-  --sel: #dbe6ff;
-  --red: #d63a3f;
-  --red-soft: #ffe3e3;
-  --amber: #b45309;
-  --amber-soft: #ffe9d8;
-  --pop-bg: rgba(255, 253, 247, .97);
-  --shadow: 4px 4px 0 #1f1c17;
-  --shadow-sm: 3px 3px 0 #1f1c17;
-  --logo-invert: 0;
+/* Intranet-only visual layer. Interaction and layout remain owned by app.css. */
+:root {
+  --retro-ink:#29231f; --retro-page:#f6f1e6; --retro-dots:#e9dfce;
+  --bg:#f6f1e6; --card:#fffdf7; --card-2:#f7f0e4; --pill:#eee8db;
+  --pill-hover:#e8e0d0; --line:#b7aa98; --line-2:#e2d9cb;
+  --fg:#29231f; --fg-2:#51483f; --muted:#6d6257; --faint:#817566;
+  --ctl-fg:#51483f; --accent:#315ce0; --accent-soft:#e6ebff;
+  --accent-fg:#fff; --sel:#e1e9ff; --seg-track:#eee8db; --seg-thumb:#fffdf7;
+  --seg-edge:0 0 0 1px #29231f, 2px 2px 0 #29231f;
+  --shadow:4px 4px 0 #29231f; --pop-bg:#fffdf7;
 }
-
-:root[data-theme="light"] body {
-  background-image: radial-gradient(#ece4d2 1px, transparent 1px);
-  background-size: 14px 14px;
+:root[data-theme="dark"] {
+  --retro-ink:#b5a998; --retro-page:#242526; --retro-dots:#343535;
+  --bg:#242526; --card:#2f3031; --card-2:#393837; --pill:#3b3a39;
+  --pill-hover:#494642; --line:#756e65; --line-2:#4b4844;
+  --fg:#f5efe5; --fg-2:#d5cabc; --muted:#b9ad9f; --faint:#a69a8d;
+  --ctl-fg:#d5cabc; --accent:#a4b8ff; --accent-soft:#3a4669;
+  --accent-fg:#172344; --sel:#3a4669; --seg-track:#393837; --seg-thumb:#56504a;
+  --seg-edge:0 0 0 1px #a99e90, 2px 2px 0 #181819;
+  --shadow:4px 4px 0 #151515; --pop-bg:#303031;
 }
-
-:root[data-theme="light"] body.side-nav .sidebar {
-  background: var(--card);
-  border-right: 3px solid var(--line);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --retro-ink:#b5a998; --retro-page:#242526; --retro-dots:#343535;
+    --bg:#242526; --card:#2f3031; --card-2:#393837; --pill:#3b3a39;
+    --pill-hover:#494642; --line:#756e65; --line-2:#4b4844;
+    --fg:#f5efe5; --fg-2:#d5cabc; --muted:#b9ad9f; --faint:#a69a8d;
+    --ctl-fg:#d5cabc; --accent:#a4b8ff; --accent-soft:#3a4669;
+    --accent-fg:#172344; --sel:#3a4669; --seg-track:#393837; --seg-thumb:#56504a;
+    --seg-edge:0 0 0 1px #a99e90, 2px 2px 0 #181819;
+    --shadow:4px 4px 0 #151515; --pop-bg:#303031;
+  }
 }
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs) {
-  border: 2px solid transparent;
-  border-radius: 6px;
+body { background-color:var(--retro-page); background-image:radial-gradient(var(--retro-dots) 1px, transparent 1px); background-size:14px 14px; }
+body.side-nav .sidebar { background:var(--card); border-right:2px solid var(--retro-ink); }
+body.side-nav :is(#nav button[data-view],#prefs) { border-radius:4px; }
+body.side-nav #nav > .nav-top-hl:not([hidden]), body.side-nav #prefs.on { background:var(--accent-soft); box-shadow:var(--seg-edge); border-radius:4px; }
+body.side-nav .side-foot { border-top:1px dashed var(--line); }
+.top { background:var(--card); border-bottom:2px solid var(--retro-ink); }
+.seg { border:1px solid var(--line); border-radius:5px; }
+.seg > .thumb { border-radius:4px; }
+.list { border-radius:5px; }
+#providers, #offProviders { background:transparent; border:0; border-radius:0; overflow:visible; }
+#providers > .row.provider, #offProviders > .row.provider {
+  background:var(--card); border:2px solid var(--retro-ink); border-radius:5px;
+  box-shadow:var(--shadow); margin:0 4px 14px 0; min-height:58px; padding:9px 13px;
 }
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs):hover:not(.on) {
-  border-color: var(--line);
-  background: var(--pill);
-}
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs).on {
-  background: var(--accent-soft);
-  border-color: var(--line);
-  box-shadow: var(--shadow-sm);
-}
-/* the gliding highlight becomes the framed thumb behind it */
-:root[data-theme="light"] body.side-nav :is(#nav > .nav-top-hl, .nav-hl) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: var(--shadow-sm);
-  background: var(--accent-soft);
-}
-:root[data-theme="light"] body.side-nav #side #nav.hl-on button[data-view]:is(.on, :hover, :active) {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-}
-:root[data-theme="light"] .side-foot { border-top: 2px dashed var(--line); }
-
-:root[data-theme="light"] .top {
-  background: var(--card);
-  border-bottom: 3px solid var(--line);
-}
-:root[data-theme="light"] .seg { border: 2px solid var(--line); border-radius: 8px; background: var(--seg-track); }
-:root[data-theme="light"] .seg > .thumb { border-radius: 5px; box-shadow: 0 0 0 1.5px var(--line); }
-
-:root[data-theme="light"] .list {
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
-}
-/* provider rows read as individually separated framed cards */
-:root[data-theme="light"] #providers > .row {
-  margin-bottom: 12px;
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: var(--shadow-sm);
-}
-:root[data-theme="light"] #providers > .row:last-child { margin-bottom: 0; }
-:root[data-theme="light"] #providers > .row:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow);
-}
-
-:root[data-theme="light"] .editor {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card-2);
-}
-
-:root[data-theme="light"] button.text { color: var(--fg-2); font-weight: 700; }
-:root[data-theme="light"] button.text.primary { color: var(--accent); }
-:root[data-theme="light"] .proto {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-}
-:root[data-theme="light"] .proto:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-sm);
-}
-/* pill toggles / switch buttons read as small framed presses */
-:root[data-theme="light"] .row button:not(.text):not(.proto):not(.segbtn) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 2px 2px 0 var(--line);
-  background: var(--card);
-}
-
-:root[data-theme="light"] .seg-group button,
-:root[data-theme="light"] button.segbtn {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-}
-
-:root[data-theme="light"] .modal .dialog {
-  border: 3px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 6px 6px 0 var(--line);
-  background: var(--card);
-}
-:root[data-theme="light"] .modal::backdrop { background: rgba(31, 28, 23, .45); }
-
-:root[data-theme="light"] .pop {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 4px 4px 0 var(--line);
-}
-
-:root[data-theme="light"] input:not([type="range"]):not([type="checkbox"]) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-}
-
-:root[data-theme="light"] .row { border-radius: 6px; }
-/* internal settings rows stand alone; never a frame inside a frame */
-:root[data-theme="light"] #internalSettings > [data-setting] {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-  margin-bottom: 10px;
-}
-:root[data-theme="light"] #internalSettings > [data-setting]:last-child { margin-bottom: 0; }
-
-:root[data-theme="light"] .side-gw > i {
-  border-radius: 0;
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-/* ==== system theme (no data-theme attribute) ================
-   Only when the OS itself asks for light. A system-dark reader
-   gets none of these rules and keeps upstream's dark surfaces.
-   ============================================================ */
-
-@media (prefers-color-scheme: light) {
-
-:root:not([data-theme]) {
-  --bg: #f6f1e6;
-  --card: #fffdf7;
-  --card-2: #f9f3e4;
-  --pill: #f1ebdc;
-  --pill-hover: #e7dfcb;
-  --seg-track: #eae2cf;
-  --seg-thumb: #fffdf7;
-  --ctl-fg: #5c564a;
-  --line: #1f1c17;
-  --line-2: #e2d9c4;
-  --fg: #1f1c17;
-  --fg-2: #443f35;
-  --muted: #8f8778;
-  --faint: #b9b09c;
-  --accent: #3d6bff;
-  --accent-soft: #e3ebff;
-  --accent-fg: #ffffff;
-  --sel: #dbe6ff;
-  --red: #d63a3f;
-  --red-soft: #ffe3e3;
-  --amber: #b45309;
-  --amber-soft: #ffe9d8;
-  --pop-bg: rgba(255, 253, 247, .97);
-  --shadow: 4px 4px 0 #1f1c17;
-  --shadow-sm: 3px 3px 0 #1f1c17;
-  --logo-invert: 0;
-}
-
-:root:not([data-theme]) body {
-  background-image: radial-gradient(#ece4d2 1px, transparent 1px);
-  background-size: 14px 14px;
-}
-
-:root:not([data-theme]) body.side-nav .sidebar {
-  background: var(--card);
-  border-right: 3px solid var(--line);
-}
-:root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs) {
-  border: 2px solid transparent;
-  border-radius: 6px;
-}
-:root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs):hover:not(.on) {
-  border-color: var(--line);
-  background: var(--pill);
-}
-:root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs).on {
-  background: var(--accent-soft);
-  border-color: var(--line);
-  box-shadow: var(--shadow-sm);
-}
-:root:not([data-theme]) body.side-nav :is(#nav > .nav-top-hl, .nav-hl) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: var(--shadow-sm);
-  background: var(--accent-soft);
-}
-:root:not([data-theme]) body.side-nav #side #nav.hl-on button[data-view]:is(.on, :hover, :active) {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-}
-:root:not([data-theme]) .side-foot { border-top: 2px dashed var(--line); }
-
-:root:not([data-theme]) .top {
-  background: var(--card);
-  border-bottom: 3px solid var(--line);
-}
-:root:not([data-theme]) .seg { border: 2px solid var(--line); border-radius: 8px; background: var(--seg-track); }
-:root:not([data-theme]) .seg > .thumb { border-radius: 5px; box-shadow: 0 0 0 1.5px var(--line); }
-
-:root:not([data-theme]) .list {
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
-}
-:root:not([data-theme]) #providers > .row {
-  margin-bottom: 12px;
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: var(--shadow-sm);
-}
-:root:not([data-theme]) #providers > .row:last-child { margin-bottom: 0; }
-:root:not([data-theme]) #providers > .row:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow);
-}
-
-:root:not([data-theme]) .editor {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card-2);
-}
-
-:root:not([data-theme]) button.text { color: var(--fg-2); font-weight: 700; }
-:root:not([data-theme]) button.text.primary { color: var(--accent); }
-:root:not([data-theme]) .proto {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-}
-:root:not([data-theme]) .proto:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-sm);
-}
-:root:not([data-theme]) .row button:not(.text):not(.proto):not(.segbtn) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 2px 2px 0 var(--line);
-  background: var(--card);
-}
-
-:root:not([data-theme]) .seg-group button,
-:root:not([data-theme]) button.segbtn {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-}
-
-:root:not([data-theme]) .modal .dialog {
-  border: 3px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 6px 6px 0 var(--line);
-  background: var(--card);
-}
-:root:not([data-theme]) .modal::backdrop { background: rgba(31, 28, 23, .45); }
-
-:root:not([data-theme]) .pop {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 4px 4px 0 var(--line);
-}
-
-:root:not([data-theme]) input:not([type="range"]):not([type="checkbox"]) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-}
-
-:root:not([data-theme]) .row { border-radius: 6px; }
-:root:not([data-theme]) #internalSettings > [data-setting] {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-  margin-bottom: 10px;
-}
-:root:not([data-theme]) #internalSettings > [data-setting]:last-child { margin-bottom: 0; }
-
-:root:not([data-theme]) .side-gw > i {
-  border-radius: 0;
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-}
+#providers > .row.provider.selected, #offProviders > .row.provider.selected { background:var(--card-2); }
+#providers > .editor, #offProviders > .editor { margin:-10px 4px 14px 0; border:1px solid var(--line); border-radius:0 0 5px 5px; background:var(--card-2); }
+#view-providers .pv-head { margin-top:12px; margin-bottom:18px; }
+#view-providers .pv-q { flex-basis:320px; }
+#addProvider { background:var(--accent); color:var(--accent-fg); border:2px solid var(--retro-ink); border-radius:4px; padding:8px 14px; box-shadow:var(--shadow); }
+#addProvider:hover { filter:brightness(.94); }
+#addProvider:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+.modal .dialog { border:2px solid var(--retro-ink); border-radius:6px; box-shadow:var(--shadow); }
+:where(input.words,input.sess-filter,textarea.words) { border-radius:4px; }
+::selection { background:var(--accent-soft); color:var(--fg); }

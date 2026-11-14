@@ -4,7 +4,7 @@
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const assert=require('node:assert/strict');
-const {chromium}=require('playwright');
+const {chromium,webkit}=require('playwright');
 const assets=path.resolve('internal/gui/assets');
 const cases=[
   {name:'explicit-light', theme:'light', colorScheme:'light'},
@@ -14,7 +14,8 @@ const cases=[
 ];
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});
- const browser=await chromium.launch({channel:'chrome'});
+ for(const engine of ['chromium','webkit']) {
+ const browser=await (engine==='chromium'?chromium.launch({channel:'chrome'}):webkit.launch());
  try{
   for(const c of cases){
    const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce',colorScheme:c.colorScheme});
@@ -59,16 +60,17 @@ const cases=[
      colorScheme:getComputedStyle(document.documentElement).colorScheme,
     };
    });
-   const retroApplied=info.bg==='#f6f1e6'&&info.rowBorder.startsWith('2px');
-   // expectations: retro skin on for explicit-light and system-light only
-   if(c.name==='explicit-light'||c.name==='system-light')assert.ok(retroApplied,`${c.name}: retro skin should apply (got ${JSON.stringify(info)})`);
-   if(c.name==='explicit-dark'||c.name==='system-dark')assert.ok(!retroApplied,`${c.name}: retro skin must NOT apply (got ${JSON.stringify(info)})`);
+   const light=c.name==='explicit-light'||c.name==='system-light';
+   assert.equal(info.bg,light?'#f6f1e6':'#242526',`${engine} ${c.name}: incorrect palette`);
+   assert.ok(info.rowBorder.startsWith('2px'),`${engine} ${c.name}: missing retro card`);
+   assert.deepEqual(errors,[],`${engine} ${c.name}: page errors`);
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
    assert.ok(!overflow,'horizontal overflow');
-   await page.screenshot({path:path.join(output,`providers-${c.name}.png`),fullPage:false});
-   console.log(c.name,JSON.stringify(info),'retro:',retroApplied,errors.length?errors.join('; '):'no errors');
+   await page.screenshot({path:path.join(output,`providers-${engine}-${c.name}.png`),fullPage:false});
+   console.log(engine,c.name,JSON.stringify(info));
    await page.close();
   }
  }finally{await browser.close();}
+ }
  console.log('theme review passed');
 })().catch(e=>{console.error(e);process.exitCode=1;});
