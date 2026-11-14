@@ -4,7 +4,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const {spawn}=require('node:child_process'),path=require('node:path');
 const {chromium,webkit}=require('playwright');
 
-test('provider entry and editor preserve behavior under the retro skin',async t=>{
+test('provider and routing group interactions preserve behavior under the retro skin',async t=>{
  const child=spawn(process.execPath,[path.join(__dirname,'retro-preview-server.cjs')],{env:{...process.env,RETRO_PREVIEW_PORT:'0'},stdio:['ignore','pipe','pipe']});
  t.after(()=>child.kill());
  const url=await new Promise((resolve,reject)=>{let s='';child.stdout.on('data',b=>{s+=b;const m=s.match(/Preview (http:\/\/127\.0\.0\.1:\d+)/);if(m)resolve(m[1])});child.on('error',reject);child.on('exit',code=>reject(new Error('preview exited: '+code)))});
@@ -26,6 +26,14 @@ test('provider entry and editor preserve behavior under the retro skin',async t=
     const editorText=await page.locator('.modal .dialog').innerText();
     const toggle=page.locator('.modal .dialog [role="switch"]').first();
     const state={addText,editorText,toggleCount:await page.locator('.modal .dialog [role="switch"]').count(),toggle:await toggle.count()?await toggle.getAttribute('aria-checked'):null,overflow:await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)};
+    await page.goto(url+'/?view=groups&desktop=1&theme='+theme);
+    const group=page.locator('.rt-group',{hasText:'示例路由组'});await group.locator('.main').click();
+    const head=page.locator('.rt-gedit .ehead');await head.waitFor();
+    state.groupExpanded=await head.getAttribute('aria-expanded');
+    assert.equal(state.groupExpanded,'true');
+    await head.focus();await page.keyboard.press('Enter');await page.locator('.rt-gedit').waitFor({state:'detached'});
+    state.groupFolded=await group.isVisible();
+    assert.equal(state.groupFolded,true);
     assert.equal(state.overflow,false,`${engine.name()} ${theme} ${width}: overflow`);assert.deepEqual(errors,[]);
     states.push(state);await page.close();
    }
