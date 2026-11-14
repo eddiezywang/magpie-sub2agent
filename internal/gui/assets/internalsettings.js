@@ -1,6 +1,7 @@
 // The internal distribution's complete settings surface. No upstream tab
 // renderers run here: omitted controls cannot reappear through search/deep links.
 const remoteBox = document.getElementById("remoteList");
+const lanBox = document.getElementById("lanList");
 let portValue = null, portError = "";
 function action(label, run, disabled = false) {
   const b = el("button", "text", t(label));
@@ -64,6 +65,7 @@ export function render(s) {
   pathTools(row(root,"data","Data folder").val,s.dir,"settings/reveal");
   pathTools(row(root,"log","Log").val,s.log,"settings/log/reveal");
   renderCLI(row(root,"cli","Command line",t("Checking your shells…")).r);
+  root.append(lanBox); renderLAN(s);
   const remote = row(root,"remote","Connect to another sub2agent",web ? t("Available in the desktop app") : "");
   if (!web) { remote.r.append(remoteBox); renderRemote(false); }
   const uninstall = row(root,"uninstall","Uninstall magpie",web ? t("Available in the desktop app") : t("Disconnects every agent, putting back what each had, then removes magpie's service and files"));

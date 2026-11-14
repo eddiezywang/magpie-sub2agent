@@ -50,6 +50,17 @@ var zhtPreset = PresetDef{
 	Chat:      "http://10.32.33.46:11288/efllmas-agw/v1",
 }
 
+// The internal distribution uses the same remote gateway protocol and preset ID.
+func remoteSub2AgentPreset() PresetDef {
+	for _, pr := range presets {
+		if pr.ID == RemoteMagpiePreset {
+			pr.Name = "Remote sub2agent"
+			return pr
+		}
+	}
+	panic("remote gateway preset missing")
+}
+
 // Distribution policy is checked independently of saved switches. Existing
 // provider records remain on disk and cannot re-enable a retired source.
 func intranetSourceAllowed(p Provider) bool {
@@ -60,7 +71,7 @@ func intranetSourceAllowed(p Provider) bool {
 		return p.IsPlugin() && p.Account.plugin.ID == "sub2agent-workbuddy"
 	}
 	if p.Preset != "" {
-		return p.Preset == codingPlanPreset.ID || p.Preset == zhtPreset.ID
+		return p.Preset == codingPlanPreset.ID || p.Preset == zhtPreset.ID || p.Preset == RemoteMagpiePreset
 	}
 	for _, id := range accountIDs {
 		if p.ID == id {

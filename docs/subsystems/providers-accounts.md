@@ -550,3 +550,5 @@ fallbacks and model-family matching without changing upstream request IDs.
 Exact catalog entries and explicit provider prices retain precedence. No
 shorter-prefix guessing or image-generation capability is invented. A suffix
 can only borrow metadata when the full base model is known by the catalog.
+
+The intranet distribution offers the existing Remote magpie protocol as **Remote sub2agent**, retaining the `remote-magpie` preset ID for compatibility. Its Settings page exposes local network sharing so another installation can use its gateway address and key.
