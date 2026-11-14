@@ -14,6 +14,8 @@ test('isolated preview refreshes CSS and reloads changed scripts',async t=>{
  const response=await fetch(url+'/api/settings',{method:'POST',body:'{}'});assert.match((await response.json()).error,/不会保存/);
  const browser=await chromium.launch({channel:'chrome'});t.after(()=>browser.close());
  const page=await browser.newPage();
+ await page.goto(url+'/?view=agents&desktop=1');
+ await page.getByText('Codex（示例）',{exact:true}).first().waitFor();
  await page.goto(url+'/?view=sessions&desktop=1');
  await page.getByText('示例会话：整理项目任务').first().waitFor();
  await page.goto(url+'/?view=routing&desktop=1');
