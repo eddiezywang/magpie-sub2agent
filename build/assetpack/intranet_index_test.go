@@ -16,3 +16,12 @@ func TestInternalIndexProductBrand(t *testing.T) {
 		t.Fatal("old brand remains in packed product index")
 	}
 }
+
+func TestInternalIndexLoadsRetroStylesheet(t *testing.T) {
+	input := "<head><link rel=\"stylesheet\" href=\"app.css\"></head>"
+	got := string(internalIndex([]byte(input)))
+	link := `<link rel="stylesheet" href="intranet-retro.css">`
+	if strings.Count(got, link) != 1 || strings.Index(got, link) < strings.Index(got, `href="app.css"`) {
+		t.Fatalf("intranet stylesheet is not loaded once after app.css: %s", got)
+	}
+}
