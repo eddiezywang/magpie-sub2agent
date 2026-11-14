@@ -7,6 +7,27 @@ const client={auth:{set:async()=>{throw new Error('Unexpected credential write')
 const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
 const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
 
+test('WorkBuddy uses measured wire-byte headroom instead of a token clamp',async()=>{
+ const model='glm-5.3-flash-maas-fixture';let calls=0;
+ const auth={access:JSON.stringify({models:[model],defaultModel:model,accessToken:'fixture',expiresAt:Date.now()+3600000,userId:'u',enterpriseId:'e'})};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:{},fetchImpl:async()=>{calls++;return sse();}});
+ const loader=await plugin.auth.loader(async()=>auth);
+ const send=size=>loader.fetch('',{body:JSON.stringify({model,stream:true,messages:[{role:'user',content:'x'.repeat(size)}]})});
+ const accepted=await send(1037000);
+ assert.equal(accepted.status,200,'the previously verified summary size must fit');await accepted.text();assert.equal(calls,1);
+ const rejected=await send(1050000);
+ assert.equal(rejected.status,413);assert.equal(calls,1,'oversized payload must not be sent upstream');
+});
+
+test('WorkBuddy wrapped upstream 413 reaches the Agent as a size error',async()=>{
+ const model='glm-5.3-flash-maas-fixture';
+ const auth={access:JSON.stringify({models:[model],defaultModel:model,accessToken:'fixture',expiresAt:Date.now()+3600000,userId:'u',enterpriseId:'e'})};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:{},fetchImpl:async()=>Response.json({code:10000,message:'StreamWithSecAPI error, status: 413, Nginx Request Entity Too Large'},{status:500})});
+ const loader=await plugin.auth.loader(async()=>auth);
+ const result=await loader.fetch('',{body:JSON.stringify({model,stream:true,messages:[{role:'user',content:'test'}]})});
+ assert.equal(result.status,413);assert.match(await result.text(),/request_too_large/);
+});
+
 test('WorkBuddy MaaS emits estimated usage before DONE and preserves real upstream usage',async()=>{
  for(const reported of [null,{prompt_tokens:1234,completion_tokens:17,total_tokens:1251}]) {
   const model='glm-5.3-maas-fixture';

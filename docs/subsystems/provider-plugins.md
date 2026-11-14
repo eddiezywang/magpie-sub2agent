@@ -23,6 +23,17 @@ capacity remains unknown. Byte-budget handling and Agent compaction must be
 validated separately; ordinary model declarations and explicit user overrides
 remain unchanged.
 
+The measured 2026-11-14 MaaS path brackets a 1 MiB upstream request cap.
+The private resolver in WorkBuddy 1.0.6 guards the final serialized body at
+1020 KiB (4 KiB forwarding margin), warns at 900 KiB and normalizes a nested
+upstream Nginx 413 wrapped in HTTP 500/business 10000 into request_too_large.
+Authentication, rate errors and ordinary 500s retain their status. An isolated
+Claude Code summary of 1,037,025 wire bytes succeeded and retained its marker
+after ~255K estimated tokens compacted to 861; this does not verify every Agent
+or guarantee arbitrary images/tool schemas fit. The legacy config writer uses
+272K only as a default compaction window, preserving explicit user settings;
+it no longer uses the frontend virtual alias to decide if the source is MaaS.
+
 The internal Sub2Agent login transport bounds each vendor authentication JSON
 request, including its body, to 12 seconds. Timeout, refused connection, DNS,
 unreachable server and HTTP 5xx/404 failures have actionable Chinese messages
