@@ -19,8 +19,8 @@ const post=async(page,url,body)=>{
  for(const engine of ['chromium','webkit']){
   const browser=await (engine==='chromium'?chromium.launch({channel:'chrome'}):webkit.launch());
   try{
-   for(const theme of ['light','dark']){
-    const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce',colorScheme:theme==='dark'?'dark':'light'});
+   for(const theme of ['light','dark']) for(const width of [1440,420]){
+    const page=await browser.newPage({viewport:{width,height:1000},reducedMotion:'reduce',colorScheme:theme==='dark'?'dark':'light'});
     const errors=[];
     page.on('pageerror',e=>{if(!e.message.startsWith('ResizeObserver loop'))errors.push(e.message);});
     let posts=0;
@@ -70,7 +70,7 @@ const post=async(page,url,body)=>{
     assert.ok(formOpen,`${engine} ${theme}: add-provider entry did not open`);
     await page.keyboard.press('Escape');
     await page.waitForTimeout(200);
-    await page.screenshot({path:path.join(output,`providers-add-entry-${theme}-${engine}.png`)});
+    await page.screenshot({path:path.join(output,`providers-add-entry-${theme}-${engine}-${width}.png`)});
 
     // 2. expand the on provider's row (the editor closes again)
     const row=page.locator('#providers > .row.provider').first();
@@ -94,7 +94,8 @@ const post=async(page,url,body)=>{
      return theme==='light' ? getComputedStyle(ed).borderTopWidth!=='0px' : true;
     },theme);
     assert.ok(editorOpen,`${engine} ${theme}: provider row did not open a framed editor`);
-    await page.screenshot({path:path.join(output,`providers-expanded-${theme}-${engine}.png`)});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${engine} ${theme} ${width}: horizontal overflow`);
+    await page.screenshot({path:path.join(output,`providers-expanded-${theme}-${engine}-${width}.png`)});
     assert.deepEqual(errors,[],`${engine} ${theme}: page errors`);
     await page.close();
    }
