@@ -20,9 +20,11 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
     const url = new URL(route.request().url());
     const json = data => route.fulfill({ json: data });
     if (url.pathname === '/boot.js') return route.fulfill({contentType: 'text/javascript', body: 'window.bootPrefs={lang:"en",theme:"light",web:true,intranet:true,featuresOff:["library","search","otel","tools","warmups"]};'});
-    if (url.pathname === '/api/state') return json({agents:[agentRow('codex','Codex')],profiles:[],settings:{lang:'en',theme:'light'}});
+    if (url.pathname === '/api/state') return json({agents:[agentRow('codex','Codex')],profiles:[],settings:{lang:'en',theme:'light',version:'0.1.3913-sub2agent.3'}});
+    if (url.pathname === '/api/settings') return json({lang:'en',theme:'light',version:'0.1.3913-sub2agent.3'});
     if (url.pathname === '/api/providers') return json({providers:[],presets:[{id:'remote-magpie',name:'Remote sub2agent',icon:'magpie',kind:'remote',endpoint:'http://192.168.1.20:3425',note:"another computer's magpie, shared on its network"}],excluded:[],gateway:{running:true,window:true}});
     if (url.pathname === '/api/plugins') return json({plugins:[]});
+    if (url.pathname === '/api/update') return json({state:'latest',current:'0.1.3913-sub2agent.3'});
     if (url.pathname === '/api/gateway/trace') {
       if (url.searchParams.has('wait')) return;
       const now = new Date().toISOString();
@@ -74,6 +76,9 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   });
   await page.evaluate(() => show('settings'));
   await page.getByText('Share on local network', {exact:true}).waitFor();
+  const version = page.locator('#internalSettings [data-setting=version]');
+  await version.getByText('0.1.3913-sub2agent.3').waitFor();
+  assert.ok(await version.getByRole('button', {name:'Check'}).isVisible());
   await page.evaluate(() => show('providers'));
   await page.getByText('Remote sub2agent', {exact:true}).first().waitFor();
   assert.deepEqual(errors, []);

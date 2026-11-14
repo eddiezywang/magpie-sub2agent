@@ -47,6 +47,9 @@ const Site = "https://usemagpie.ai"
 // Feed is where the newest release is described. MAGPIE_UPDATE_FEED points
 // it elsewhere, for testing an update against a local server.
 func Feed() string {
+	if distribution.Internal {
+		return distribution.AppFeed
+	}
 	if f := os.Getenv("MAGPIE_UPDATE_FEED"); f != "" {
 		return f
 	}
@@ -133,7 +136,7 @@ func Latest(ctx context.Context) (*Release, error) { return LatestIn(ctx, "") }
 // Stable channel it is Stable's release (see Stable).
 func LatestIn(ctx context.Context, lang string) (*Release, error) {
 	if distribution.Internal {
-		return nil, fmt.Errorf("upstream updates are disabled in this distribution")
+		return latestFrom(ctx, Feed(), lang)
 	}
 
 	return latestAt(ctx, withChannel(withLang(Feed(), lang)), lang)
@@ -143,7 +146,7 @@ func LatestIn(ctx context.Context, lang string) (*Release, error) {
 // what Stable's "up to date" leaves out, the newest release out.
 func LatestEvery(ctx context.Context, lang string) (*Release, error) {
 	if distribution.Internal {
-		return nil, fmt.Errorf("upstream updates are disabled in this distribution")
+		return latestFrom(ctx, Feed(), lang)
 	}
 
 	return latestAt(ctx, withLang(Feed(), lang), lang)
@@ -199,7 +202,9 @@ func latestFrom(ctx context.Context, feed, lang string) (*Release, error) {
 		return nil, fmt.Errorf("update feed: %w", err)
 	}
 	r.Notes = InLang(r.Notes, lang)
-	r.githubAddresses()
+	if !distribution.Internal {
+		r.githubAddresses()
+	}
 	return &r, nil
 }
 
@@ -1231,7 +1236,7 @@ func download(ctx context.Context, a Asset, path string) error {
 	// route (apiroute.go), never through a mirror.
 	on, viaAPI := a, false
 	toGitHub := a.GitHub != "" && a.GitHub != a.URL
-	toAPI := mirrorOf(ctx) == ""
+	toAPI := !distribution.Internal && mirrorOf(ctx) == ""
 	// Settings' update source (source.go): GitHub only starts at github.com
 	// and goes on to its API route; the site only goes to no other
 	switch Source() {
@@ -1385,7 +1390,7 @@ func fetch(ctx context.Context, a Asset, path string) error {
 	// through a mirror when one is given (mirror.go): the hash checked
 	// below is still the feed's
 	u := a.URL
-	if !onAPIRoute(ctx) {
+	if !distribution.Internal && !onAPIRoute(ctx) {
 		u = mirrored(mirrorOf(ctx), a.URL)
 	}
 	mirror := strings.TrimSuffix(u, a.URL)
