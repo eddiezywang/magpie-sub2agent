@@ -169,8 +169,8 @@ func (s *Server) withinCap(p provider.Provider, to provider.Protocol, path strin
 // capFit is withinCap without its log line: body fitted under p's known
 // cap, and how many images were left out for it.
 func (s *Server) capFit(p provider.Provider, to provider.Protocol, path string, body []byte) ([]byte, int) {
-	if workBuddyCompactionBody(p, to, body) {
-		return body, 0 // rescue must receive the complete Agent summary request
+	if workBuddyPrivateByteBudget(p, body) {
+		return body, 0 // the private transport owns these models' distinct caps
 	}
 	n := s.bodyCaps.of(p.ID)
 	if n <= 0 || len(body) <= capNear(n) || countsTokens(path) {
@@ -189,7 +189,7 @@ func (s *Server) capFit(p provider.Provider, to provider.Protocol, path string, 
 // is refused again. When nothing more can go, the refusal is said as a
 // 413 that names the size, the cap and what was kept.
 func (s *Server) refitOverCap(ctx context.Context, p provider.Provider, to provider.Protocol, path string, body []byte, in http.Header, res *http.Response) (*http.Response, error) {
-	if workBuddyCompactionBody(p, to, body) {
+	if workBuddyPrivateByteBudget(p, body) {
 		// MaaS and hy4free have different byte caps despite sharing a
 		// provider. Do not learn one provider-wide cap or strip images
 		// before the compaction-only fallback gets the original history.

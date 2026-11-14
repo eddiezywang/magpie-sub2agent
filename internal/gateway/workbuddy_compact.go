@@ -15,17 +15,30 @@ func workBuddyMaasCompaction(c candidate, kind string) bool {
 		strings.Contains(strings.ToLower(c.p.OwnModelID(c.model)), "-maas")
 }
 
-func workBuddyCompactionBody(p provider.Provider, proto provider.Protocol, body []byte) bool {
+func workBuddyPrivateByteBudget(p provider.Provider, body []byte) bool {
 	if p.ID != "sub2agent-workbuddy" {
 		return false
 	}
-	req, err := parse(proto, body)
-	return err == nil && compacting(req)
+	model := strings.ToLower(p.OwnModelID(modelOf(body)))
+	return strings.Contains(model, "-maas") || model == "hy4free"
+}
+
+func workBuddyRescueSelected(p provider.Provider) bool {
+	if len(p.Models) > 0 {
+		return slices.Contains(p.Models, "hy4free")
+	}
+	// A plugin's default list lives in its live catalog, not p.Models.
+	for _, entry := range provider.Served() {
+		if entry.Group == "" && entry.Provider.ID == p.ID && entry.Model == "hy4free" {
+			return true
+		}
+	}
+	return false
 }
 
 func workBuddyCompactRescue(c candidate, kind string, status int, from provider.Protocol, body []byte, tried []candidate) (candidate, bool) {
 	if status != http.StatusRequestEntityTooLarge || !workBuddyMaasCompaction(c, kind) ||
-		!slices.Contains(c.p.Models, "hy4free") || !c.p.AccountServes(c.p.PluginAccountKey(), "hy4free") {
+		!workBuddyRescueSelected(c.p) || !c.p.AccountServes(c.p.PluginAccountKey(), "hy4free") {
 		return candidate{}, false
 	}
 	for _, previous := range tried {
@@ -33,7 +46,7 @@ func workBuddyCompactRescue(c candidate, kind string, status int, from provider.
 			return candidate{}, false // never cycle between MaaS and its rescue
 		}
 	}
-	req, err := parse(from, body)
+	req, err := parseIn(from, body, true)
 	if err != nil || !compacting(req) {
 		return candidate{}, false // a kind/header alone must not reroute a turn
 	}

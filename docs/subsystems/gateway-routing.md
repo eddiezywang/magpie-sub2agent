@@ -8,8 +8,13 @@ account and not known to be too small. Ordinary turns, 429s, authentication
 errors and other failures do not activate this path. It uses the existing
 compaction recognizer, retry trace, protocol conversion and usage records;
 hy4free is the billed model for the summary, while the requested model and
-main conversation affinity stay unchanged. Image fitting is bypassed for
-these WorkBuddy compactions so the fallback receives the complete request.
+main conversation affinity stay unchanged. Plugins' default model selections
+are read from the live served catalog rather than assumed to exist in the
+provider's explicit Models field. Compaction is verified on the original
+client body, before protocol conversion merges or rewrites its text blocks.
+Image fitting for MaaS and hy4free is delegated to the private transport:
+these models have different byte limits and must not share a provider-wide
+learned image cap. The fallback receives the complete request.
 If rescue also fails, the existing error/fallback path applies without a cycle.
 No gateway-generated summary or hidden replacement of the Agent's history is
 performed. Only hy4free has been verified as a rescue transport; other models

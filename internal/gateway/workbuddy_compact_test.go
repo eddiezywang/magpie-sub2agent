@@ -48,6 +48,16 @@ func TestWorkBuddyCompactRescueScope(t *testing.T) {
 	if got, ok := workBuddyCompactRescue(c, KindCompact, 413, provider.Chat, body, nil); !ok || got.model != "hy4free" || !got.compactRescue {
 		t.Fatalf("rescue: %+v %v", got, ok)
 	}
+	catalogProvider := c.p
+	catalogProvider.Chat, catalogProvider.Key = "http://127.0.0.1:1/v1", "fixture"
+	if err := provider.Save(catalogProvider); err != nil {
+		t.Fatal(err)
+	}
+	pluginDefault := c
+	pluginDefault.p.Models = nil
+	if _, ok := workBuddyCompactRescue(pluginDefault, KindCompact, 413, provider.Chat, body, nil); !ok {
+		t.Fatal("a provider with a catalog list and no explicit model selection must rescue")
+	}
 	s := New()
 	s.bodyCaps.learn(c.p.ID, 1024)
 	withImage := []byte(`{"model":"hy4free","messages":[` + rescueSummary + `,{"role":"user","content":[{"type":"image_url","image_url":{"url":"data:image/png;base64,` + strings.Repeat("A", 6000) + `"}}]}]}`)

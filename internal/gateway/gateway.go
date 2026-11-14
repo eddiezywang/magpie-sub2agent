@@ -4727,7 +4727,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 			}
 		}
 		if !hw.passing && !hw.refused {
-			if rescue, ok := workBuddyCompactRescue(c, call.Kind, hw.code(), from, attemptBody, cands[:i+1]); ok {
+			if rescue, ok := workBuddyCompactRescue(c, call.Kind, hw.code(), from, plain, cands[:i+1]); ok {
 				// Add it only after an actual size rejection, ahead of other
 				// fallbacks. Keep the normal trace, usage and protocol path.
 				left := slices.DeleteFunc(slices.Clone(cands[i+1:]), func(x candidate) bool {
