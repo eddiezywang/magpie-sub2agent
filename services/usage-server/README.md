@@ -70,3 +70,10 @@ SC Regular/Bold fonts under `assets/fonts` with their license. They are availabl
 from [the Noto CJK project](https://github.com/notofonts/noto-cjk/tree/main/Sans).
 `USAGE_SERVER_FONT_FILE` may name an additional font; a missing CJK font must be
 fixed by installing the intended font rather than redesigning the receipt.
+
+`USAGE_SERVER_ICON_DIR` selects the deployed brand asset directory. For the
+internal pixel theme, copy `build/intranet/pixel-icons` there (including its
+manifest) and retain the MIT notice from `build/pixel-icons/vendor/LICENSE`.
+Pixel SVGs keep their original palette and crisp edges in receipts; traditional
+SVGs retain the existing monochrome/two-tone rendering. PNG fallbacks remain
+available, while generated SVG counterparts are preferred by the renderer.

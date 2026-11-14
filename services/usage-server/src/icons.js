@@ -13,7 +13,7 @@ const path = require('node:path');
 const INK = '#1f1d20';
 const PAPER = '#f7f4ed';
 
-const ICON_DIR = path.resolve(__dirname, '..', 'assets', 'icons');
+const ICON_DIR = process.env.USAGE_SERVER_ICON_DIR || path.resolve(__dirname, '..', 'assets', 'icons');
 const cache = new Map();
 
 function luminance([r, g, b]) {
@@ -102,11 +102,13 @@ function loadIcon(name) {
           .slice(open.index + open[0].length)
           .replace(/<\/svg\s*>\s*$/i, '')
           .replace(/<title[\s\S]*?<\/title>/gi, '');
+        const pixel = /shape-rendering="crispEdges"/.test(open[0]);
         icon = {
           kind: 'svg',
           viewBox: vb[1],
-          mono: !/-color$/i.test(name),
-          inner: recolor(inner, !/-color$/i.test(name)),
+          pixel,
+          mono: !pixel && !/-color$/i.test(name),
+          inner: pixel ? inner : recolor(inner, !/-color$/i.test(name)),
         };
       } else {
         icon = { kind: 'png', dataUrl: `data:image/png;base64,${bytes.toString('base64')}` };
@@ -127,7 +129,7 @@ function iconMarkup(name, x, y, size) {
   if (icon.kind === 'png') {
     return `<image x="${x}" y="${y}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet" filter="url(#iconInk)" href="${icon.dataUrl}"/>`;
   }
-  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="${icon.viewBox}" preserveAspectRatio="xMidYMid meet" fill="${icon.mono ? INK : PAPER}" overflow="visible">${icon.inner}</svg>`;
+  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="${icon.viewBox}"${icon.pixel ? ' shape-rendering="crispEdges"' : ''} preserveAspectRatio="xMidYMid meet" fill="${icon.mono ? INK : PAPER}" overflow="visible">${icon.inner}</svg>`;
 }
 
 module.exports = { iconMarkup };
