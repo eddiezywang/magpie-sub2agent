@@ -1,5 +1,13 @@
 # Gateway routing and fallback
 
+The internal cheap template prefers WorkBuddy's hy4free, then MaaS deployments,
+then other WorkBuddy models even when the managed relative-price service is
+unreachable. This is an offline ordering preference, not a free-price or balance
+claim. A positive managed score for hy4free removes its free-first preference;
+the server remains responsible for prices and promotions. Within each tier the
+existing managed-price/model ranking remains. Template-backed groups recompute
+their members; manually edited groups retain their explicit order.
+
 The gateway is magpie's local LLM endpoint (`127.0.0.1:3425` by default). It
 serves Chat Completions, Responses, Anthropic Messages and Gemini. It finds
 the provider, key or account and model for each request. When the upstream

@@ -3,6 +3,7 @@ package provider
 import (
 	"cmp"
 	"slices"
+	"strings"
 )
 
 // Internal templates use model facts and managed relative prices. No template
@@ -21,7 +22,7 @@ func internalTemplate(kind string, ms []rated, ds []Entry) Template {
 	}
 	cheap := slices.Clone(ms)
 	slices.SortStableFunc(cheap, func(a, b rated) int {
-		return cmp.Or(-cmp.Compare(btoi(a.priced), btoi(b.priced)), cmp.Compare(a.out, b.out), -cmp.Compare(btoi(a.managed), btoi(b.managed)), cmp.Compare(btoi(a.tiny), btoi(b.tiny)), -cmp.Compare(a.e.Released, b.e.Released))
+		return cmp.Or(cmp.Compare(workBuddyCheapTier(a), workBuddyCheapTier(b)), -cmp.Compare(btoi(a.priced), btoi(b.priced)), cmp.Compare(a.out, b.out), -cmp.Compare(btoi(a.managed), btoi(b.managed)), cmp.Compare(btoi(a.tiny), btoi(b.tiny)), -cmp.Compare(a.e.Released, b.e.Released))
 	})
 	add := func(m rated) {
 		if !slices.Contains(t.Group.Members, m.e.ID) {
@@ -85,4 +86,21 @@ func internalTemplate(kind string, ms []rated, ds []Entry) Template {
 		t.Why = "unsupported internal template"
 	}
 	return t
+}
+
+// An offline scheduling preference is not a price declaration. Prefer the
+// enterprise fallback, then MaaS, before other WorkBuddy models even without
+// the managed catalog. A positive managed score ends the free-first preference.
+func workBuddyCheapTier(m rated) int {
+	if !strings.HasPrefix(m.e.Provider.ID, "sub2agent-workbuddy") {
+		return 2
+	}
+	id := strings.ToLower(m.e.Model)
+	if id == "hy4free" && (!m.managed || m.out == 0) {
+		return 0
+	}
+	if strings.Contains(id, "-maas-") || strings.HasSuffix(id, "-maas") {
+		return 1
+	}
+	return 2
 }

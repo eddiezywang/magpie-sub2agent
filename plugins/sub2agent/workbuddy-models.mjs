@@ -4,6 +4,16 @@ import snapshot from 'sub2agent/generated/codebuddy-models.json';
 const positive = value => Number.isSafeInteger(value) && value >= 512 ? value : undefined;
 const base = id => String(id).toLowerCase().replace(/-maas(?:-[a-z0-9_.-]+)?$/, '');
 
+// Operational Agent budget, not the model's advertised token capacity. The
+// MaaS transport separately guards 900 KiB of serialized request bytes, so a
+// generic 1M-token catalog window must never be exposed as usable on this path.
+function agentBudget(limit = {}) {
+  const output = Math.min(limit.output || 32000, 32000);
+  const context = Math.min(limit.context || 132000, 132000);
+  const input = Math.min(limit.input || 100000, 100000, Math.max(1, context-output));
+  return {context,input,output:Math.min(output,context-1)};
+}
+
 // Preserve the vendor's input cap separately from its full window. Never copy
 // credentials, prices or unrecognised response fields into model metadata.
 export function modelMetadata(row) {
@@ -18,7 +28,9 @@ export function workBuddyModelSet(bundle, ids) {
     const upstream=bundle.modelMap?.[id] || id;
     const row=fallback.get(base(upstream)) || fallback.get(base(id));
     const saved=bundle.modelMetadata?.[id];
-    return [id,{name:id,...modelMetadata(row),...(saved?.limit?{limit:{...modelMetadata(row).limit,...saved.limit}}:{})}];
+    const metadata={...modelMetadata(row),...(saved?.limit?{limit:{...modelMetadata(row).limit,...saved.limit}}:{})};
+    if (/-maas(?:-|\||$)/i.test(upstream) || /-maas(?:-|\||$)/i.test(id)) metadata.limit=agentBudget(metadata.limit);
+    return [id,{name:id,...metadata}];
   }));
 }
 
