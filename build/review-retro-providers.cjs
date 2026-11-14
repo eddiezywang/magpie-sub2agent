@@ -65,12 +65,10 @@ const post=async(page,url,body)=>{
     // nothing is inert): open it, then close without saving
     const addBtn=page.locator('#addProvider');
     await addBtn.click();
-    await page.waitForTimeout(400);
-    const formOpen=await page.evaluate(()=>!!document.querySelector('.editor, .modal .dialog, form'));
-    assert.ok(formOpen,`${engine} ${theme}: add-provider entry did not open`);
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(200);
+    await page.locator('#addSheet').waitFor({state:'visible'});
     await page.screenshot({path:path.join(output,`providers-add-entry-${theme}-${engine}-${width}.png`)});
+    await page.keyboard.press('Escape');
+    await page.locator('#addSheet').waitFor({state:'hidden'});
 
     // 2. expand the on provider's row (the editor closes again)
     const row=page.locator('#providers > .row.provider').first();
