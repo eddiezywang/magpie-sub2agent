@@ -11586,6 +11586,9 @@ function renderModels(p) {
     };
     head.append(el("b", "", t("Model settings")), fold);
     names.append(head);
+    if (intranet && p.id.startsWith("sub2agent-workbuddy") && p.models.some((m) => /-maas(?:-|$)/i.test(m.id))) {
+      names.append(el("p", "hint", "MaaS 标称容量来自供应商或模型资料；实际可用长度还受单次请求约 1 MiB 的大小限制。请保留自动压缩，图片、工具定义和工具结果也会占用请求空间。"));
+    }
     const ids = servedIds(p);
     if (!ids.length) { names.append(el("span", "hint", t("Pick a model first."))); return; }
     const prefs = draft.modelPrefs = draft.modelPrefs || {};
