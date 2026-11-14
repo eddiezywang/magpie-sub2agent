@@ -136,7 +136,7 @@ func Latest(ctx context.Context) (*Release, error) { return LatestIn(ctx, "") }
 // Stable channel it is Stable's release (see Stable).
 func LatestIn(ctx context.Context, lang string) (*Release, error) {
 	if distribution.Internal {
-		return latestFrom(ctx, Feed(), lang)
+		return latestInternal(ctx, lang)
 	}
 
 	return latestAt(ctx, withChannel(withLang(Feed(), lang)), lang)
@@ -146,7 +146,7 @@ func LatestIn(ctx context.Context, lang string) (*Release, error) {
 // what Stable's "up to date" leaves out, the newest release out.
 func LatestEvery(ctx context.Context, lang string) (*Release, error) {
 	if distribution.Internal {
-		return latestFrom(ctx, Feed(), lang)
+		return latestInternal(ctx, lang)
 	}
 
 	return latestAt(ctx, withLang(Feed(), lang), lang)
@@ -1219,6 +1219,25 @@ var retryWaits = []time.Duration{2 * time.Second, 4 * time.Second, 8 * time.Seco
 // asking with Range for what is still missing; the hash is checked over the whole file, the bytes kept
 // from the tries before included.
 func download(ctx context.Context, a Asset, path string) error {
+	if !distribution.Internal {
+		return downloadSingle(ctx, a, path)
+	}
+	err := downloadSingle(ctx, a, path)
+	if err == nil || ctx.Err() != nil {
+		return err
+	}
+	other := internalAlternateAsset(a.URL)
+	if other == "" {
+		return err
+	}
+	a.URL = other
+	if next := downloadSingle(ctx, a, path); next != nil {
+		return fmt.Errorf("%v; alternate source: %w", err, next)
+	}
+	return nil
+}
+
+func downloadSingle(ctx context.Context, a Asset, path string) error {
 	if a.SHA256 == "" {
 		return errors.New("the release lists no checksum for " + filepath.Base(path))
 	}
@@ -1263,6 +1282,11 @@ func download(ctx context.Context, a Asset, path string) error {
 			tctx = withAPIRoute(ctx)
 		}
 		if err = fetch(tctx, on, path); err == nil || ctx.Err() != nil || !Network(err) {
+			break
+		}
+		// Internal releases have a second independent source; try it before
+		// spending the public release retry schedule on the failed source.
+		if distribution.Internal {
 			break
 		}
 		left := 0

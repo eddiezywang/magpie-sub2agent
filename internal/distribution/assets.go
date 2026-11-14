@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
+	"strings"
 )
 
 // AssetURL permits the internal artifact server and local test servers. This
@@ -16,6 +18,10 @@ func AssetURL(raw string) error {
 	switch u.Hostname() {
 	case "172.21.0.177", "127.0.0.1", "localhost", "::1":
 		return nil
+	case "uat.rcrai.weoa.com":
+		if u.Port() == "" && strings.HasPrefix(u.Path, "/wemail/sub2agent/releases/") && path.Clean(u.Path) == u.Path {
+			return nil
+		}
 	}
 	return fmt.Errorf("public resource downloads are disabled: %s", u.Hostname())
 }
