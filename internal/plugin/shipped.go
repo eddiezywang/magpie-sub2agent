@@ -48,13 +48,16 @@ func shipped(l List) List {
 		}); i >= 0 {
 			old := l.Plugins[i].Spec
 			l.Plugins[i].Spec, l.Plugins[i].Bundled = pkg, kind
+			if (kind == "codebuddy" || kind == "trae") && !l.Plugins[i].ExplicitOn {
+				l.Plugins[i].Off = true
+			}
 			for id, chosen := range l.Prefer {
 				if chosen == old {
 					l.Prefer[id] = pkg
 				}
 			}
 		} else {
-			l.Plugins = append(l.Plugins, Entry{Spec: pkg, Bundled: kind})
+			l.Plugins = append(l.Plugins, Entry{Spec: pkg, Bundled: kind, Off: kind == "codebuddy" || kind == "trae"})
 		}
 	}
 
@@ -81,12 +84,7 @@ func effectiveList() List {
 		l.Plugins = slices.Clone(l.Plugins)
 		l.Prefer = cloneStringMap(l.Prefer)
 		l = shipped(l)
-		for i := range l.Plugins {
-			switch Name(l.Plugins[i].Spec) {
-			case "@sub2agent/codebuddy", "@sub2agent/trae":
-				l.Plugins[i].Off = true
-			}
-		}
+
 	}
 	return l
 }

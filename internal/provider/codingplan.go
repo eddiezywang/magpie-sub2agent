@@ -68,7 +68,7 @@ func intranetSourceAllowed(p Provider) bool {
 		return true
 	}
 	if p.Account != nil {
-		return p.IsPlugin() && p.Account.plugin.ID == "sub2agent-workbuddy"
+		return p.IsPlugin()
 	}
 	if p.Preset != "" {
 		return p.Preset == codingPlanPreset.ID || p.Preset == zhtPreset.ID || p.Preset == RemoteMagpiePreset

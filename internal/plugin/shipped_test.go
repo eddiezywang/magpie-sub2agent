@@ -36,8 +36,31 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 		ps = append(ps, Provider{ID: "sub2agent-" + e.Bundled, Spec: e.Spec})
 	}
 	UseCached(ps)
-	if got := len(Cached()); got != 1 {
-		t.Fatalf("picker must expose only WorkBuddy enterprise, got %d", got)
+	if got := len(Cached()); got != 2 {
+		t.Fatalf("picker must expose enabled providers, got %d", got)
+	}
+	for _, kind := range []string{"codebuddy", "trae"} {
+		if err := SetOff("@sub2agent/"+kind, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := len(Cached()); got != 4 {
+		t.Fatalf("enabled providers not visible: %d", got)
+	}
+	// An older file could contain an apparently enabled entry, though the old
+	// runtime always forced it off. It stays off until explicitly enabled.
+	legacy := shipped(List{Plugins: []Entry{{Spec: "@sub2agent/codebuddy", Bundled: "codebuddy"}}})
+	if !legacy.Plugins[0].Off {
+		t.Fatal("legacy provider became enabled without a user action")
+	}
+	if err := SetOff("@sub2agent/codebuddy", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetOff("@sub2agent/codebuddy", false); err != nil {
+		t.Fatal(err)
+	}
+	if len(Cached()) != 4 {
+		t.Fatal("explicit enablement did not persist")
 	}
 	// A moved portable bundle follows its current executable, retaining Off.
 	l := shipped(List{Plugins: []Entry{{Spec: "old/path", Bundled: "workbuddy", Off: true}}})

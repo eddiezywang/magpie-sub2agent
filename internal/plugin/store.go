@@ -56,6 +56,8 @@ type Entry struct {
 	Bundled string `json:"bundled,omitempty"`
 	// Off is set on a plugin the user turned off.
 	Off bool `json:"off,omitempty"`
+	// ExplicitOn records a deliberate enablement of a formerly unavailable bundled provider.
+	ExplicitOn bool `json:"explicitOn,omitempty"`
 	// Options are handed to the plugin as its second argument, as
 	// OpenCode's ["name", {options}] does.
 	Options map[string]any `json:"options,omitempty"`
@@ -657,6 +659,9 @@ func SetOff(name string, off bool) error {
 		return fmt.Errorf("no plugin %q", name)
 	}
 	l.Plugins[i].Off = off
+	if l.Plugins[i].Bundled == "codebuddy" || l.Plugins[i].Bundled == "trae" {
+		l.Plugins[i].ExplicitOn = !off
+	}
 	if err := save(l); err != nil {
 		return err
 	}

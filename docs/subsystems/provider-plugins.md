@@ -44,8 +44,8 @@ Inference streaming keeps its original transport. See
 
 ## Sub2Agent intranet distribution
 
-The intranet executable loads complete local CodeBuddy, WorkBuddy enterprise
-and Trae enterprise provider plugins from its adjacent `providers` directory.
+The intranet executable ships complete local CodeBuddy, WorkBuddy enterprise
+and Trae enterprise provider plugins from its adjacent `providers` directory. CodeBuddy and Trae start disabled and can be enabled in Plugins; older installations that previously forced them off remain off until explicitly enabled.
 Magpie retains ownership of add/edit sheets, account selection and persistence,
 model selection, routing and client protocol handling. Each local plugin reuses
 the private Sub2Agent checkout's authentication adapters, credential services,

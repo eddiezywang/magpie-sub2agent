@@ -3,10 +3,7 @@
 package provider
 
 import (
-	"context"
 	"testing"
-
-	"github.com/yetone/magpie/internal/plugin"
 )
 
 func TestIntranetProviderScope(t *testing.T) {
@@ -22,11 +19,6 @@ func TestIntranetProviderScope(t *testing.T) {
 	for _, id := range []string{"anthropic", "openai"} {
 		if _, err := FromPreset(id); err == nil {
 			t.Fatalf("disabled preset %s was offered", id)
-		}
-	}
-	for _, id := range []string{"sub2agent-codebuddy", "sub2agent-trae"} {
-		if _, err := plugin.Authorize(context.Background(), id, 0, nil, plugin.NewAccount); err == nil {
-			t.Fatalf("plugin bypass for %s", id)
 		}
 	}
 	custom := Provider{ID: "custom-fixture", Name: "Custom fixture", Chat: "http://fixture.invalid/v1", Key: "fixture"}
