@@ -1,233 +1,12 @@
 /* ============================================================
-   magpie · pixel-press skin (intranet override, light mode only)
-   Warm cream paper, near-black ink, bright blue accent,
-   hard offset shadows. Dark theme untouched.
+   sub2agent intranet · Retro pixel skin (approved GLM design)
+   Warm cream paper, near-black ink, bright blue accent, hard
+   offset shadows. Overrides light mode only; dark theme keeps
+   upstream surfaces. Loaded after app.css by intranet_index.go.
    ============================================================ */
 
-/* ---- light-mode palette only ------------------------------- */
-:root[data-theme="light"] {
-  --bg: #f6f1e6;
-  --card: #fffdf7;
-  --card-2: #f9f3e4;
-  --pill: #f1ebdc;
-  --pill-hover: #e7dfcb;
-  --seg-track: #eae2cf;
-  --seg-thumb: #fffdf7;
-  --seg-edge: 0 1px 2px rgba(31, 28, 23, .2), 0 0 0 .5px rgba(31, 28, 23, .25);
-  --ctl-fg: #5c564a;
-  --line: #1f1c17;
-  --line-2: #e2d9c4;
-  --fg: #1f1c17;
-  --fg-2: #443f35;
-  --muted: #8f8778;
-  --faint: #b9b09c;
-  --accent: #4169f5;
-  --accent-soft: #e3ebff;
-  --accent-fg: #ffffff;
-  --sel: #dbe6ff;
-  --red: #d63a3f;
-  --red-soft: #ffe3e3;
-  --amber: #b45309;
-  --amber-soft: #ffe9d8;
-  --pop-bg: rgba(255, 253, 247, .97);
-  --shadow: 4px 4px 0 #1f1c17;
-  --logo-invert: 0;
-}
-@media (prefers-color-scheme: light) {
-  :root[data-theme="light"] {
-    --bg: #f6f1e6;
-    --card: #fffdf7;
-    --card-2: #f9f3e4;
-    --pill: #f1ebdc;
-    --pill-hover: #e7dfcb;
-    --seg-track: #eae2cf;
-    --seg-thumb: #fffdf7;
-    --seg-edge: 0 1px 2px rgba(31, 28, 23, .2), 0 0 0 .5px rgba(31, 28, 23, .25);
-    --ctl-fg: #5c564a;
-    --line: #1f1c17;
-    --line-2: #e2d9c4;
-    --fg: #1f1c17;
-    --fg-2: #443f35;
-    --muted: #8f8778;
-    --faint: #b9b09c;
-    --accent: #4169f5;
-    --accent-soft: #e3ebff;
-    --accent-fg: #ffffff;
-    --sel: #dbe6ff;
-    --red: #d63a3f;
-    --red-soft: #ffe3e3;
-    --amber: #b45309;
-    --amber-soft: #ffe9d8;
-    --pop-bg: rgba(255, 253, 247, .97);
-    --shadow: 4px 4px 0 #1f1c17;
-    --logo-invert: 0;
-  }
-}
-
-/* ---- paper texture on the app ground (light only) ---------- */
-:root[data-theme="light"] body,
-:root[data-theme="light"] body { background-image: radial-gradient(#ece4d2 1px, transparent 1px); background-size: 14px 14px; }
-
-/* ---- sidebar: framed paper column -------------------------- */
-:root[data-theme="light"] body.side-nav .sidebar,
-:root[data-theme="light"] body.side-nav .sidebar {
-  background: var(--card);
-  border-right: 3px solid var(--line);
-}
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs),
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs) {
-  border: 2px solid transparent;
-  border-radius: 6px;
-}
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs):hover:not(.on),
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs):hover:not(.on) {
-  border-color: var(--line);
-  background: var(--pill);
-}
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs).on,
-:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs).on {
-  background: var(--accent-soft);
-  border-color: var(--line);
-  box-shadow: 3px 3px 0 var(--line);
-}
-/* the gliding highlight becomes the framed thumb behind it */
-:root[data-theme="light"] body.side-nav :is(#nav > .nav-top-hl, .nav-hl),
-:root[data-theme="light"] body.side-nav :is(#nav > .nav-top-hl, .nav-hl) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 3px 3px 0 var(--line);
-  background: var(--accent-soft);
-}
-:root[data-theme="light"] body.side-nav #side #nav.hl-on button[data-view]:is(.on, :hover, :active),
-:root[data-theme="light"] body.side-nav #side #nav.hl-on button[data-view]:is(.on, :hover, :active) {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-}
-:root[data-theme="light"] .side-foot,
-:root[data-theme="light"] .side-foot { border-top: 2px dashed var(--line); }
-
-/* ---- header ------------------------------------------------- */
-:root[data-theme="light"] .top,
-:root[data-theme="light"] .top {
-  background: var(--card);
-  border-bottom: 3px solid var(--line);
-}
-:root[data-theme="light"] .seg,
-:root[data-theme="light"] .seg { border: 2px solid var(--line); border-radius: 8px; background: var(--seg-track); }
-:root[data-theme="light"] .seg > .thumb,
-:root[data-theme="light"] .seg > .thumb { border-radius: 5px; box-shadow: 0 0 0 1.5px var(--line); }
-
-/* ---- views: framed content on the paper -------------------- */
-:root[data-theme="light"] .view,
-:root[data-theme="light"] .view { padding-top: 16px; }
-
-/* ---- lists, rows, provider cards --------------------------- */
-:root[data-theme="light"] .list,
-:root[data-theme="light"] .list {
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
-}
-/* provider rows read as individually separated framed cards,
-   while the expandable behaviour is untouched */
-:root[data-theme="light"] #providers > .row,
-:root[data-theme="light"] #providers > .row {
-  position: relative;
-  margin: 0 0 12px;
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 3px 3px 0 var(--line);
-  overflow: hidden;
-}
-:root[data-theme="light"] #providers > .row:last-child,
-:root[data-theme="light"] #providers > .row:last-child { margin-bottom: 0; }
-:root[data-theme="light"] #providers > .row + .row,
-:root[data-theme="light"] #providers > .row + .row { border-top: 2px solid var(--line); }
-:root[data-theme="light"] #providers > .row:hover,
-:root[data-theme="light"] #providers > .row:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--line); }
-:root[data-theme="light"] #providers > .row + .row,
-:root[data-theme="light"] #providers > .row + .row { margin-top: 12px; }
-
-/* ---- the editor that expands from a provider row ----------- */
-:root[data-theme="light"] .editor,
-:root[data-theme="light"] .editor {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card-2);
-}
-:root[data-theme="light"] .editor.framed,
-:root[data-theme="light"] .editor.framed { box-shadow: 3px 3px 0 var(--line); }
-
-/* ---- buttons ------------------------------------------------ */
-:root[data-theme="light"] button.text,
-:root[data-theme="light"] button.text { color: var(--fg-2); font-weight: 700; }
-:root[data-theme="light"] button.text.primary,
-:root[data-theme="light"] button.text.primary { color: var(--accent); }
-:root[data-theme="light"] .proto,
-:root[data-theme="light"] .proto {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-}
-:root[data-theme="light"] .proto:hover,
-:root[data-theme="light"] .proto:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--line); }
-
-/* ---- segmented controls (the warm-at / seg switches) -------- */
-:root[data-theme="light"] .seg-group button, :root[data-theme="light"] .seg-group button,
-:root[data-theme="light"] button.segbtn, :root[data-theme="light"] button.segbtn {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 2px 2px 0 var(--line);
-}
-
-/* ---- modal dialog ------------------------------------------- */
-:root[data-theme="light"] .modal .dialog,
-:root[data-theme="light"] .modal .dialog {
-  border: 3px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 6px 6px 0 var(--line);
-  background: var(--card);
-}
-:root[data-theme="light"] .modal::backdrop,
-:root[data-theme="light"] .modal::backdrop { background: rgba(31, 28, 23, .45); }
-
-/* ---- popovers / menus --------------------------------------- */
-:root[data-theme="light"] .pop,
-:root[data-theme="light"] .pop {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 4px 4px 0 var(--line);
-}
-
-/* ---- inputs -------------------------------------------------- */
-:root[data-theme="light"] input:not([type="range"]):not([type="checkbox"]),
-:root[data-theme="light"] input:not([type="range"]):not([type="checkbox"]) {
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--card);
-}
-:root[data-theme="light"] .row input, :root[data-theme="light"] .row input { box-shadow: none; }
-
-/* ---- status dot: pixel accent ------------------------------- */
-:root[data-theme="light"] .side-gw > i,
-:root[data-theme="light"] .side-gw > i {
-  border-radius: 0;
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-@media (prefers-color-scheme: light) {
-/* ============================================================
-   magpie · pixel-press skin (intranet override, light mode only)
-   Warm cream paper, near-black ink, bright blue accent,
-   hard offset shadows. Dark theme untouched.
-   ============================================================ */
-
-/* ---- light-mode palette only ------------------------------- */
+/* ---- light-mode palette ------------------------------------ */
+:root[data-theme="light"],
 :root:not([data-theme]) {
   --bg: #f6f1e6;
   --card: #fffdf7;
@@ -236,7 +15,6 @@
   --pill-hover: #e7dfcb;
   --seg-track: #eae2cf;
   --seg-thumb: #fffdf7;
-  --seg-edge: 0 1px 2px rgba(31, 28, 23, .2), 0 0 0 .5px rgba(31, 28, 23, .25);
   --ctl-fg: #5c564a;
   --line: #1f1c17;
   --line-2: #e2d9c4;
@@ -244,7 +22,7 @@
   --fg-2: #443f35;
   --muted: #8f8778;
   --faint: #b9b09c;
-  --accent: #4169f5;
+  --accent: #3d6bff;
   --accent-soft: #e3ebff;
   --accent-fg: #ffffff;
   --sel: #dbe6ff;
@@ -254,193 +32,182 @@
   --amber-soft: #ffe9d8;
   --pop-bg: rgba(255, 253, 247, .97);
   --shadow: 4px 4px 0 #1f1c17;
+  --shadow-sm: 3px 3px 0 #1f1c17;
   --logo-invert: 0;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]) {
-    --bg: #f6f1e6;
-    --card: #fffdf7;
-    --card-2: #f9f3e4;
-    --pill: #f1ebdc;
-    --pill-hover: #e7dfcb;
-    --seg-track: #eae2cf;
-    --seg-thumb: #fffdf7;
-    --seg-edge: 0 1px 2px rgba(31, 28, 23, .2), 0 0 0 .5px rgba(31, 28, 23, .25);
-    --ctl-fg: #5c564a;
-    --line: #1f1c17;
-    --line-2: #e2d9c4;
-    --fg: #1f1c17;
-    --fg-2: #443f35;
-    --muted: #8f8778;
-    --faint: #b9b09c;
-    --accent: #4169f5;
-    --accent-soft: #e3ebff;
-    --accent-fg: #ffffff;
-    --sel: #dbe6ff;
-    --red: #d63a3f;
-    --red-soft: #ffe3e3;
-    --amber: #b45309;
-    --amber-soft: #ffe9d8;
-    --pop-bg: rgba(255, 253, 247, .97);
-    --shadow: 4px 4px 0 #1f1c17;
-    --logo-invert: 0;
-  }
+
+/* paper dot grid on the app ground (light only) */
+:root[data-theme="light"] body,
+:root:not([data-theme]) body {
+  background-image: radial-gradient(#ece4d2 1px, transparent 1px);
+  background-size: 14px 14px;
 }
 
-/* ---- paper texture on the app ground (light only) ---------- */
-:root:not([data-theme]) body,
-:root:not([data-theme]) body { background-image: radial-gradient(#ece4d2 1px, transparent 1px); background-size: 14px 14px; }
-
-/* ---- sidebar: framed paper column -------------------------- */
-:root:not([data-theme]) body.side-nav .sidebar,
+/* ---- sidebar ------------------------------------------------ */
+:root[data-theme="light"] body.side-nav .sidebar,
 :root:not([data-theme]) body.side-nav .sidebar {
   background: var(--card);
   border-right: 3px solid var(--line);
 }
-:root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs),
+:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs),
 :root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs) {
   border: 2px solid transparent;
   border-radius: 6px;
 }
-:root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs):hover:not(.on),
+:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs):hover:not(.on),
 :root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs):hover:not(.on) {
   border-color: var(--line);
   background: var(--pill);
 }
-:root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs).on,
+:root[data-theme="light"] body.side-nav :is(#nav button[data-view], #prefs).on,
 :root:not([data-theme]) body.side-nav :is(#nav button[data-view], #prefs).on {
   background: var(--accent-soft);
   border-color: var(--line);
-  box-shadow: 3px 3px 0 var(--line);
+  box-shadow: var(--shadow-sm);
 }
 /* the gliding highlight becomes the framed thumb behind it */
-:root:not([data-theme]) body.side-nav :is(#nav > .nav-top-hl, .nav-hl),
+:root[data-theme="light"] body.side-nav :is(#nav > .nav-top-hl, .nav-hl),
 :root:not([data-theme]) body.side-nav :is(#nav > .nav-top-hl, .nav-hl) {
   border: 2px solid var(--line);
   border-radius: 6px;
-  box-shadow: 3px 3px 0 var(--line);
+  box-shadow: var(--shadow-sm);
   background: var(--accent-soft);
 }
-:root:not([data-theme]) body.side-nav #side #nav.hl-on button[data-view]:is(.on, :hover, :active),
+:root[data-theme="light"] body.side-nav #side #nav.hl-on button[data-view]:is(.on, :hover, :active),
 :root:not([data-theme]) body.side-nav #side #nav.hl-on button[data-view]:is(.on, :hover, :active) {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
 }
-:root:not([data-theme]) .side-foot,
+:root[data-theme="light"] .side-foot,
 :root:not([data-theme]) .side-foot { border-top: 2px dashed var(--line); }
 
 /* ---- header ------------------------------------------------- */
-:root:not([data-theme]) .top,
+:root[data-theme="light"] .top,
 :root:not([data-theme]) .top {
   background: var(--card);
   border-bottom: 3px solid var(--line);
 }
-:root:not([data-theme]) .seg,
+:root[data-theme="light"] .seg,
 :root:not([data-theme]) .seg { border: 2px solid var(--line); border-radius: 8px; background: var(--seg-track); }
-:root:not([data-theme]) .seg > .thumb,
+:root[data-theme="light"] .seg > .thumb,
 :root:not([data-theme]) .seg > .thumb { border-radius: 5px; box-shadow: 0 0 0 1.5px var(--line); }
 
-/* ---- views: framed content on the paper -------------------- */
-:root:not([data-theme]) .view,
-:root:not([data-theme]) .view { padding-top: 16px; }
-
-/* ---- lists, rows, provider cards --------------------------- */
-:root:not([data-theme]) .list,
+/* ---- lists, rows, provider cards ---------------------------- */
+:root[data-theme="light"] .list,
 :root:not([data-theme]) .list {
   background: var(--card);
   border: 2px solid var(--line);
   border-radius: 6px;
   box-shadow: var(--shadow);
 }
-/* provider rows read as individually separated framed cards,
-   while the expandable behaviour is untouched */
-:root:not([data-theme]) #providers > .row,
+/* provider rows read as individually separated framed cards */
+:root[data-theme="light"] #providers > .row,
 :root:not([data-theme]) #providers > .row {
-  position: relative;
-  margin: 0 0 12px;
+  margin-bottom: 12px;
   border: 2px solid var(--line);
   border-radius: 6px;
   background: var(--card);
-  box-shadow: 3px 3px 0 var(--line);
-  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
-:root:not([data-theme]) #providers > .row:last-child,
+:root[data-theme="light"] #providers > .row:last-child,
 :root:not([data-theme]) #providers > .row:last-child { margin-bottom: 0; }
-:root:not([data-theme]) #providers > .row + .row,
-:root:not([data-theme]) #providers > .row + .row { border-top: 2px solid var(--line); }
-:root:not([data-theme]) #providers > .row:hover,
-:root:not([data-theme]) #providers > .row:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--line); }
-:root:not([data-theme]) #providers > .row + .row,
-:root:not([data-theme]) #providers > .row + .row { margin-top: 12px; }
+:root[data-theme="light"] #providers > .row:hover,
+:root:not([data-theme]) #providers > .row:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
 
-/* ---- the editor that expands from a provider row ----------- */
-:root:not([data-theme]) .editor,
+/* ---- editor that expands from a provider row ----------------- */
+:root[data-theme="light"] .editor,
 :root:not([data-theme]) .editor {
   border: 2px solid var(--line);
   border-radius: 6px;
   background: var(--card-2);
 }
-:root:not([data-theme]) .editor.framed,
-:root:not([data-theme]) .editor.framed { box-shadow: 3px 3px 0 var(--line); }
 
-/* ---- buttons ------------------------------------------------ */
-:root:not([data-theme]) button.text,
+/* ---- buttons -------------------------------------------------- */
+:root[data-theme="light"] button.text,
 :root:not([data-theme]) button.text { color: var(--fg-2); font-weight: 700; }
-:root:not([data-theme]) button.text.primary,
+:root[data-theme="light"] button.text.primary,
 :root:not([data-theme]) button.text.primary { color: var(--accent); }
-:root:not([data-theme]) .proto,
+:root[data-theme="light"] .proto,
 :root:not([data-theme]) .proto {
   border: 2px solid var(--line);
   border-radius: 6px;
   background: var(--card);
   box-shadow: 2px 2px 0 var(--line);
 }
-:root:not([data-theme]) .proto:hover,
-:root:not([data-theme]) .proto:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--line); }
+:root[data-theme="light"] .proto:hover,
+:root:not([data-theme]) .proto:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-sm);
+}
+/* pill toggles / switch buttons read as small framed presses */
+:root[data-theme="light"] .row button:not(.text):not(.proto):not(.segbtn),
+:root:not([data-theme]) .row button:not(.text):not(.proto):not(.segbtn) {
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 var(--line);
+  background: var(--card);
+}
 
-/* ---- segmented controls (the warm-at / seg switches) -------- */
-:root:not([data-theme]) .seg-group button, :root:not([data-theme]) .seg-group button,
-:root:not([data-theme]) button.segbtn, :root:not([data-theme]) button.segbtn {
+/* ---- segmented controls ---------------------------------------- */
+:root[data-theme="light"] .seg-group button,
+:root:not([data-theme]) .seg-group button,
+:root[data-theme="light"] button.segbtn,
+:root:not([data-theme]) button.segbtn {
   border: 2px solid var(--line);
   border-radius: 6px;
   background: var(--card);
   box-shadow: 2px 2px 0 var(--line);
 }
 
-/* ---- modal dialog ------------------------------------------- */
-:root:not([data-theme]) .modal .dialog,
+/* ---- modal dialog ----------------------------------------------- */
+:root[data-theme="light"] .modal .dialog,
 :root:not([data-theme]) .modal .dialog {
   border: 3px solid var(--line);
   border-radius: 6px;
   box-shadow: 6px 6px 0 var(--line);
   background: var(--card);
 }
-:root:not([data-theme]) .modal::backdrop,
+:root[data-theme="light"] .modal::backdrop,
 :root:not([data-theme]) .modal::backdrop { background: rgba(31, 28, 23, .45); }
 
-/* ---- popovers / menus --------------------------------------- */
-:root:not([data-theme]) .pop,
+/* ---- popovers / menus -------------------------------------------- */
+:root[data-theme="light"] .pop,
 :root:not([data-theme]) .pop {
   border: 2px solid var(--line);
   border-radius: 6px;
   box-shadow: 4px 4px 0 var(--line);
 }
 
-/* ---- inputs -------------------------------------------------- */
-:root:not([data-theme]) input:not([type="range"]):not([type="checkbox"]),
+/* ---- inputs ------------------------------------------------------- */
+:root[data-theme="light"] input:not([type="range"]):not([type="checkbox"]),
 :root:not([data-theme]) input:not([type="range"]):not([type="checkbox"]) {
   border: 2px solid var(--line);
   border-radius: 6px;
   background: var(--card);
 }
-:root:not([data-theme]) .row input, :root:not([data-theme]) .row input { box-shadow: none; }
 
-/* ---- status dot: pixel accent ------------------------------- */
-:root:not([data-theme]) .side-gw > i,
+/* ---- settings rows: framed cards, no nesting ---------------------- */
+:root[data-theme="light"] .row,
+:root:not([data-theme]) .row { border-radius: 6px; }
+/* internal settings rows stand alone; strips never draw a frame inside a frame */
+:root[data-theme="light"] #internalSettings > [data-setting],
+:root:not([data-theme]) #internalSettings > [data-setting] {
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow: 2px 2px 0 var(--line);
+  margin-bottom: 10px;
+}
+:root[data-theme="light"] #internalSettings > [data-setting]:last-child,
+:root:not([data-theme]) #internalSettings > [data-setting]:last-child { margin-bottom: 0; }
+
+/* ---- status dot: pixel accent -------------------------------------- */
+:root[data-theme="light"] .side-gw > i,
 :root:not([data-theme]) .side-gw > i {
   border-radius: 0;
   box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
 }
