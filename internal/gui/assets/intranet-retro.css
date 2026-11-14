@@ -67,7 +67,10 @@ body.side-nav .crumb > b { font-weight:700; }
 .segs .thumb { border-radius:3px; }
 button.text.primary { border-radius:4px; box-shadow:inset 0 0 0 1px var(--retro-ink), 2px 2px 0 var(--retro-ink); }
 button.text.action { border-radius:4px; border-color:var(--retro-ink); box-shadow:2px 2px 0 var(--retro-ink); }
-:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) { border-radius:4px; }
+:is(.view,.modal) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),textarea,select) {
+  border-radius:4px;
+  caret-color:var(--accent);
+}
 /* The same .seg node becomes the vertical navigation in sidebar mode. */
 body.side-nav #nav.seg { border:0; background:transparent; }
 .view .list { border-radius:5px; border-color:var(--line); box-shadow:2px 2px 0 var(--retro-ink); }
@@ -88,5 +91,4 @@ body.side-nav #nav.seg { border:0; background:transparent; }
 #addProvider:hover { filter:brightness(.94); }
 #addProvider:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
 .modal .dialog { border:2px solid var(--retro-ink); border-radius:6px; box-shadow:var(--shadow); }
-:where(input.words,input.sess-filter,textarea.words) { border-radius:4px; }
 ::selection { background:var(--accent-soft); color:var(--fg); }
