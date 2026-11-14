@@ -59,6 +59,7 @@ export function render(s) {
   document.getElementById("view-settings").classList.remove("set-searching");
   root.replaceChildren(); prefsBase = prefsKeep(s);
   gateway(root, s);
+  renderUpdate(row(root,"version","Version",s.version || "").r);
   row(root,"login","Open at login").val.append(segs([[false,t("Off")],[true,t("On")]],!!s.login,on => prefWrite(api("settings/login",{on}))));
   row(root,"lightweight","Lightweight mode",t("A closed window frees about 100 MB after a minute; the gateway and tasks keep running, only the page reloads")).val.append(
     segs([[false,t("Off")],[true,t("On")]],s.lightweight === true,on => savePrefs({...prefsKeep(prefs),lightweight:on})));

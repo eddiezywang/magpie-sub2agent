@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"log"
 	"net/http"
@@ -177,10 +176,6 @@ func updateDue(s settings.Settings, last, now time.Time) bool {
 }
 
 func (u *updater) start() {
-	if distribution.Internal {
-		return
-	}
-
 	u.behind = update.ReadBehind(Version)
 	u.place(runtime.GOOS, update.GUI)
 	gateway.SetRestarter(u.restartBesideAsked) // magpie update in a terminal
@@ -296,9 +291,6 @@ type packagedJSON struct {
 
 // check asks the feed and, when it can, stages the new version.
 func (u *updater) check() {
-	if distribution.Internal {
-		return
-	}
 
 	if u.begin() {
 		u.run()
