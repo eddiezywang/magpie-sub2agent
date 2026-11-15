@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/gateway"
@@ -8,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestWorkspaceThroughputOwnerAndUnavailable(t *testing.T) {
@@ -45,5 +47,26 @@ func TestWorkspaceThroughputOwnerAndUnavailable(t *testing.T) {
 	t.Setenv("MAGPIE_ADDR", "192.0.2.1:8989")
 	if out := read(); out.Status != "unavailable" {
 		t.Fatal("nonloopback owner accepted")
+	}
+}
+
+func TestWorkspaceThroughputRejectsUnsupportedOwner(t *testing.T) {
+	for _, body := range []string{`{"version":0}`, `{"version":1,"epoch":1,"windowSeconds":180,"total":{"points":[]}}`, `invalid`} {
+		t.Run(body, func(t *testing.T) {
+			owner := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(body)) }))
+			defer owner.Close()
+			t.Setenv("MAGPIE_ADDR", strings.TrimPrefix(owner.URL, "http://"))
+			if _, ok := gateway.OwnerThroughput(context.Background()); ok {
+				t.Fatal("unsupported/malformed owner treated as idle")
+			}
+		})
+	}
+	owner := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { <-r.Context().Done() }))
+	defer owner.Close()
+	t.Setenv("MAGPIE_ADDR", strings.TrimPrefix(owner.URL, "http://"))
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancel()
+	if _, ok := gateway.OwnerThroughput(ctx); ok {
+		t.Fatal("timed out owner treated as idle")
 	}
 }

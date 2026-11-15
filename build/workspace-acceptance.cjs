@@ -9,14 +9,16 @@ async function fixture(page){
  .replace('agents,checks:{}','agents,checks:Object.fromEntries(agents.map(a=>[a.id,{status:a.wired?"configured":"not-configured",managed:a.wired}]))');
  await page.addInitScript(source);
  await page.addInitScript(()=>{
-  const original=window.fetch;window.qa={failed:false,delay:0,calls:[],sets:0,unavailable:false};
+  const original=window.fetch;window.qa={failed:false,delay:0,calls:[],sets:0,unavailable:false,telemetryCalls:0,telemetryPending:0,telemetryMax:0,telemetryDelay:0,unknown:false,epoch:1};
   window.fetch=async(input,init={})=>{
    const url=new URL(String(input),location.href);
    if(url.pathname==='/api/set')qa.sets++;
    if(url.pathname==='/api/gateway/throughput'){
+    qa.telemetryCalls++;qa.telemetryPending++;qa.telemetryMax=Math.max(qa.telemetryMax,qa.telemetryPending);
+    try{if(qa.telemetryDelay)await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,qa.telemetryDelay);init.signal?.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'))},{once:true})});}finally{qa.telemetryPending--;}
     const points=Array.from({length:180},(_,i)=>Math.round(40+18*Math.sin(i/9)+8*Math.cos(i/4)));
-    const total={current:42,peak:68,points};
-    return new Response(JSON.stringify(qa.unavailable?{version:1,status:'unavailable'}:{version:1,status:'ok',asOf:Math.floor(Date.now()/1000),epoch:'fixture',total,providers:[{...total,id:'workbuddy',name:'WorkBuddy 企业'}],models:[{...total,id:'model-a',name:'示例模型 A'}],sessions:[{...total,id:'demo',name:'demo-session',agent:'opencode'}]}));
+    const total=qa.unknown?{current:null,peak:null,points:Array(180).fill(null)}:{current:qa.epoch===1?42:3,peak:qa.epoch===1?68:5,points};
+    return new Response(JSON.stringify(qa.unavailable?{version:1,status:'unavailable'}:{version:1,status:qa.unknown?'partial':'ok',asOf:Math.floor(Date.now()/1000),epoch:qa.epoch,total,providers:[{...total,id:'workbuddy',name:'WorkBuddy 企业'}],models:[{...total,id:'model-a',name:'示例模型 A'}],sessions:[{...total,id:'demo',name:'demo-session',agent:'opencode'}]}));
    }
    if(url.pathname.startsWith('/api/agents/connect/')){
     qa.calls.push(url.pathname);if(qa.delay)await new Promise(r=>setTimeout(r,qa.delay));
@@ -113,5 +115,22 @@ async function test(browser,engine){
   await history.evaluate(()=>{state.agents.forEach(a=>a.wired=false);renderAgents()});await history.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
   assert.deepEqual(history.errors,[]);console.log(`${engine}: default/history/deep links, keyboard disclosure, predefined unavailable/empty groups and reactive targets`);
  }finally{await history.close();}
+ const telemetry=await open(browser);
+ try{
+  await telemetry.evaluate(()=>qa.unknown=true);await telemetry.locator('#ws-current').getByText('待校准',{exact:true}).waitFor();
+  assert.equal(await telemetry.locator('#ws-total-curve path').getAttribute('d'),'');
+  await telemetry.evaluate(()=>{qa.unknown=false;qa.epoch=2});await telemetry.locator('#ws-peak').getByText('5.0 token/s',{exact:true}).waitFor();
+  await telemetry.evaluate(()=>qa.telemetryDelay=1800);const start=await telemetry.evaluate(()=>qa.telemetryCalls);
+  await telemetry.waitForFunction(n=>qa.telemetryCalls>=n+2,start,{timeout:10000});assert.equal(await telemetry.evaluate(()=>qa.telemetryMax),1);
+  await telemetry.waitForFunction(()=>qa.telemetryPending===1);
+  await telemetry.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))});
+  await telemetry.waitForFunction(()=>qa.telemetryPending===0);const paused=await telemetry.evaluate(()=>qa.telemetryCalls);
+  await telemetry.waitForTimeout(1200);assert.equal(await telemetry.evaluate(()=>qa.telemetryCalls),paused);
+  await telemetry.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'))});
+  await telemetry.waitForFunction(n=>qa.telemetryCalls>n,paused);
+  await telemetry.evaluate(()=>show('agents'));await telemetry.waitForFunction(()=>qa.telemetryPending===0);
+  const stopped=await telemetry.evaluate(()=>qa.telemetryCalls);await telemetry.waitForTimeout(1200);assert.equal(await telemetry.evaluate(()=>qa.telemetryCalls),stopped);
+  assert.deepEqual(telemetry.errors,[]);console.log(`${engine}: unknown gaps, epoch peak reset, single-flight slow reads, background pause/resume and leave cancellation`);
+ }finally{await telemetry.close();}
 }
 (async()=>{await fs.mkdir(output,{recursive:true});for(const [name,type]of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(name==='chromium'?{channel:'chrome'}:{});try{await test(browser,name)}finally{await browser.close();}}})().catch(err=>{console.error(err);process.exitCode=1;});

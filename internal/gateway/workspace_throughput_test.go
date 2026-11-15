@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/provider"
 	"net/http/httptest"
 	"sync"
@@ -80,6 +81,49 @@ func TestWorkspaceThroughputConcurrent(t *testing.T) {
 	wg.Wait()
 }
 
+func TestWorkspaceThroughputBoundariesAndReset(t *testing.T) {
+	second := int64(1000)
+	m := throughputMeter{now: func() time.Time { return time.Unix(second, 0) }}
+	first := m.snapshot()
+	for _, p := range first.Total.Points {
+		if p != nil {
+			t.Fatal("startup history fabricated")
+		}
+	}
+	m.add("a", "s", "p", "m", 50, 2, true)
+	second++
+	first = m.snapshot()
+	if *first.Total.Current != 20 || *first.Total.Peak != 20 {
+		t.Fatal("first five-second mean")
+	}
+	m.add("a", "s", "q", "m", 50, 4, true)
+	second++
+	secondOut := m.snapshot()
+	if *secondOut.Total.Points[178] != 100 || *secondOut.Total.Points[179] != 200 || *secondOut.Total.Peak != 60 {
+		t.Fatal("conversion changed previous bucket")
+	}
+	second += 180
+	idle := m.snapshot()
+	if *idle.Total.Current != 0 || *idle.Total.Peak != 60 {
+		t.Fatal("ring expiration lost independent peak")
+	}
+	for i := 0; i < 600; i++ {
+		m.add("a", "s", time.Unix(int64(i), 0).String(), "m", 1, 1, true)
+	}
+	bounded := m.snapshot()
+	if len(bounded.Providers) != 128 || len(bounded.Models) != 512 || !bounded.Truncated {
+		t.Fatal("provider/model dimensions unbounded")
+	}
+	second++
+	if total := m.snapshot().Total.Points[179]; total == nil || *total != 600 {
+		t.Fatal("dimension eviction dropped total")
+	}
+	other := throughputMeter{now: func() time.Time { return time.Unix(second, 0) }}
+	if reset := other.snapshot(); reset.Epoch == first.Epoch || reset.Total.StartedAt == first.Total.StartedAt {
+		t.Fatal("restart reused sequence identity")
+	}
+}
+
 func TestWorkspaceThroughputReceivesDeliveredContent(t *testing.T) {
 	second := int64(3000)
 	meter := throughputMeter{now: func() time.Time { return time.Unix(second, 0) }}
@@ -105,7 +149,20 @@ func TestWorkspaceThroughputOwnerBoundary(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(w, remote)
 	// Upstream builds omit the endpoint entirely; intranet refuses LAN access.
-	if w.Code == 200 {
-		t.Fatal("remote throughput accepted")
+	want := 404
+	if distribution.Internal {
+		want = 403
+	}
+	if w.Code != want {
+		t.Fatalf("remote throughput status %d, want %d", w.Code, want)
+	}
+	if distribution.Internal {
+		local := httptest.NewRequest("GET", "/v1/magpie/throughput", nil)
+		local.RemoteAddr = "127.0.0.1:12345"
+		w = httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, local)
+		if w.Code != 200 {
+			t.Fatalf("local owner route unavailable: %d", w.Code)
+		}
 	}
 }
