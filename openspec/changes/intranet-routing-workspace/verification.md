@@ -424,3 +424,14 @@ Published provider PNG returned HTTP 200. No QA home, logs or auth key uploaded.
 Tasks 1.4/5.5 remain open: disconnect-preview still has a known hard-coded
 upstream title assertion, and final requirement/evidence audit is not yet complete.
 This test/docs step does not replace the delivered product binary.
+
+### Native disconnect preview acceptance
+
+The retained disconnect-preview test now supports explicit intranet packed
+assets and checks this fork's Sub2Agent title. Its write audit excludes only
+the existing update liveness and native titlebar negotiation endpoints, not
+Agent/settings writes. Both browser engines and English/Chinese passed all
+three viewport/zoom cases with omp and Codex: full-width file diff and note,
+visible heading/buttons, expansion, scroll to restored value, cancellation
+and zero configuration writes. The original title/startup-POST failures were
+test-profile assumptions; no application behavior was changed in this step.

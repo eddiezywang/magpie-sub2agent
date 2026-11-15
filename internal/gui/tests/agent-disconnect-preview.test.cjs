@@ -7,7 +7,8 @@ const path = require("node:path");
 const { test } = require("node:test");
 const { chromium, webkit } = require("playwright");
 
-const assets = path.resolve(__dirname, "../assets");
+const assets = path.resolve(process.env.MAGPIE_ASSETS || path.join(__dirname, "../assets"));
+const intranet = process.env.MAGPIE_INTRANET_TEST === "1";
 const changes = (id) => [
   {
     path: id === "omp" ? "~/.omp/agent/config.yml" : "~/.codex/config.toml",
@@ -35,9 +36,10 @@ function serve(lang, textSize, posts) {
   return async (route) => {
     const req = route.request(), url = new URL(req.url());
     const json = (data) => route.fulfill({ json: data });
-    // the window saying it is in use (update/using) is not the page's doing
-    if (req.method() === "POST" && url.pathname !== "/api/update/using") posts.push(url.pathname);
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = ${JSON.stringify({ lang, theme: "light", textSize, web: false })};` });
+    // Startup window liveness and native titlebar negotiation are independent
+    // of agent configuration. Every other write is still unexpected here.
+    if (req.method() === "POST" && !["/api/update/using", "/api/window/titlebar"].includes(url.pathname)) posts.push(url.pathname);
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = ${JSON.stringify({ intranet, lang, theme: "light", textSize, web: false })};` });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return json(state);
     if (url.pathname === "/api/settings") return json(state.settings);
@@ -76,7 +78,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
         page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
         await page.route("**/*", serve(lang, textSize, posts));
         await page.goto("http://magpie.test/?view=agents");
-        assert.equal(await page.title(), "magpie");
+        assert.equal(await page.title(), "Sub2Agent");
         assert.equal(new URL(page.url()).searchParams.get("view"), "agents");
         for (const id of ["omp", "codex"]) {
           await page.locator(`.row.agent[data-id="${id}"] .ag-conn`).click();
