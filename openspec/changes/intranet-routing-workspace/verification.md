@@ -389,3 +389,38 @@ in this test; real packaged runtime checks remain separately recorded above.
 Node syntax checks passed for all three changed scripts. This step changes
 only test infrastructure and evidence; the KF-delivered f15ef0851 application
 remains the current product binary. Remaining broad acceptance gates stay open.
+
+### Packaged isolation and combined regression at 4fe27ae9c
+
+The current 062343 package was restarted as isolated PID 29896 after creating
+synthetic original-Magpie settings/auth sentinels under its QA XDG root.
+build/workspace-runtime-isolation.cjs passed against that actual process:
+the API data path resolves to XDG_CONFIG_HOME/sub2agent; a lightweight preference
+is written to disk, reread after reload and restored; the 19893 port is retained;
+both original-Magpie sentinel files remain byte-identical and their fake auth
+marker does not appear in provider data. The test never accesses live user files.
+The first draft incorrectly treated the API's home-abbreviated path as absolute;
+it now expands the display-only tilde against the known QA home. Another draft
+ran before lazy settings initialization; it now opens Settings and waits for
+prefs before writing. Neither draft changed application code.
+
+Fresh production/packed/intranet related Go checks passed for GUI, gateway,
+distribution and appdir, including SharedConfig/InterruptedConfig migration.
+Gateway and GUI workspace/connect/model preference/FX/isolation race checks
+passed (2.413s/9.812s). Full assetpack/appdir/distribution packages passed upstream.
+Windows and Linux related go vet passed; Windows upstream and Linux intranet
+nogui production builds passed. Existing full-suite red results remain recorded.
+
+The eight-script combined packed GUI run passed both engines: workspace main
+acceptance, native provider operations, focus, hidden-model bulk recovery,
+Agent diagnostics, lifecycle, native group operations and internal Settings.
+Re-ran actual packaged runtime ten-page/streamed-output checks successfully.
+Added three actual-runtime expanded throughput captures before the uncalibrated
+group-model request; the provider capture visibly shows 480.0 token/s. Viewed
+locally and published all three dimensions alongside the ten retained pages at:
+http://124.220.199.224:8805/workspace-review-20261116/delivery-062343/delivery-062343.html
+Published provider PNG returned HTTP 200. No QA home, logs or auth key uploaded.
+
+Tasks 1.4/5.5 remain open: disconnect-preview still has a known hard-coded
+upstream title assertion, and final requirement/evidence audit is not yet complete.
+This test/docs step does not replace the delivered product binary.

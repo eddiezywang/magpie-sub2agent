@@ -53,6 +53,14 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
   assert(measured,'gateway must return a calibrated snapshot within 15 seconds');
   assert(measured.total.points.some(v=>typeof v==='number'&&v>0),'measured snapshot must retain calibrated output');
   assert(measured.providers.some(p=>p.id==='workspace-qa'));assert(measured.models.length>0);assert(measured.sessions.length>0);
+  // The workspace has an inner scroller; top screenshots omit these rows.
+  const throughput=page.locator('#ws-throughput');await throughput.evaluate(e=>e.open=true);
+  for(const dimension of ['providers','models','sessions']){
+   await page.locator(`[data-dimension="${dimension}"]`).click();
+   await throughput.scrollIntoViewIfNeeded();
+   await page.locator('#ws-throughput-rows .ws-throughput-row').first().waitFor();
+   await page.screenshot({path:path.join(output,'runtime-throughput-'+dimension+'.png'),animations:'disabled'});
+  }
   const routing=await page.evaluate(async port=>{
    for(const id of ['workspace-qa','workspace-qa-second']){const data=await api('providers');const exists=data.providers.some(p=>p.id===id);await api('provider/save',{id,name:id==='workspace-qa'?'隔离测试供应商':'隔离备用供应商',chat:`http://127.0.0.1:${port}/v1`,key:id==='workspace-qa'?'synthetic-only':'synthetic-second',models:['qa-model','gpt-6.1-sol'],...(exists?{from:id}:{new:true})})}
    let data=await api('groups');if(!data.groups.some(g=>g.templateKind==='steady'))data=await api('groups/template',{kind:'steady',name:'稳定优先'});

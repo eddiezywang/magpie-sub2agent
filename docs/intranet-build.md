@@ -159,6 +159,14 @@ $env:QA_RUNTIME = 'D:\path\to\fresh-build-folder'
 node build/workspace-runtime.cjs
 ```
 
+`build/workspace-runtime-isolation.cjs` additionally checks the actual QA
+process's displayed data directory, persists/reloads/restores a lightweight
+preference, and compares synthetic original-Magpie settings/auth sentinels.
+Before starting the isolated QA process, create those sentinel files under
+`qa-home/XDG_CONFIG_HOME/magpie`; never point this check at a user's data.
+The runtime review also captures expanded provider/model/session throughput
+separately, because the workspace's inner scroller can hide it in top captures.
+
 The launcher uses a private HOME/USERPROFILE/APPDATA/XDG inside that fresh folder,
 clears Agent folder overrides, and uses local gateway/web ports 19893/19894.
 The verifier requires Playwright and Chrome. It creates only synthetic providers
