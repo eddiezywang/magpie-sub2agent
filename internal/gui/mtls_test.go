@@ -173,7 +173,7 @@ func TestProviderSaveClientCert(t *testing.T) {
 		t.Fatalf("saved %q %q", p.ClientCert, p.ServerCA)
 	}
 	info := providerInfo(*p, nil)
-	if !info.TakesClientCert || info.ClientCert != "~/Downloads/magpie-laptop/client.pem" {
+	if !info.TakesClientCert || info.ClientCert != filepath.FromSlash("~/Downloads/magpie-laptop/client.pem") {
 		t.Fatalf("shown %v %q", info.TakesClientCert, info.ClientCert)
 	}
 	if code, out := post(base + `,"from":"home","models":[],"headers":{}}`); code != 200 {
