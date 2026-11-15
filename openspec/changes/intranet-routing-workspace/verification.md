@@ -346,3 +346,26 @@ deletion complete through native controls. Its API fixture is isolated and
 does not claim real backend persistence; actual group persistence/request was
 verified separately in workspace-runtime.cjs. Tasks 1.4/5.5 remain open pending
 the remaining retained-operation coverage and broader acceptance audit.
+
+### Latest merged build delivery 062343
+
+Re-fetched fork/main at 0372636b4 and verified it is already an ancestor of
+feature/intranet-routing-workspace. Built clean detached source f15ef0851,
+manifest workingTreeChanges false, excluding user-local .github tooling.
+Version 0.6.0 Windows x64 ZIP: 73,276,051 bytes; SHA256:
+29854da541877242fb61f4335efa8cac91b731720ee5a538114f391ae887a1ab.
+The actual isolated Windows program passed all ten retained-page checks with
+no script errors, seven loopback streamed replies, attributed 180-point
+throughput, routing-group persistence/request and TIG preset checks.
+All 54 local manifest files and the core-script budget passed. Playwright
+captures (synthetic data only) returned HTTP 200 at:
+http://124.220.199.224:8805/workspace-review-20261116/delivery-062343/delivery-062343.html
+Delivered local -> laptop -> personal iDisk -> KF. Both remote ZIP hashes
+match the local archive. KF independently verified all 54 extracted files
+and source commit f15ef0851233dae2fd013e6e61bc27367620742e.
+Laptop ZIP: C:\Users\eddiewang\Downloads\sub2agent-windows-x64-20261116-062343.zip
+KF executable:
+C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-062343\sub2agent-windows-x64-20261116-062343\sub2agent.exe
+Previous packages were retained; KF application was not auto-started.
+This delivery does not close the separately recorded full-suite failures
+or the remaining broader workspace acceptance tasks.
