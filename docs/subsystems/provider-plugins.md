@@ -22,6 +22,11 @@ new account's answer. WorkBuddy seeds its account catalog from the successful
 login discovery for five minutes, so opening the editor does not repeat those
 vendor requests. After catalog expiry, the next listing discovers models again.
 
+The internal WorkBuddy model editor offers a MaaS-only bulk selection. It
+replaces the draft picks with usable catalog IDs containing the `-maas` segment,
+including Auto MaaS, and switches to picked-only serving when saved. It makes
+no assumption about a model's price or remaining allowance.
+
 WorkBuddy 1.0.6 removes the 1.0.5 blanket 100K/32K clamp. Discovery and
 snapshot token capacities remain model metadata, not a conversion of the
 separate request-byte guard or a promise of end-to-end capacity. Unknown Auto
