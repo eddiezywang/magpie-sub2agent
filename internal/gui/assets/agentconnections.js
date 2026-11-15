@@ -18,26 +18,11 @@ function draw() {
       button.className = "text action";
       button.textContent = t(check.status === "configured" ? "Adapt existing connection" : "Connect to sub2agent");
       button.onclick = async (event) => {
-        event.stopPropagation();
-        const id = row.dataset.id;
-        if (agentPickPending.has(id) || agentConnectPending.has(id)) return;
-        agentConnectPending.add(id);
-        button.setAttribute("aria-disabled", "true");
-        button.setAttribute("aria-busy", "true");
-        const done = delayedWait(() => agentWaiting(id, "Connecting…"));
+        event.stopPropagation(); button.disabled = true;
         try {
-          const next = await api("agents/connect/" + encodeURIComponent(id), {});
-          await done();
-          agentWaits.delete(id); agentConnectPending.delete(id);
-          state = next; leave(); renderAgents();
-        } catch (err) {
-          await done();
-          agentWaits.delete(id); agentConnectPending.delete(id);
-          button.removeAttribute("aria-disabled"); button.removeAttribute("aria-busy");
-          const line = row.querySelector(".ag-st");
-          if (line) { line.classList.remove("wait"); line.classList.add("bad"); line.setAttribute("role", "alert"); line.querySelector(".ag-st-t").textContent = err.message; }
-          statusErr(err);
-        }
+          state = await api("agents/connect/" + encodeURIComponent(row.dataset.id), {});
+          leave(); renderAgents();
+        } catch (err) { statusErr(err); button.disabled = false; }
       };
       box.append(" · ", button);
     }
