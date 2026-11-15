@@ -1222,19 +1222,23 @@ func download(ctx context.Context, a Asset, path string) error {
 	if !distribution.Internal {
 		return downloadSingle(ctx, a, path)
 	}
-	err := downloadSingle(ctx, a, path)
-	if err == nil || ctx.Err() != nil {
-		return err
+	sources := internalAssetSources(a.URL)
+	if len(sources) == 0 {
+		return downloadSingle(ctx, a, path)
 	}
-	other := internalAlternateAsset(a.URL)
-	if other == "" {
-		return err
+	var failures []string
+	for _, source := range sources {
+		a.URL = source
+		if err := downloadSingle(ctx, a, path); err == nil {
+			return nil
+		} else {
+			failures = append(failures, fmt.Sprintf("%s: %v", hostOf(source), err))
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+		}
 	}
-	a.URL = other
-	if next := downloadSingle(ctx, a, path); next != nil {
-		return fmt.Errorf("%v; alternate source: %w", err, next)
-	}
-	return nil
+	return fmt.Errorf("update download sources failed: %s", strings.Join(failures, "; "))
 }
 
 func downloadSingle(ctx context.Context, a Asset, path string) error {

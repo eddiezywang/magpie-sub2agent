@@ -1,0 +1,12 @@
+import { createHash, createPublicKey, verify } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+const dir=path.resolve(process.argv[2] || ''), data=JSON.parse(readFileSync(path.join(dir,'latest.json'),'utf8'));
+const name='magpie-windows-amd64.exe', version=data.version, asset=data.assets?.[name];
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version||'') || !asset || !/^[a-f0-9]{64}$/.test(asset.sha256||'')) throw Error('invalid manifest');
+const file=path.join(dir,version,name), bytes=readFileSync(file), hash=createHash('sha256').update(bytes).digest('hex');
+const sums=data.signed?.sums, sig=Buffer.from(data.signed?.sig||'','base64');
+const key=createPublicKey({key:Buffer.concat([Buffer.from('302a300506032b6570032100','hex'),Buffer.from('vZLjKd13KX+3te66w3nBbJRkLGwd81sJNx3UgCrqJ9Y=','base64')]),format:'der',type:'spki'});
+const entry=`${hash}  ${name}\n`;
+if (hash!==asset.sha256 || bytes.length!==asset.size || sums!==entry || !verify(null,Buffer.from(`magpie release ${version}\n${sums}`),key,sig)) throw Error('release signature, size, or checksum invalid');
+console.log(JSON.stringify({version,sha256:hash,size:bytes.length,file}));

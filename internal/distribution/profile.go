@@ -7,6 +7,7 @@ const Registry = Base + "/npm"
 const Dist = Base + "/magpie/plugins/dist"
 const AppFeed = Base + "/sub2agent/releases/latest.json"
 const AppMirror = "http://uat.rcrai.weoa.com/wemail/sub2agent/releases"
+const AppPublicMirror = "http://124.220.199.224:8899/sub2agent/releases"
 
 // Removed are features absent from the internal distribution, even when an
 // imported configuration used to enable them.

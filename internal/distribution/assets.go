@@ -22,6 +22,10 @@ func AssetURL(raw string) error {
 		if u.Port() == "" && strings.HasPrefix(u.Path, "/wemail/sub2agent/releases/") && path.Clean(u.Path) == u.Path {
 			return nil
 		}
+	case "124.220.199.224":
+		if u.Scheme == "http" && u.Port() == "8899" && strings.HasPrefix(u.Path, "/sub2agent/releases/") && path.Clean(u.Path) == u.Path {
+			return nil
+		}
 	}
 	return fmt.Errorf("public resource downloads are disabled: %s", u.Hostname())
 }
