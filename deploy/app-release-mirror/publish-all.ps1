@@ -1,17 +1,18 @@
-param([Parameter(Mandatory=$true)][string]$ReleaseDir,[Parameter(Mandatory=$true)][string]$JumpSession,[string]$KfSeedPath='',[switch]$ForceTransfer)
+param([Parameter(Mandatory=$true)][string]$ReleaseDir,[Parameter(Mandatory=$true)][string]$JumpSession,[string]$KfSeedPath='')
 $ErrorActionPreference='Stop'
 $here=Split-Path -Parent $MyInvocation.MyCommand.Path
 $meta=(node "$here/verify-release.mjs" $ReleaseDir | ConvertFrom-Json)
-if ($LASTEXITCODE -ne 0 -or !$meta.version -or !$meta.sha256) { throw 'Signed release validation failed' }
-$version=$meta.version; $digest=$meta.sha256
+if ($LASTEXITCODE -ne 0 -or !$meta.version -or !$meta.files) { throw 'Signed release validation failed' }
+$version=$meta.version; $files=@($meta.files); $digest=(Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $ReleaseDir 'latest.json')).Hash.ToLowerInvariant()
 if ($JumpSession -cnotmatch '^tj-[a-f0-9]+$') { throw 'JumpSession must be a test-jump session ID' }
 $stage=Join-Path ([IO.Path]::GetTempPath()) ('sub2agent-release-'+$version+'-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
-Copy-Item -LiteralPath $meta.file -Destination (Join-Path $stage 'asset.exe') -Force
+New-Item -ItemType Directory -Path (Join-Path $stage 'assets') | Out-Null
+foreach ($asset in $files) { Copy-Item -LiteralPath $asset.file -Destination (Join-Path $stage ('assets/'+$asset.name)) }
 Copy-Item -LiteralPath (Join-Path $ReleaseDir 'latest.json') -Destination (Join-Path $stage 'latest.json') -Force
 Copy-Item -LiteralPath (Join-Path $here 'apply-release.py') -Destination (Join-Path $stage 'apply-release.py') -Force
 $archive=Join-Path $stage ('release-'+$version+'.tar')
-tar -cf $archive -C $stage asset.exe latest.json apply-release.py
+tar -cf $archive -C $stage assets latest.json apply-release.py
 if ($LASTEXITCODE -ne 0) { throw 'Release archive failed' }
 # Public host: stage, verify on host, atomically publish.
 $remote='/tmp/sub2agent-release-'+$version+'.tar'
@@ -23,20 +24,8 @@ if($LASTEXITCODE -ne 0){throw 'Public mirror publish failed'}
 $kfScript='C:\Users\eddiewang\AppData\Local\Temp\sub2agent-sync-domain.js'
 Get-Content -Raw (Join-Path $here 'sync-domain.js') | hc file write --on kf $kfScript | Out-Null
 if($LASTEXITCODE -ne 0){throw 'KF domain script transfer failed'}
-# Skip the large jump transfer only if the already-published version and
-# actual file digest both match. A stale or absent feed forces a full publish.
-$kfFeed='C:\Users\eddiewang\AppData\Local\Temp\sub2agent-check-feed.ps1'
-$feedCheck=@"
-`$ErrorActionPreference='Stop'
-`$r=Invoke-RestMethod -Uri 'http://172.21.0.177:18989/sub2agent/releases/latest.json' -TimeoutSec 10
-if (`$r.version -eq '$version' -and `$r.assets.'magpie-windows-amd64.exe'.sha256 -eq '$digest') {Write-Output 'FEED_MATCH'}
-"@
-$feedCheck | hc file write --on kf $kfFeed | Out-Null
-$feedResult=hc exec --on kf "powershell -NoProfile -File $kfFeed"
-$hashCmd="ssh -o BatchMode=yes -p 36000 eddiewang@172.21.0.177 sha256sum /opt/sub2agent-plugin-market/www/sub2agent/releases/$version/magpie-windows-amd64.exe"
-$hashResult=hc exec --on kf "wecli test-jump exec $JumpSession `"$hashCmd`" --timeout 20"
-$intranetCurrent=(-not $ForceTransfer) -and (($feedResult -join '') -match 'FEED_MATCH') -and (($hashResult -join '') -match $digest)
-if (-not $intranetCurrent) {
+# Publish the complete signed version through KF and the jump. The archive
+# contains every asset; no feed is updated until all files have been verified.
 # Send the archive to KF via binary-safe hc, then through the authenticated jump.
 $kfArchive='C:\Users\eddiewang\AppData\Local\Temp\release-'+$version+'.tar'
 $kfScript='C:\Users\eddiewang\AppData\Local\Temp\sub2agent-sync-domain.js'
@@ -44,23 +33,25 @@ $kfScript='C:\Users\eddiewang\AppData\Local\Temp\sub2agent-sync-domain.js'
 # retransferring it; future versions automatically use the chunked path.
 $seed=$KfSeedPath
 $check=''
-if ($seed) {
+if ($seed -and $files.Count -eq 1 -and $files[0].name -eq 'magpie-windows-amd64.exe') {
     if ($seed -cnotmatch '^C:\\Users\\eddiewang\\AppData\\Local\\Temp\\[A-Za-z0-9_.\\-]+$' -or $seed.Contains('..')) { throw 'KfSeedPath must be a safe path under KF temp' }
     $check=hc exec --on kf "powershell -NoProfile -Command `"if (Test-Path -LiteralPath '$seed') { (Get-FileHash -Algorithm SHA256 -LiteralPath '$seed').Hash }`""
 }
-if (($check -join '') -match $digest) {
+if ($seed -and $files.Count -eq 1 -and (($check -join '') -match $files[0].sha256)) {
     $remoteManifest='C:\Users\eddiewang\AppData\Local\Temp\sub2agent-seed-latest-'+$version+'.json'
     $remoteApply='C:\Users\eddiewang\AppData\Local\Temp\sub2agent-seed-apply-'+$version+'.py'
-    Get-Content -Raw (Join-Path $stage 'latest.json') | hc file write --on kf $remoteManifest | Out-Null
+    $manifestProc=Start-Process -FilePath hc -ArgumentList @('file','write','--on','kf',$remoteManifest) -RedirectStandardInput (Join-Path $stage 'latest.json') -NoNewWindow -Wait -PassThru
+    if($manifestProc.ExitCode -ne 0){throw 'KF manifest transfer failed'}
     Get-Content -Raw (Join-Path $stage 'apply-release.py') | hc file write --on kf $remoteApply | Out-Null
     $kfSeed=@"
 `$ErrorActionPreference='Stop'
 `$stage=Join-Path `$env:TEMP ('sub2agent-seed-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path `$stage | Out-Null
-Copy-Item -LiteralPath '$seed' -Destination (Join-Path `$stage 'asset.exe')
+New-Item -ItemType Directory -Path (Join-Path `$stage 'assets') | Out-Null
+Copy-Item -LiteralPath '$seed' -Destination (Join-Path `$stage 'assets/magpie-windows-amd64.exe')
 Copy-Item -LiteralPath '$remoteManifest' -Destination (Join-Path `$stage 'latest.json')
 Copy-Item -LiteralPath '$remoteApply' -Destination (Join-Path `$stage 'apply-release.py')
-tar -cf '$kfArchive' -C `$stage asset.exe latest.json apply-release.py
+tar -cf '$kfArchive' -C `$stage assets latest.json apply-release.py
 if (`$LASTEXITCODE -ne 0) {throw 'KF tar failed'}
 Write-Output 'KF_ARCHIVE_OK'
 "@
@@ -117,7 +108,6 @@ $remoteCmd="scp -q -o BatchMode=yes -o ConnectTimeout=10 -P 36000 /tmp/release-$
 $result=hc exec --on kf "wecli test-jump exec $JumpSession `"$remoteCmd`" --timeout 120"
 if(($result -join "`n") -notmatch 'RELEASE_APPLIED') { $result=hc exec --on kf "wecli test-jump wait $JumpSession --timeout 120" }
 if(($result -join "`n") -notmatch 'RELEASE_APPLIED') { throw '0.177 publish did not confirm success; inspect jump session' }
- } else { Write-Output "0.177 already has verified $version" }
 # The Pod cannot reach the public mirror, but can reach 0.177. It stores its own
 # copy. This makes no proxy and does not modify the existing wemail service.
 $domainScript=@"

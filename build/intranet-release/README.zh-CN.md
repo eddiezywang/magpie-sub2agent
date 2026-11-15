@@ -10,6 +10,32 @@ node build/intranet-release/prepare.mjs <新构建的sub2agent.exe> <版本号> 
 .\deploy\app-release-mirror\publish-all.ps1 -ReleaseDir <本地发布目录> -JumpSession <KF跳板会话ID>
 ```
 
+macOS 桌面版需在装有 Xcode 命令行工具的 Mac 上构建，使用 Apple
+Developer ID Application 签名身份和 `notarytool` 钥匙串配置；需准备私有
+Sub2Agent 源码、固定版本的社区插件源码以及账单签名密钥文件：
+
+```sh
+export MACOS_SIGN_IDENTITY='Developer ID Application: <团队>'
+export MACOS_NOTARY_PROFILE='<notarytool 钥匙串配置名>'
+export BILLING_KEY_FILE='<管理员密钥文件绝对路径>'
+export SUB2AGENT_SOURCE='<私有 Sub2Agent 源码目录>'
+export MAGPIE_COMMUNITY_SOURCE='<固定版本的社区插件源码目录>'
+bash build/intranet-macos.sh 0.6.0
+```
+
+脚本生成 `magpie-darwin-arm64.zip` 和 `magpie-darwin-amd64.zip`，分别适用
+Apple 芯片和 Intel，执行签名、公证及装订。之后把两份 zip 交给发布管理员，
+与同版本 Windows 文件一起生成**一份**签名版本清单：
+
+```powershell
+node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私钥路径> <本地发布目录> <mac-arm64.zip> <mac-amd64.zip>
+.\deploy\app-release-mirror\publish-all.ps1 -ReleaseDir <本地发布目录> -JumpSession <KF跳板会话ID>
+```
+
+以上 macOS 打包和公证流程尚未在 Mac 上验证；发布前必须分别实测安装及
+原生自动更新。脚本需要使用同一个 Apple 团队的签名身份，确保已安装版本与
+更新包签名者一致。不要在提交历史、日志或公开服务器保存密钥和凭据。
+
 将发布目录通过授权内网通道传至 0.177。将版本目录完整复制到 `/opt/sub2agent-plugin-market/www/sub2agent/releases/<版本号>`，确认 SHA-256 后，再使用同目录临时文件和 `rename` 原子替换 `latest.json`。版本目录不得覆盖已有内容；新内容使用新版本号。服务仅提供静态下载，无应用端上传接口。发布前备份 `latest.json`，保留旧版本以便回滚。
 
 域名源由管理员独立保存并发布相同文件，不应代理到 0.177。先上传版本目录、确认摘要，再更新域名源的 `latest.json`。当前域名源保存在 wemail Pod 的临时静态目录，Pod 重建后副本会丢失，需要重新同步。公网独立副本位于 `124.220.199.224:8899`，其服务实现与部署方式见 `deploy/app-release-mirror`；某些企业网络可能对该公网地址返回拦截页面，因此不保证每台设备都能访问。

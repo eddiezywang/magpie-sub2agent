@@ -87,6 +87,21 @@ func TestThreeSourcesOnlyThirdAvailable(t *testing.T) {
 	}
 }
 
+func TestMacReleaseAssetUsesEveryConfiguredSource(t *testing.T) {
+	for _, arch := range []string{"arm64", "amd64"} {
+		name := "/0.6.1/magpie-darwin-" + arch + ".zip"
+		got := internalAssetSources(internalReleaseSources[1] + name)
+		if len(got) != len(internalReleaseSources) {
+			t.Fatalf("%s: got %v", arch, got)
+		}
+		for i, base := range internalReleaseSources {
+			if got[i] != base+name {
+				t.Fatalf("%s source %d: %s", arch, i, got[i])
+			}
+		}
+	}
+}
+
 func TestInternalLatestPrefersNewestValidFeed(t *testing.T) {
 	pub, private, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
