@@ -82,3 +82,16 @@ Experimental changes were reverted. The observed read/copy allocation assertion
 fails; no production optimization or raised threshold has been shipped.
 GitHub issue lookup is unavailable because gh is not installed. This remains
 an explicit verification limitation; do not describe the full suite as passing.
+
+### Latest merged-main package 034732
+
+Built source 14017f165569f179b723c8bd09c4ee3e9843774d, including main
+0372636b4, with clean tracked inputs (untracked .github agent tooling excluded).
+ZIP: sub2agent-windows-x64-20261116-034732.zip, 73,276,075 bytes,
+SHA256 528235ce71006390fb7058fb7cc2c79c92906935d8a2b25410d8e5681b369df9.
+Fresh isolated XDG runtime PID 47980: 10 retained pages, zero script errors,
+actual streamed output and native routing group persistence passed in Chrome.
+Updated runtime verifier reads the observed snapshot explicitly after readiness;
+this script-only change is not application code and does not alter the package.
+Review screenshots were replaced with this actual native build, synthetic data
+only. Full settings allocation assertion remains a documented limitation above.

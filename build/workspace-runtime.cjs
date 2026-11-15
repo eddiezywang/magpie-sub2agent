@@ -41,7 +41,7 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
   // can correctly return unavailable without a total. Wait for the actual
   // calibrated snapshot instead of throwing on that supported state.
   const observed=await page.waitForFunction(async()=>{const r=await fetch('/api/gateway/throughput');if(!r.ok)return false;const d=await r.json();return d.total?.points?.some(v=>typeof v==='number'&&v>0)?d:false},null,{timeout:15000});
-  const measured=await observed.jsonValue();await observed.dispose();
+  const measured=await page.evaluate(async()=>{const r=await fetch('/api/gateway/throughput');return r.json()});await observed.dispose();
   assert(measured.total.points.some(v=>typeof v==='number'&&v>0),'measured snapshot must retain calibrated output');
   assert(measured.providers.some(p=>p.id==='workspace-qa'));assert(measured.models.length>0);assert(measured.sessions.length>0);
   const routing=await page.evaluate(async port=>{
