@@ -157,3 +157,21 @@ fail the new title assertion at 1440, establishing the regression. Current
 screenshots inspected visually. Native operation coverage above and verified
 native logo/name source complete task 2.3, with live-vendor auth explicitly
 unverified. Only this scope is checked; other acceptance tasks remain open.
+
+### Retained page layout matrix
+
+build/workspace-pages-acceptance.cjs passed 120 cases: both Chrome and WebKit,
+light/dark, 1440/1024/390, all ten retained pages (workspace, Agents, Providers,
+Routing, Groups, Gateway, Sessions, Usage, Plugins, Settings). Checks visible
+named surfaces, one native host, no document viewport overflow or script errors,
+and keyboard activation of Agent disclosure and all throughput dimensions.
+This completes the page/layout/keyboard matrix task 5.4; synthetic APIs do not
+prove each retained page's complete operation set (task 1.4 stays open). Native
+runtime capture separately covers all ten pages in the actual Windows package.
+
+043758 package source 7d11613aa; zip 73,275,720 bytes, SHA256
+7be4857d6091044ccfac937e78d485b600cdbed8a8fe4e0a848f6f70ecabdce8.
+Isolated native runtime PID 11448 passed ten-page, group save/reload/request,
+positive delivered throughput and TIG preset checks. Public gallery updated to
+7d11613aa and includes the inspected Add sheet screenshot. Only selected public
+files were uploaded; private-auth stays local and is excluded from publication.
