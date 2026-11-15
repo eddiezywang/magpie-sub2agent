@@ -139,7 +139,7 @@ test('HTTP legacy receipt shows CNY model valuation and keeps the exchange rate 
  assert.ok(report.billing.amounts_by_currency.USD>0);assert.equal(report.billing.unpriced_attempts,0);
  assert.equal(report.valuation.currency,'CNY');assert.ok(report.valuation.amount>0);assert.equal(report.totals.unpriced_requests,0);
  const svg=(await fetch(base+'/reports/fixture-user/daily.svg?date=2026-11-13').then(r=>r.text())).replace(/<[^>]*>/g,'');
- assert.ok(svg.includes('¥'));assert.ok(svg.includes('人民币'));assert.ok(!svg.includes('待定价'));assert.ok(!svg.includes('$'));
+ assert.ok(svg.includes('¥'));assert.ok(svg.includes('API 总费用'));assert.ok(svg.includes('按 API 价格折算'));assert.ok(!svg.includes('人民币'));assert.ok(!svg.includes('待定价'));assert.ok(!svg.includes('$'));
  const url=base+'/admin/report-currency';assert.equal((await fetch(url)).status,401);
  const update=body=>fetch(url,{method:'PUT',headers:{authorization:'Bearer fixture-admin','content-type':'application/json'},body:JSON.stringify(body)});
  assert.equal((await update({currency:'CNY',usd_to_cny:0,as_of:'2026-11-13',source:'fixture'})).status,400);

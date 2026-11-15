@@ -41,11 +41,17 @@ const SCALE = 2; // crisper PNG, like the canvas's devicePixelRatio 2–3
 
 const ASSETS = path.resolve(__dirname, '..', 'assets');
 let lakeDataURL = null;
+let logoDataURL = null;
 try {
   const jpg = fs.readFileSync(path.join(ASSETS, 'lake.jpg'));
   lakeDataURL = `data:image/jpeg;base64,${jpg.toString('base64')}`;
 } catch {
   lakeDataURL = null; // teal pattern stands in
+}
+try {
+  logoDataURL = `data:image/png;base64,${fs.readFileSync(path.join(ASSETS, 'sub2agent-logo.png')).toString('base64')}`;
+} catch {
+  logoDataURL = null;
 }
 
 function escapeXml(value) {
@@ -292,15 +298,15 @@ function receipt(report) {
   const hit = day ? hitRate(day) : totals.cache_hit_rate;
   return {
     title: weekly ? '每周 AI 账单' : '每日 AI 账单',
-    tagline: '经 sub2agent 路由',
+    tagline: '经 Sub2Agent 路由',
     head: [
       { label: '用户', value: report.user?.name || report.user?.id || '未标明用户' },
       { label: weekly ? '区间' : '日期', value: dateLabel },
       { label: '开具', value: cnDateTime(period.generated_at) },
     ],
-    totalLabel: valuation ? 'API 价格折算 · 人民币' : billing ? '用量折算' : 'API 总费用',
+    totalLabel: valuation ? 'API 总费用' : billing ? '用量折算' : 'API 总费用',
     total: valuation ? pending>0 && !cost ? '待定价' : costText(cost) : billing ? amounts.length === 1 ? amountText(amounts[0]) : amounts.length > 1 ? '分项统计' : pending > 0 ? '待定价' : '无已计价用量' : money(cost),
-    totalNote: valuation ? '模型目录价折算 · 非实际扣款'+(pending>0?' · 部分待定价':'') : billing ? (amounts.map(amountText).join(' · ') || '未定价不代表免费') + (pending > 0 ? ' · 含待定价用量' : '') : '按 API 价格折算 · 非发票',
+    totalNote: valuation ? '按 API 价格折算'+(pending>0?' · 部分待定价':'') : billing ? (amounts.map(amountText).join(' · ') || '未定价不代表免费') + (pending > 0 ? ' · 含待定价用量' : '') : '按 API 价格折算 · 非发票',
     stats: statRows,
     agentHead: ['AGENT / 模型', '费用'],
     agents: shown,
@@ -314,7 +320,7 @@ function receipt(report) {
     note: pending > 0 ? `${pending} 次${billing ? '调用尝试待定价' : '请求没有价格'}` : '',
     empty: (calls ?? 0) === 0 ? (weekly ? '这段时间没有调用。' : '这一天没有调用。') : '',
     footer: [
-      ['用量账单由 ', 'sub2agent', ' 生成'],
+      ['用量账单由 ', 'Sub2Agent', ' 生成'],
       ['仅采集 token 数值与模型名 · 不含对话内容'],
     ],
     credit: valuation ? `汇率 ${valuation.usd_to_cny} · ${valuation.as_of} · 非结算凭证` : '用量统计仅供参考 · 非结算凭证',
@@ -475,6 +481,7 @@ function renderReportCardSvg(report) {
   ${bg}
   <g transform="translate(${BACKDROP_PAD},${BACKDROP_PAD})">
   ${paperPath(ph)}
+  ${logoDataURL ? `<image x="30" y="25" width="23" height="23" href="${logoDataURL}"/>` : ''}
   ${s.body}
   </g>
 </svg>

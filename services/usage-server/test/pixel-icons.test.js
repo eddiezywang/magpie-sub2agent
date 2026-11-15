@@ -15,3 +15,19 @@ test('pixel receipt marks retain the brand palette and crisp rendering', () => {
   assert.match(svg, /#1c1a24/);
   assert.doesNotMatch(svg, /rgb\(/);
 });
+
+test('classic receipt keeps its lake and logo as it grows for more models', () => {
+  const { renderReportCardSvg } = require('../src/card');
+  const base = { user: { name: 'fixture-user' }, period: { type: 'daily' }, totals: { requests: 1 }, by_agent_model: [] };
+  const short = renderReportCardSvg(base);
+  const long = renderReportCardSvg({ ...base, by_agent_model: [
+    { agent: 'codex', icon: 'codex-color', models: Array.from({ length: 5 }, (_, i) => ({ model: `fixture-${i}`, icon: 'openai' })) },
+    { agent: 'claude', icon: 'claudecode-color', models: Array.from({ length: 5 }, (_, i) => ({ model: `fixture-${i}`, icon: 'claude-color' })) },
+  ] });
+  const height = svg => Number(svg.match(/viewBox="0 0 \d+ (\d+)"/)[1]);
+  assert.ok(height(long) > height(short));
+  assert.match(long, /data:image\/jpeg;base64,/);
+  assert.match(long, /data:image\/png;base64,/);
+  assert.match(long, /Sub2Agent/);
+  assert.match(long, /shape-rendering="crispEdges"/);
+});
