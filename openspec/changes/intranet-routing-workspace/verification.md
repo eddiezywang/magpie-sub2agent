@@ -250,3 +250,12 @@ Combined with the preceding unknown/adaptation, bulk failure/retry/locks,
 candidate, lifecycle, native backend model-retention checks and inspected
 Agent content screenshots, tasks 2.6/2.7/2.8 are now verified. Other open gates
 remain open; no full-suite green claim is made.
+
+Clean 52306cd75 Windows bundle 053640 built and launched in isolation as PID
+32196, replacing the older QA process only. Actual runtime ten-page checks,
+seven loopback streamed replies, 180-point attributed throughput and routing
+group save/reload/request passed. Agent screenshot inspected; selected safe
+screenshots published (HTTP 200):
+http://124.220.199.224:8805/workspace-review-20261116/bulk-053640/bulk-053640.html
+ZIP SHA256: f07fb4ed2f626021be69f714b7727b397a5623d9eb3007725687661f798ea26f.
+This build is local; KF still has the separately verified 050727 delivery.
