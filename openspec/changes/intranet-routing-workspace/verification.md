@@ -279,3 +279,22 @@ epoch, dimension eviction, owner response limits and access restrictions, QA
 commands, shared configuration and rollback are now documented in their owning
 references. No application code changed in this documentation/lifecycle step.
 Full retained-operation regression (1.4) and broader test gate (5.5) remain open.
+
+### Broader test pass at 114cd19c4
+
+`go test -tags intranet ./internal/gui -count=1 -timeout 240s` is terminal red,
+not a successful full-package check. Local log:
+../.build-tools/workspace-gui-full-114cd19.log. It reports upstream assumptions
+about removed Library/Bark/builtins/public providers, Codex routing-group fixture
+failures, TestFXStateDoesNotWait waiting for a disabled refresh, a Windows
+gateway helper cleanup failure, and timeout while TestProviderSaveModelPrefs
+was running. Accounting goroutines also referenced an earlier deleted test
+home. These findings require test/profile and lifecycle investigation before
+closing 5.5; they are not explained away as environmental timing.
+
+Packed plugin-intranet-offline browser regression initially exposed an image
+assertion race: the card exists before its SVG has loaded. The test now waits
+for image completion and still asserts positive naturalWidth, so missing/broken
+assets fail. Its full six Chromium/WebKit cases pass at desktop/light and
+narrow/dark, including timeout, retry, HTTP 503, healthy empty directory, cached
+catalog, pixel icon and omitted privacy settings. No product code changed.

@@ -66,6 +66,10 @@ for (const engine of ['chromium', 'webkit']) test(engine + ': intranet market re
     await card.waitFor();
     const artwork = card.locator('img[src="icons/kiro-color.svg"]');
     assert.equal(await artwork.count(), 1, 'marketplace uses the bundled pixel icon');
+    await page.waitForFunction(() => {
+      const img = document.querySelector('.pm-card img[src="icons/kiro-color.svg"]');
+      return img?.complete;
+    });
     assert.ok(await artwork.evaluate(img => img.complete && img.naturalWidth > 0), 'pixel icon loads');
     await panel.getByText(/目录缓存时间/).waitFor();
     if(process.env.ARTIFACT_DIR && engine==='chromium') await page.screenshot({path:path.join(process.env.ARTIFACT_DIR,`06-market-cache-${theme}.png`)});
