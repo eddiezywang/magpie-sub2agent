@@ -20,6 +20,7 @@ type throughputTrack struct {
 	ID, Name, Agent, Provider string
 	Started, Heard, At        int64
 	Peak                      float64
+	PeakKnown                 bool
 	Buckets                   [throughputSpan]throughputBucket
 }
 type ThroughputSeries struct {
@@ -82,8 +83,11 @@ func (t *throughputTrack) advance(now int64) {
 	// window plus four trailing means can contain contributions after a gap.
 	end := min(now-1, t.At+throughputSpan+4)
 	for s := t.At; s <= end; s++ {
-		if v, ok := t.mean(s); ok && v > t.Peak {
-			t.Peak = v
+		if v, ok := t.mean(s); ok {
+			t.PeakKnown = true
+			if v > t.Peak {
+				t.Peak = v
+			}
 		}
 	}
 	t.At = now
@@ -167,8 +171,10 @@ func (t *throughputTrack) series(now int64) ThroughputSeries {
 	if v, ok := t.mean(now - 1); ok {
 		out.Current = &v
 	}
-	peak := t.Peak
-	out.Peak = &peak
+	if t.PeakKnown || out.Calibration == "ok" {
+		peak := t.Peak
+		out.Peak = &peak
+	}
 	return out
 }
 func (m *throughputMeter) snapshot() ThroughputState {

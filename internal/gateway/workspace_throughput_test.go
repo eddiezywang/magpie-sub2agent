@@ -49,6 +49,9 @@ func TestWorkspaceThroughputUnknownAndLimits(t *testing.T) {
 	if out.Status != "partial" || out.Total.Current != nil || out.Total.Points[179] != nil {
 		t.Fatal("unknown rate presented as numeric zero")
 	}
+	if out.Total.Peak != nil || out.Models[0].Peak != nil {
+		t.Fatal("uncalibrated peak presented as numeric zero")
+	}
 	for i := 0; i < 300; i++ {
 		m.add("a", time.Unix(int64(i), 0).String(), "p", "m", 1, 1, true)
 	}

@@ -13,8 +13,8 @@
 
 ## 待解决和继续验证
 
-- 全量 `go test -tags 'nogui,intranet' ./...` 已启动；`TestSenderAgainstRealSummaryServer` 报汇总为零，其余完整结果待收集，不能声称全量通过。
+- 首次全量 `go test -tags 'nogui,intranet' ./...` 失败，后半段存在 C 盘临时目录耗尽引起的创建失败；不能作为功能验收。将 TEMP/TMP/GOTMPDIR 全部切到 D 盘后，以 `-p 2 -timeout 15m` 重跑，结果待收集。`TestSenderAgainstRealSummaryServer` 在独立 D 盘重跑仍报汇总为零。
 - 广泛的 `TestLive` 筛选命中了 provider 的 `TestLiveSinceCarriesOver`，其 Codex fixture 未找到 provider；待核对内网供应商限制与原测试的关系。独立的工作台定向测试通过。
-- race 尚待 Windows C 编译器准备完成后执行。
+- Windows LLVM-MinGW 编译器准备后，`go test -race -tags intranet ./internal/gateway ./internal/gui -run '^TestWorkspaceThroughput' -count=1` 通过。未校准且无有效历史的峰值现返回 null，防止显示为数值零；补充断言并再次通过 race。
 - 仍需完整验证键盘、原生 Agent 接入异常适配、模型选择保留、供应商认证/草稿保护、路由组持久化及实际请求、所有者转发和未知校准边界。
 - 仍需全语言 GUI 回归、上下游构建/vet和核心资产范围审计；未勾选的组合任务保持未完成。
