@@ -120,7 +120,7 @@ body.side-nav #nav.seg { border:0; background:transparent; }
 /* Opt-in only: the native host must supply a matching frameless window. */
 body.retro-frame .brand { display:flex !important; gap:7px; order:-1; }
 body.retro-frame .logo img { width:30px; height:30px; }
-body.retro-frame .retro-wordmark { display:block; width:106px; height:14px; flex:none; overflow:hidden; font-size:0; background:var(--fg); mask:url('intranet-wordmark.svg') center / contain no-repeat; -webkit-mask:url('intranet-wordmark.svg') center / contain no-repeat; }
+body.retro-frame .retro-wordmark { display:block; width:106px; flex:none; overflow:hidden; white-space:nowrap; color:var(--fg); font-family:BitrimusBrand, var(--font, system-ui), sans-serif; font-size:16px; font-weight:400; letter-spacing:0; line-height:1; }
 body.retro-frame .side-top .retro-wordmark { width:clamp(62px,calc(var(--side-w) - 104px),106px); }
 body.retro-frame:not(.side-nav) .retro-wordmark, body.retro-frame .side-top.tight .retro-wordmark { display:none; }
 body.retro-frame .side-top { gap:8px; padding:0 10px 0 12px; }

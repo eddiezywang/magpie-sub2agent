@@ -45,6 +45,12 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.locator('.row.agent[data-id="codex"]').waitFor();
   await page.waitForTimeout(400); // the header's delayed animation used to assume a bird
   assert.equal(await page.title(), 'Sub2Agent');
+  await t.test('packed brand font is loaded and used', async () => {
+    await page.waitForFunction(() => [...document.fonts].some(f => f.family === 'BitrimusBrand' && f.status === 'loaded'));
+    const font = await page.locator('.brand > span:not(.logo)').evaluate(e => ({family:getComputedStyle(e).fontFamily, text:e.textContent}));
+    assert.match(font.family, /BitrimusBrand/);
+    assert.equal(font.text, 'Sub2Agent');
+  });
   await t.test('product labels use the Sub2Agent name without rewriting paths', async () => {
     const got = await page.evaluate(() => ({
       brand: brandText('Magpie connects magpie'),
