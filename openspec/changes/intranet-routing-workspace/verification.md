@@ -27,3 +27,12 @@
 - Windows LLVM-MinGW 编译器准备后，`go test -race -tags intranet ./internal/gateway ./internal/gui -run '^TestWorkspaceThroughput' -count=1` 通过。未校准且无有效历史的峰值现返回 null，防止显示为数值零；补充断言并再次通过 race。
 - 仍需完整验证键盘、原生 Agent 接入异常适配、模型选择保留、供应商认证/草稿保护、路由组持久化及实际请求、所有者转发和未知校准边界。
 - 仍需全语言 GUI 回归、上下游构建/vet和核心资产范围审计；未勾选的组合任务保持未完成。
+
+## 合并 main 后的便携构建 · 2026-11-16 02:26
+
+- 将 `fork/main` 的 `a04143978` 合并到当前功能分支，合并提交 `c0712c51ff7f8882def1b67783774d275a3eae48` 已推送；无冲突，保留工作台功能和 Agent 内容区顶部的批量按钮。
+- 合并结果通过 Agent 当前模型优先/Claude 路由组、GUI 供应商模型等待/throughput/核心脚本体积、gateway throughput、内网三源更新和 distribution 定向 Go 测试。重新生成测试运行时后供应商 Node 测试 19/19 通过；域名同步测试通过，app.js 语法及 diff whitespace 检查通过。
+- 完整 `internal/update` 内网标签测试存在上游 CLI 名称及公共更新通道假设不适用于内网版的失败，不能记作全量通过。
+- `build/intranet.ps1 -BunArchive .../bun-windows-x64-baseline-1.4.2.zip` 生成完整 Windows x64 便携包 `sub2agent-windows-x64-20261116-022615.zip`，含 Bun，73,272,417 字节，SHA-256 `0c894f1f57267ecf50fd593ef812f2be22464d31e33023055ba78b32c04383f2`。清单 sourceCommit 为 c0712c51f；workingTreeChanges=true 由用户既有未跟踪 .github 目录导致，构建时已跟踪源码无未提交差异。
+- 合并后的 packed-assets Chromium/WebKit 工作台回归再次全部通过。实际新程序在隔离 HOME 和 portable data 启动，10 个保留页面无脚本错误；Claude/Codex 原生接入、真实预定义组持久化及 8 次本机合成流式响应验证通过，180 点接口含正数及供应商/模型/会话归属。首次运行验证期间统计读取返回暂时不可用，等待后完整重跑通过；该次未记为通过。
+- 审查页已更新为此构建截图；Playwright 验证 14 张图片均 HTTP 200，页面含合并版本。只上传截图和脱敏 JSON，归档 SHA-256 `0461c86de9c34f7f201b47568fcd74898d034c8f2ca7b09875345a3fbfbf356e`。
