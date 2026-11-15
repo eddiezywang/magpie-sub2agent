@@ -69,8 +69,10 @@ func TestGatewayModeStatsNameTheGatewaySessions(t *testing.T) {
 				if k := keys(days); !slices.Contains(k, "claude:"+remote) {
 					t.Fatalf("gateway mode %s, days=%s: keys %v leave out the gateway's session", mode, days, k)
 				}
-				if now := time.Now(); !now.Equal(at) {
-					t.Fatalf("virtual clock advanced during stats query: %v to %v", at, now)
+				// Missing files can take short Windows replacement retries. Keep the
+				// test far from midnight, but do not require zero elapsed time.
+				if elapsed := time.Since(at); elapsed >= time.Second {
+					t.Fatalf("stats queries advanced virtual time by %v", elapsed)
 				}
 			}
 		}
