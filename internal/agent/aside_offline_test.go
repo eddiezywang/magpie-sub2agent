@@ -32,6 +32,12 @@ func TestAsideInitialReadOffersStageWithoutWrites(t *testing.T) {
 }
 
 func TestAsideOfflineDisconnectRestoresWithoutDaemon(t *testing.T) {
+	// DSH's shared folder is deliberately not classified as a missing CLI
+	// on Windows. This fixture tests the offline path with a known-missing
+	// CLI, so judge that synthetic condition using the Linux policy.
+	if runtime.GOOS == "windows" {
+		judgeFor(t, "linux")
+	}
 	settings, models := asideHome(t)
 	before := readFile(settings)
 	a := mustFindAside(t)
