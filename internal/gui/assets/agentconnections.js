@@ -40,7 +40,7 @@ async function run(list){
  for(let i=0;i<list.length;i++){
   if(visit!==generation||!visible()){skipped+=list.length-i;break;}
   const a=state.agents.find(x=>x.id===list[i].id);
-  if(!a||pending.has(a.id)){skipped++;continue;}
+  if(!a||a.wired||!connectable(a)||snapshot?.[a.id]?.status==='unknown'||pending.has(a.id)){skipped++;continue;}
   pending.add(a.id);
   const statusLine=document.querySelector('.agent-bulk-result');resultText=`接入中 ${i+1}/${list.length} · ${a.name}`;if(statusLine)statusLine.textContent=resultText;
   try{const next=await api('agents/connect/'+encodeURIComponent(a.id),{});if(visit===generation){state=next;renderAgents();}success++;}

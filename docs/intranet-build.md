@@ -16,6 +16,32 @@ read/search/resume/export interactions and gateway conversation projection.
 Library remains removed. Retaining Sessions does not enable reading private
 agent history until its existing consent setting permits it.
 
+## Workspace verification
+
+The intranet asset pack includes the workspace only in this distribution. It
+shares the native Agent, Routing and Providers elements and existing settings;
+it adds no independent routing preference. Throughput is an in-memory 180-second
+output estimate, separate from Sessions and billing (see
+[gateway sessions](subsystems/gateway-sessions.md#workspace-throughput-intranet)).
+Returning to an earlier build removes the workspace UI; it does not undo Agent
+model selections made through the native save API. Disconnect or select another
+model through the retained Agent page to change those settings.
+
+`build/workspace-launch.ps1 -BuildPath <fresh-portable-bundle>` starts an isolated
+QA runtime on gateway 19893 and web 19894. It uses a dedicated HOME, APPDATA and
+XDG directories, clears the Agent folder overrides and keeps the web sign-in key
+in the local bundle's `qa-web-key.txt`; never publish that file or the logs.
+Use a fresh QA bundle, not a real user's portable folder. The launcher does not
+stop an existing process or take over its port.
+
+`QA_RUNTIME=<bundle> node build/workspace-runtime.cjs` verifies native wiring,
+group persistence/routing, throughput and retained pages against that runtime.
+It writes synthetic Agent fixtures into the QA home and adds synthetic providers
+and a template through the existing APIs. `build/workspace-acceptance.cjs` uses
+packed assets selected by WORKSPACE_ASSETS and isolated synthetic APIs in both
+browser engines; ARTIFACT_DIR selects its screenshot output. Keep screenshots
+and sanitized result JSON separate from the runtime directory before publishing.
+
 `internal/distribution` is the source of truth for internal service addresses,
 removed built-in registrations and the resource download policy. The policy
 applies to application resources and their redirects, not provider inference.
