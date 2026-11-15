@@ -552,7 +552,13 @@ func (a *Agent) Pick(key, v string) error {
 			}
 		}
 	}
-	return a.Apply(key, v)
+	if err := a.Apply(key, v); err != nil {
+		return err
+	}
+	if a.afterPick != nil {
+		return a.afterPick(key, v)
+	}
+	return nil
 }
 
 // Connect puts magpie into the agent's config, the Agents page's switch

@@ -15,6 +15,10 @@ Only when no gateway model is currently selected does reconnect restore the
 previous models and efforts. The historical snapshot is discarded after a
 current selection is applied successfully.
 
+An explicit Claude Code main-model routing-group pick also resets its named
+tiers to follow that group, replacing old tier-specific model overrides. Sync
+does not reset tiers; a tier picked separately afterwards remains independent.
+
 ## Responsibilities and sources of truth
 
 | Part | Responsibility | Source |
