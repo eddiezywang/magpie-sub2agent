@@ -1555,6 +1555,17 @@ func providerRoutes(mux *http.ServeMux, w Windows) {
 		// ?wait: an account just signed in opens in the editor with its
 		// vendor's list, worth the wait there (#204)
 		if r.URL.Query().Has("wait") {
+			// A plugin's old list may predate the account just signed in.
+			// FetchNew treats that file as listed, so wait for the invalidated
+			// plugin catalog before opening the account's editor.
+			if len(plugin.Cached()) > 0 && !plugin.Answered() {
+				ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+				_, err := plugin.Providers(ctx)
+				cancel()
+				if err != nil {
+					log.Printf("providers after sign-in: %v", err)
+				}
+			}
 			provider.FetchNew(8 * time.Second)
 		}
 		// ?last=1: the list kept from the last read, at once (#1519);

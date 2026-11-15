@@ -16,6 +16,12 @@ token renewal. The bundled vendor snapshot supplies offline Hy4 limits without
 encoding prices. Auto remains unknown when its vendor gives no fixed cap. Input
 caps and whole-context windows remain separate; normal user overrides still win.
 
+The post-sign-in Providers request waits for an invalidated plugin catalog,
+even when its old list file already exists. A pre-login empty list is not the
+new account's answer. WorkBuddy seeds its account catalog from the successful
+login discovery for five minutes, so opening the editor does not repeat those
+vendor requests. After catalog expiry, the next listing discovers models again.
+
 WorkBuddy 1.0.6 removes the 1.0.5 blanket 100K/32K clamp. Discovery and
 snapshot token capacities remain model metadata, not a conversion of the
 separate request-byte guard or a promise of end-to-end capacity. Unknown Auto
