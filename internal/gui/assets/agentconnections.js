@@ -12,7 +12,7 @@ window.agentConnectionAcquire=id=>{
 const visible=()=>!document.getElementById('view-agents')?.hidden;
 export function leave(){active=false;snapshot=null;generation++;}
 export async function refresh(){leave();await enter();return t('Agents looked for again');}
-function candidates(){return (state.agents||[]).filter(a=>!a.wired&&connectable(a)&&snapshot?.[a.id]&&snapshot[a.id].status!=='unknown'&&!pending.has(a.id));}
+function candidates(){return (state.agents||[]).filter(a=>!a.cliMissing&&!a.wired&&connectable(a)&&snapshot?.[a.id]&&snapshot[a.id].status!=='unknown'&&!pending.has(a.id));}
 function draw(){
  if(!visible())return;
  const page=document.getElementById('view-agents');
@@ -26,7 +26,7 @@ function draw(){
   const recheck=el('button','text connection-recheck',t('Check again'));
   recheck.disabled=busy||pending.size>0;recheck.onclick=()=>refresh().catch(statusErr);bar.append(recheck);
  }
- if(failures.length){const retry=el('button','text',t('Retry failed connections'));retry.disabled=busy||pending.size>0;retry.onclick=()=>run(failures.map(x=>state.agents.find(a=>a.id===x.id)).filter(a=>a&&!a.wired));bar.append(retry);result.textContent=failures.map(x=>x.name+': '+t(x.error)).join('; ');}
+ if(failures.length){const retry=el('button','text',t('Retry failed connections'));retry.disabled=busy||pending.size>0;retry.onclick=()=>run(failures.map(x=>state.agents.find(a=>a.id===x.id)).filter(a=>a&&!a.wired));bar.append(retry);}
  for(const row of document.querySelectorAll('#agents .agent[data-id]')){
   row.querySelector('.connection-check')?.remove();row.querySelector('.connection-adapt')?.remove();
   const check=snapshot?.[row.dataset.id];if(!check)continue;
@@ -44,7 +44,7 @@ async function run(list){
  for(let i=0;i<list.length;i++){
   if(visit!==generation||!visible()){skipped+=list.length-i;break;}
   const a=state.agents.find(x=>x.id===list[i].id);
-  if(!a||a.wired||!connectable(a)||snapshot?.[a.id]?.status==='unknown'||pending.has(a.id)){skipped++;continue;}
+  if(!a||a.cliMissing||a.wired||!connectable(a)||!snapshot?.[a.id]||snapshot[a.id].status==='unknown'||pending.has(a.id)){skipped++;continue;}
   pending.add(a.id);
   const statusLine=document.querySelector('.agent-bulk-result');resultText=t('Connecting {i}/{n} · {agent}',{i:i+1,n:list.length,agent:a.name});if(statusLine)statusLine.textContent=resultText;
   try{const next=await api('agents/connect/'+encodeURIComponent(a.id),{});if(visit===generation){state=next;renderAgents();}success++;}

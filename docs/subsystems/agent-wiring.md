@@ -473,3 +473,15 @@ Explicit user thresholds, user windows and full-context preferences keep the
 same precedence. Other agents read the provider's 256,000 working window and
 retain their own compaction scheduling. This recommendation does not guarantee
 that byte-heavy tool output fits the independent request-body cap.
+
+## Internal bulk Agent connections
+
+The internal Agent toolbar is shared by the standalone page and the expanded
+workspace list. Its candidates use the complete Agent snapshot, excluding
+already wired Agents, missing CLIs, non-connectable Agents and unknown checks.
+The queue rechecks those conditions before each native connect API write; retry
+cannot connect an Agent whose CLI disappeared after its earlier failure.
+Native row writes and the bulk queue share the connection gate. Results retain
+success/failure/skipped counts together with individual errors, including after
+a redraw. Missing-CLI exclusion and partial-failure result preservation are
+covered in build/workspace-acceptance.cjs in Chromium and WebKit.

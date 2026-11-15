@@ -62,6 +62,8 @@ async function test(browser,engine){
   await page.locator('#ws-agents summary').click();await page.getByRole('button',{name:'一键全部接入（8）'}).waitFor();
   await page.evaluate(()=>qa.failed=true);await page.getByRole('button',{name:'一键全部接入（8）'}).click();
   await page.getByRole('button',{name:'重试失败项'}).waitFor();
+  assert.match(await page.locator('.agent-bulk-result').innerText(),/已接入 7 · 失败 1 · 跳过 0/);
+  assert.match(await page.locator('.agent-bulk-result').innerText(),/Codex.*配置只读/);
   assert.equal(await page.evaluate(()=>state.agents.filter(a=>a.wired).length),9);
   await page.evaluate(()=>qa.failed=false);await page.getByRole('button',{name:'重试失败项'}).click();
   await page.getByText('已接入 1 · 失败 0 · 跳过 0',{exact:true}).waitFor();
@@ -99,6 +101,17 @@ async function test(browser,engine){
   assert.equal(await leaving.evaluate(()=>qa.calls.length),1);assert.doesNotMatch(await leaving.locator('.agent-bulk-result').innerText(),/接入中/);
   assert.deepEqual(leaving.errors,[]);console.log(`${engine}: leave stops remaining bulk writes and clears progress`);
  }finally{await leaving.close();}
+ const missing=await open(browser);
+ try{
+  await missing.locator('#ws-agents summary').click();
+  await missing.evaluate(()=>{state.agents.find(a=>a.id==='codex').cliMissing=true;renderAgents()});
+  await missing.getByRole('button',{name:'一键全部接入（7）',exact:true}).click();
+  await missing.getByText('已接入 7 · 失败 0 · 跳过 0',{exact:true}).waitFor();
+  assert.equal(await missing.evaluate(()=>qa.calls.some(x=>x.endsWith('/codex'))),false);
+  assert.equal(await missing.evaluate(()=>state.agents.find(a=>a.id==='codex').wired),false);
+  assert.deepEqual(missing.errors,[]);
+  console.log(`${engine}: missing CLI excluded from bulk candidates and writes`);
+ }finally{await missing.close();}
  const locking=await open(browser);
  try{
   await locking.locator('#ws-agents summary').click();await locking.getByRole('button',{name:'一键全部接入（8）'}).waitFor();

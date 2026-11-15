@@ -101,3 +101,17 @@ match local SHA256 528235ce71006390fb7058fb7cc2c79c92906935d8a2b25410d8e5681b369
 KF extracted all 54 manifest files and verified each hash. Executable:
 C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-034732\sub2agent-windows-x64-20261116-034732\sub2agent.exe
 KF was not auto-launched. Review site returned HTTP 200 after screenshot update.
+
+### Bulk candidate and result follow-up
+
+Fixed missing-CLI Agents entering bulk connect and partial-failure redraws
+replacing the count summary with only errors. Packed current assets verified in
+Chrome and WebKit: candidates omit missing CLI, no connect request targets that
+Agent, failed batches retain 7 success/1 failure/0 skipped plus Codex error,
+retry succeeds. Both engines also passed existing unknown snapshot, shared write
+locks, leave cancellation, supplier draft preservation, group save races, all
+five locales, six workspace layouts, and telemetry lifecycle checks.
+The standalone 034732 delivered bundle predates this follow-up; rebuild is
+required before representing these two fixes as delivered.
+
+Latest current-head race run passed TestWorkspace*, TestSessionCurve*, TestModelSpeeds*, TestModelLoads* in gateway and GUI. Reviewed tests cover all 4.6/4.7 cases, including retry attribution, distinct same-named models, owner/held-key/LAN rejection and Sessions compatibility. Core script budget and all four i18n guards also passed. Tasks 4.6/4.7 are now checked; broader native operation and full acceptance gates remain unchecked.
