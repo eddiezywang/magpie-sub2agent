@@ -128,6 +128,7 @@ body.retro-frame .side-top .side-toggle { margin-left:auto; }
 body.retro-frame .retro-window-controls { display:flex; gap:6px; align-items:center; margin-left:8px; order:10; }
 body.retro-frame .retro-window-button { width:30px; height:29px; display:grid; place-items:center; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:2px; box-shadow:1px 2px 0 var(--line); }
 body.retro-frame .retro-window-button svg { width:16px; height:16px; fill:currentColor; shape-rendering:crispEdges; }
+body.retro-frame .retro-window-button.restoring svg { transform:scale(.78); }
 body.retro-frame .retro-window-button:hover { background:var(--accent-soft); border-color:var(--retro-ink); }
 body.retro-frame .retro-window-button.close:hover { background:#b34a40; color:#fff; }
 body.retro-frame .retro-window-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }

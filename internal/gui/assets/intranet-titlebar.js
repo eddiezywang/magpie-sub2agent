@@ -10,10 +10,11 @@
   name.classList.add('retro-wordmark');
   name.setAttribute('aria-label', 'Sub2Agent');
   const languageLabels = {
-    'zh-CN': ['最小化', '最大化', '关闭'], 'zh-TW': ['最小化', '最大化', '關閉'],
-    'ja-JP': ['最小化', '最大化', '閉じる'], 'de-DE': ['Minimieren', 'Maximieren', 'Schließen'],
+    'zh-CN': ['最小化', '最大化', '关闭', '还原'], 'zh-TW': ['最小化', '最大化', '關閉', '還原'],
+    'ja-JP': ['最小化', '最大化', '閉じる', '元に戻す'], 'de-DE': ['Minimieren', 'Maximieren', 'Schließen', 'Wiederherstellen'],
   };
-  const labels = languageLabels[document.documentElement.lang] || ['Minimize', 'Maximize', 'Close'];
+  const englishLabels = ['Minimize', 'Maximize', 'Close', 'Restore'];
+  const labels = languageLabels[document.documentElement.lang] || englishLabels;
   const specs = [
     [labels[0], 'Minimise', 'M3 11h10v2H3z'],
     [labels[1], 'ToggleMaximise', 'M3 3h10v2H3zm0 8h10v2H3zM3 5h2v6H3zm8 0h2v6h-2z'],
@@ -29,17 +30,35 @@
     button.setAttribute('aria-label', label);
     button.title = label;
     button.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${drawing}"/></svg>`;
-    button.addEventListener('click', () => winRuntime.then((runtime) => runtime?.Window[method]()));
+    button.addEventListener('click', async () => {
+      const runtime = await winRuntime;
+      if (!runtime) return;
+      await runtime.Window[method]();
+      if (method === 'ToggleMaximise') await updateMaximized();
+    });
     controls.append(button);
   }
   actions.append(controls);
-  new MutationObserver(() => {
-    const current = languageLabels[document.documentElement.lang] || ['Minimize', 'Maximize', 'Close'];
+  let maximized = false;
+  function updateLabels() {
+    const current = languageLabels[document.documentElement.lang] || englishLabels;
     for (const [index, button] of [...controls.children].entries()) {
-      button.setAttribute('aria-label', current[index]);
-      button.title = current[index];
+      const label = current[index === 1 && maximized ? 3 : index];
+      button.setAttribute('aria-label', label);
+      button.title = label;
     }
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    controls.children[1].classList.toggle('restoring', maximized);
+  }
+  async function updateMaximized() {
+    const runtime = await winRuntime;
+    if (runtime?.Window?.IsMaximised) {
+      maximized = !!(await runtime.Window.IsMaximised());
+      updateLabels();
+    }
+  }
+  new MutationObserver(updateLabels).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  window.addEventListener('resize', updateMaximized);
+  updateMaximized();
   document.querySelector('.top').addEventListener('dblclick', (event) => {
     if (!event.target.closest('button, nav')) winRuntime.then((runtime) => runtime?.Window.ToggleMaximise());
   });
