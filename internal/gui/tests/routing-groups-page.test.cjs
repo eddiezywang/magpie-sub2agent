@@ -15,6 +15,7 @@ const { test } = require("node:test");
 const { chromium, webkit } = require("playwright");
 
 const assets = path.resolve(process.env.MAGPIE_ROUTING_ASSETS || path.join(__dirname, "../assets"));
+const intranet = process.env.MAGPIE_INTRANET_TEST === "1";
 const models = [
   { id: "a/m", name: "m", providerName: "A", icon: "generic" },
   { id: "b/m", name: "m", providerName: "B", icon: "generic" },
@@ -48,7 +49,7 @@ function serve(lang, web) {
   return async (r) => {
     const url = new URL(r.request().url());
     const json = (data) => r.fulfill({ json: data });
-    if (url.pathname === "/boot.js") return r.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:${web}};` });
+    if (url.pathname === "/boot.js") return r.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {intranet:${intranet},lang:"${lang}",theme:"light",web:${web}};` });
     if (url.pathname === "/wails/runtime.js") return r.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return json(state);
     if (url.pathname === "/api/plugins") return json({ plugins: [] });

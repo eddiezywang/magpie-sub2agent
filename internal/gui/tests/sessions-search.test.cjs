@@ -13,7 +13,8 @@ const path = require("node:path");
 const { test } = require("node:test");
 const { chromium, webkit } = require("playwright");
 
-const assets = path.resolve(__dirname, "../assets");
+const assets = path.resolve(process.env.MAGPIE_ASSETS || path.join(__dirname, "../assets"));
+const intranet = process.env.MAGPIE_INTRANET_TEST === "1";
 const at = (min) => new Date(Date.now() - min * 60e3).toISOString();
 const gw = (id, title, min) => ({
   agent: "pi", id, cwd: "", title, gateway: true, start: at(min + 5), last: at(min), models: [{ model: "m" }], size: 2048, deletable: true,
@@ -31,7 +32,7 @@ function serve(lang, log) {
   return async (route) => {
     const url = new URL(route.request().url());
     const json = (data) => route.fulfill({ json: data });
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:${JSON.stringify(lang)},theme:"light",web:true};` });
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {intranet:${intranet},lang:${JSON.stringify(lang)},theme:"light",web:true};` });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return json(state);
     if (url.pathname === "/api/plugins") return json({ plugins: [] });

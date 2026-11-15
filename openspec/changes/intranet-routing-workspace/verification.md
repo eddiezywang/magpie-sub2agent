@@ -325,3 +325,24 @@ tests passed under -race (gateway 2.691s, GUI 9.279s). Logs are local
 workspace-focused-6f4528.log and workspace-race-6f4528.log. This is a relevant
 packed/profile/race pass; it does not erase the remaining full-suite failures
 or close tasks 1.4/5.5. No application binary change in this test-only step.
+
+### Retained native operation regression
+
+Existing routing-groups-page, Sessions export/search and Settings shortcut
+regressions now accept explicit intranet boot and extracted packed assets.
+The combined 60-case run passed all routing navigation/editor refresh and
+Sessions export/search cases. Chrome's two Settings cases initially asserted
+departure before asynchronous intranet navigation completed; waiting for the
+Providers view makes the intended state observable. The rerun passed all four
+Settings shortcut cases in Chrome/WebKit and English/Chinese. Session search
+also covers all five languages, narrow layouts, query replacement and partial
+results; export covers native/web behavior. Full run log is local
+workspace-retained-4919.log and retains the initial failures transparently.
+
+workspace-groups-acceptance.cjs passed both engines against packed assets:
+prefilled native editor creates a group, API receives its actual member,
+refused edit retains draft, retry updates the name, switch off/on and confirmed
+deletion complete through native controls. Its API fixture is isolated and
+does not claim real backend persistence; actual group persistence/request was
+verified separately in workspace-runtime.cjs. Tasks 1.4/5.5 remain open pending
+the remaining retained-operation coverage and broader acceptance audit.

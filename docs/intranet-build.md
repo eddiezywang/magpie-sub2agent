@@ -188,6 +188,8 @@ Workspace verification includes these independent packed-asset browser checks:
   failed reads, delayed saves and leaving a paused bulk queue.
 - `workspace-agent-status-acceptance.cjs`: native drift status/details on both
   surfaces, alongside unknown/adaptation cases in `workspace-acceptance.cjs`.
+- `workspace-groups-acceptance.cjs`: native prefilled group editor creation,
+  save failure/retry, enable/disable and confirmed deletion.
 - `workspace-providers-acceptance.cjs` and `workspace-pages-acceptance.cjs`: native
   provider operations and retained-page layout/browser/theme matrix.
 
@@ -205,3 +207,8 @@ process, and launch the checksum-verified older bundle with the same intentional
 override. Do not copy a QA home over the user's configuration. The workspace
 has no on-disk statistics migration; native Agent/provider writes remain real
 settings changes and are not undone merely by changing the executable.
+
+The existing Sessions export/search, Settings shortcut and routing-groups-page
+browser regressions accept `MAGPIE_INTRANET_TEST=1` to exercise internal boot.
+Set `MAGPIE_ASSETS` to the extracted pack; the routing suite uses
+`MAGPIE_ROUTING_ASSETS`. Leaving the internal flag unset keeps upstream fixtures.

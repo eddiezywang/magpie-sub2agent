@@ -11,7 +11,8 @@ const path = require("node:path");
 const { test } = require("node:test");
 const { chromium, webkit } = require("playwright");
 
-const assets = path.resolve(__dirname, "../assets");
+const assets = path.resolve(process.env.MAGPIE_ASSETS || path.join(__dirname, "../assets"));
+const intranet = process.env.MAGPIE_INTRANET_TEST === "1";
 
 function serve(lang, web, asked) {
   const settings = {
@@ -22,7 +23,7 @@ function serve(lang, web, asked) {
   return async (route) => {
     const req = route.request(), url = new URL(req.url());
     const json = (data) => route.fulfill({ json: data });
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:${web}};` });
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {intranet:${intranet},lang:"${lang}",theme:"light",web:${web}};` });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname.startsWith("/api/window/")) { if (url.pathname === "/api/window/main") asked.push(url.pathname + url.search); return json({}); }
     if (url.pathname === "/api/state") return json({ agents: [], profiles: [], settings: { lang, theme: "light" } });
@@ -74,6 +75,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       assert.ok(new URL(page.url()).searchParams.get("view") === "settings", page.url());
       // from a text box on another page too
       await page.locator('#nav button[data-view="providers"]').click();
+      await page.locator('#view-providers').waitFor({ state: 'visible' });
       assert.equal(await shown(page), false);
       const box = page.locator("#view-providers input:visible").first();
       if (await box.count()) { await box.focus(); }
