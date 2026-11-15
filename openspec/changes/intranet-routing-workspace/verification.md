@@ -488,3 +488,24 @@ current; the subsequent commit records verification-only script/doc updates.
 5.5 remains open for the final scope/known-red audit. The related packed Go,
 race, vet, build and actual isolation checks above passed, but the broader
 suite failures recorded earlier must not be silently converted into passes.
+
+### Corrected reproduced known-red test assumptions
+
+Reproduced TestSenderAgainstRealSummaryServer (zero report) and
+TestSharedCheckedReadsOnceAndKnowsUnknown (14 shared vs 31 copied allocations).
+Root causes were test assumptions, not workspace accounting changes:
+- The Go fixture queried a UTC calendar date, but the collector stores/reports
+  local days. The integration now deliberately uses 23:30 UTC and runs both UTC
+  and Asia/Shanghai child servers, querying the collector's own dayStamp and
+  asserting HTTP 200 as well as exactly-once billing/counters.
+- Windows environment/file reads add allocation overhead outside the settings
+  clone. The no-copy check now directly compares warmed shared slice/map
+  identity and requires fewer allocations than LoadChecked, retaining changed
+  file and malformed file assertions. Initial cold reads are not warm identity.
+
+Both complete packages pass under intranet (accounting 1.891s, settings 14.341s).
+Go overlay mutation checks fail as required: forcing SharedChecked to clone
+fails identity/allocation assertions; restoring the UTC query date fails only
+the Shanghai cross-midnight case with zero counters. gofmt/diff checks passed.
+No application code or billing/aggregation policy changed. Remaining unrelated
+profile/Windows broad-suite failures still require explicit tracking.

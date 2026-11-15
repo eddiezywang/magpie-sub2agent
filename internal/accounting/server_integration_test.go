@@ -6,7 +6,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -18,6 +20,13 @@ import (
 )
 
 func TestSenderAgainstRealSummaryServer(t *testing.T) {
+	for _, zone := range []string{"UTC", "Asia/Shanghai"} {
+		t.Run(zone, func(t *testing.T) { senderAgainstRealSummaryServer(t, zone) })
+	}
+}
+
+func senderAgainstRealSummaryServer(t *testing.T, zone string) {
+	t.Helper()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("Node 18+ is required for cross-language verification")
@@ -28,7 +37,12 @@ func TestSenderAgainstRealSummaryServer(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	cmd := proc.CommandContext(ctx, node, "-e", `const {createUsageServer}=require(process.argv[1]);const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:process.argv[2],billingSigningKey:'11'.repeat(32)});app.start().then(p=>console.log(p));`, source, t.TempDir())
+	// Cross the UTC/local midnight boundary deliberately. Reports use the
+	// collector's local date, while summaries always carry a UTC minute.
+	yesterday := time.Now().UTC().AddDate(0, 0, -1)
+	at := time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 23, 30, 0, 0, time.UTC)
+	cmd := proc.CommandContext(ctx, node, "-e", `const {createUsageServer}=require(process.argv[1]);const {dayStamp}=require(require('node:path').join(require('node:path').dirname(process.argv[1]),'store.js'));const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:process.argv[2],billingSigningKey:'11'.repeat(32)});app.start().then(p=>console.log(JSON.stringify({port:p,stamp:dayStamp(new Date(process.argv[3]))})));`, source, t.TempDir(), at.Format(time.RFC3339))
+	cmd.Env = append(os.Environ(), "TZ="+zone)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +55,14 @@ func TestSenderAgainstRealSummaryServer(t *testing.T) {
 	if !scanner.Scan() {
 		t.Fatal("server did not start")
 	}
-	base := "http://127.0.0.1:" + scanner.Text()
+	var server struct {
+		Port  int    `json:"port"`
+		Stamp string `json:"stamp"`
+	}
+	if err := json.Unmarshal(scanner.Bytes(), &server); err != nil || len(server.Stamp) != 8 {
+		t.Fatalf("invalid server startup: %q (%v)", scanner.Text(), err)
+	}
+	base := "http://127.0.0.1:" + fmt.Sprint(server.Port)
 	res, err := http.Get(base + "/usage/aggregation-rules")
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +77,6 @@ func TestSenderAgainstRealSummaryServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	var buffer minuteBuffer
-	at := time.Now().UTC().Truncate(time.Minute)
 	record := usage.Record{Agent: "codex", Provider: "sub2agent-workbuddy", Model: "glm-5.3-flash-maas-fixture", Input: 100, Output: 20, Status: 200}
 	for range 10 {
 		if err = buffer.Add(record, at, &rules); err != nil {
@@ -80,7 +100,8 @@ func TestSenderAgainstRealSummaryServer(t *testing.T) {
 			t.Fatalf("real server acknowledgement: %v %v", ack, err)
 		}
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/reports/fixture-user/daily.json?date="+at.Format("2006-01-02"), nil)
+	date := server.Stamp[:4] + "-" + server.Stamp[4:6] + "-" + server.Stamp[6:]
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/reports/fixture-user/daily.json?date="+date, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +113,9 @@ func TestSenderAgainstRealSummaryServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("daily report: HTTP %d", res.StatusCode)
+	}
 	var report struct {
 		Totals struct {
 			Requests int `json:"requests"`
