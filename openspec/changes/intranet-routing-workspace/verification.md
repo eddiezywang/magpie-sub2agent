@@ -210,3 +210,17 @@ disappears. Existing unmanaged connections now use the native status/switch
 without an additional adaptation button; workspace-acceptance checks that
 one native switch performs exactly one connect write. The fixture resets its
 authoritative Agent object before subsequent unknown-snapshot cases.
+
+Full packed workspace interaction suite passed both engines after these edits,
+including all five languages, six layouts, failure/retry, write locks, unknown
+snapshots, stale routing reads, draft guards and telemetry lifecycle. JS syntax,
+whitespace and TestCoreScriptBudget passed. Clean 13dfe951b package 052224 was
+built and launched in isolation (PID 22932). Its actual Windows runtime passed
+the ten-page/streaming/group persistence checks again. Agent screenshot inspected:
+bulk control is in Agent content and redundant connection rows are absent.
+Selected screenshots are at
+http://124.220.199.224:8805/workspace-review-20261116/focus-052224/focus-052224.html
+The 050727 bundle remains the last verified KF delivery; 052224 is local only.
+Its ZIP SHA256 is ae0df61eeabe58e43b96f41a46ac1a7bd5a45703fba642d73cd71102198a6fb6.
+Open tasks 1.3/1.4/2.6/2.7/2.8/5.5/5.6 still require their complete stated scope;
+the targeted checks above do not close those broader gates.
