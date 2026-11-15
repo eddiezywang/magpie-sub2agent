@@ -210,3 +210,6 @@ func (m *throughputMeter) snapshot() ThroughputState {
 	}
 	return out
 }
+
+// Throughput reads the workspace meter without changing Sessions speed semantics.
+func (s *Server) Throughput() ThroughputState { return s.throughput.snapshot() }

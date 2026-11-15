@@ -1320,3 +1320,21 @@ in [reference.md](../reference.md); the code is
 - **Scope.** A cursor carries a fingerprint of its filter and key. A held key
   sees its own rows and tombstones only. `TestUsageRequestsFeedOverGateway`
   and the `TestFeed…` tests in `internal/usage/feed_test.go` guard these.
+
+## Workspace throughput (intranet)
+
+The independent `workspace_throughput.go` meter receives actual delivered
+content deltas from `liveRow.observe` and its final parser flush. It fixes
+liveRates conversion at ingestion, preserving actual provider/model attribution
+when a session changes models. Unknown rates produce null samples, never byte
+counts labeled as tokens. The meter retains 180 complete seconds, five-second
+current rates and independent peaks; session identity includes its agent.
+Total aggregation remains intact when the 128-provider, 512-model or 256-session
+limit evicts a least-recently-active dimension. Epoch and per-series startedAt
+identify resets. Storage is memory-only and does not require session recording.
+
+The internal GUI reads `/api/gateway/throughput`; another local gateway owner is
+queried at `/v1/magpie/throughput` under the trace endpoint's loopback/held-key
+restrictions. Unsupported or unreachable owners return unavailable, not idle.
+The existing `/api/speeds` and Sessions' 120-second/three-second curves are unchanged.
+Tests: `TestWorkspaceThroughput*` in gateway and GUI, under the intranet tag.

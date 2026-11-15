@@ -437,6 +437,7 @@ func codexReadableTitles(ids []string) map[string]string {
 // waits up to 25 s for something to change after the seq it is given, so
 // the page hears of a request as it happens.
 func traceRoutes(mux *http.ServeMux) {
+	workspaceThroughputRoutes(mux)
 	// Names can arrive or change after a route finishes, independently of the
 	// trace sequence. Read only the IDs the page currently lists.
 	mux.HandleFunc("POST /api/gateway/session-titles", func(rw http.ResponseWriter, r *http.Request) {

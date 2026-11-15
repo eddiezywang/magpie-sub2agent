@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"github.com/yetone/magpie/internal/provider"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -73,4 +75,34 @@ func TestWorkspaceThroughputConcurrent(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestWorkspaceThroughputReceivesDeliveredContent(t *testing.T) {
+	second := int64(3000)
+	meter := throughputMeter{now: func() time.Time { return time.Unix(second, 0) }}
+	f := &inflight{agent: "codex", session: "live-test", throughput: &meter}
+	l := liveBegin(f, "workspace-live-test", provider.Chat)
+	l.routed("workspace-test-provider", "workspace-live-test")
+	for i := 0; i < liveRateMin; i++ {
+		liveRates.learn("workspace-test-provider", "workspace-live-test", 4, 8)
+	}
+	l.observe([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"test\"}}]}\n\n"))
+	l.observe([]byte(": keepalive\n\n"))
+	l.finish(false, 8)
+	second++
+	out := meter.snapshot()
+	if out.Total.Points[179] == nil || *out.Total.Points[179] != 8 || len(out.Models) != 1 || out.Sessions[0].Agent != "codex" {
+		t.Fatalf("delivered content missing: %+v", out)
+	}
+}
+func TestWorkspaceThroughputOwnerBoundary(t *testing.T) {
+	srv := New()
+	remote := httptest.NewRequest("GET", "/v1/magpie/throughput", nil)
+	remote.RemoteAddr = "198.51.100.1:1234"
+	w := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(w, remote)
+	// Upstream builds omit the endpoint entirely; intranet refuses LAN access.
+	if w.Code == 200 {
+		t.Fatal("remote throughput accepted")
+	}
 }

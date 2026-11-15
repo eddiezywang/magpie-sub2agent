@@ -34,7 +34,8 @@ type liveRow struct {
 	// tr: f's trace, nil when its routes are in none
 	tr *trace
 	// curves: f's session speed meter, nil when it has none
-	curves *curveMeter
+	curves     *curveMeter
+	throughput *throughputMeter
 }
 
 // liveBegin starts counting f's reply, from is the agent's protocol, which
@@ -45,9 +46,9 @@ func liveBegin(f *inflight, model string, from provider.Protocol) *liveRow {
 		return nil
 	}
 	f.mu.Lock()
-	tr, curves := f.tr, f.curves
+	tr, curves, throughput := f.tr, f.curves, f.throughput
 	f.mu.Unlock()
-	l := &liveRow{f: f, tr: tr, curves: curves, model: model, counter: liveContentCounter{proto: from}}
+	l := &liveRow{f: f, tr: tr, curves: curves, throughput: throughput, model: model, counter: liveContentCounter{proto: from}}
 	f.live.Store(l)
 	return l
 }
@@ -76,6 +77,8 @@ func (l *liveRow) observe(p []byte) {
 	provider, model := l.provider, l.model
 	l.mu.Unlock()
 	l.curves.add(l.f.agent, l.f.session, provider, model, content-was)
+	rate, rated := liveRates.rate(provider, model)
+	l.throughput.add(l.f.agent, l.f.session, provider, model, content-was, rate, rated)
 	l.tell(bytes, contentAt, provider, model, content)
 }
 
@@ -152,10 +155,13 @@ func (l *liveRow) finish(failed bool, output int) {
 		return
 	}
 	l.ended = true
+	was := l.counter.total
 	l.counter.flush()
 	sse, content := l.counter.sse, l.counter.total
 	bytes, contentAt, provider, model := l.bytes, l.contentAt, l.provider, l.model
 	l.mu.Unlock()
+	rate, rated := liveRates.rate(provider, model)
+	l.throughput.add(l.f.agent, l.f.session, provider, model, content-was, rate, rated)
 	if sse && !failed && output > 0 {
 		liveRates.learn(provider, model, content, output)
 	}

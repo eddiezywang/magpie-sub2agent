@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 // Busy is what a restart of the magpie serving the gateway would cut
@@ -90,6 +92,9 @@ func (s *Server) counted(h http.Handler) http.Handler {
 			f.mu.Lock()
 			f.tr = &s.trace
 			f.curves = &s.curves
+			if distribution.Internal {
+				f.throughput = &s.throughput
+			}
 			f.mu.Unlock()
 			// the session's curve counts it in flight, its tool gaps
 			// being the time between
@@ -131,7 +136,8 @@ type busyCounters struct {
 	// handing back what requests left once it rests (idle_memory.go)
 	idle idleMemory
 	// each session's output speed, for the Sessions page (session_speed.go)
-	curves curveMeter
+	curves     curveMeter
+	throughput throughputMeter
 }
 
 // parked is how many runs wait on their caller's tool results.
