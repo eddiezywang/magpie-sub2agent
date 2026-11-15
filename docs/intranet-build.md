@@ -151,11 +151,11 @@ and raw usage do not enter its response. Existing /api/speeds and Sessions'
 120-second curves retain their original contract. See
 [session statistics](subsystems/gateway-sessions.md#workspace-throughput-intranet).
 
-For a native review, build a fresh timestamped portable folder, then run:
+For a native review, build a fresh timestamped application folder, then run:
 
 ```powershell
-./build/workspace-launch.ps1 -BuildPath D:\path\to\fresh-portable-folder
-$env:QA_RUNTIME = 'D:\path\to\fresh-portable-folder'
+./build/workspace-launch.ps1 -BuildPath D:\path\to\fresh-build-folder
+$env:QA_RUNTIME = 'D:\path\to\fresh-build-folder'
 node build/workspace-runtime.cjs
 ```
 
@@ -169,9 +169,9 @@ ZIP is created before verification and contains no QA configuration. Browser
 fixture checks use build/workspace-acceptance.cjs against extracted packed assets
 via WORKSPACE_ASSETS; those fixtures are never part of the packaged app.
 
-Rollback uses a retained, checksum-verified portable bundle in a separate folder.
+Rollback uses a retained, checksum-verified bundle in a separate folder.
 Close only the review process started from its recorded path/PID; do not stop a
-user's existing gateway. Back up the review data before selecting another bundle
+user's existing gateway. Internal releases share ~/.sub2agent; a separate EXE folder alone does not isolate configuration. The review launcher explicitly redirects XDG_CONFIG_HOME. Back up the selected configuration before selecting another bundle
 and keep data directories separate. The meter has no persistent migration to
 reverse. Reverting application code requires rebuilding the complete embedded
 asset bundle as well; replacing only workspace.js cannot update a packed EXE.

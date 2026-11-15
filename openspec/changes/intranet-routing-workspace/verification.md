@@ -64,3 +64,21 @@
 - 修复读取 `/api/agents/connections` 失败后沿用旧行却计作已接入/未接入的问题：保留行统一标为未知、原生状态点不再绿色、未知对象不进入批量候选或路由组目标；缺失单行检查也按未知处理。展开的 Agent 工具区提供原生“重新检测”，不添加重复行说明；失败访问不会因重绘自动循环重试。
 - Chromium/WebKit packed-assets 验证单行未知计数 2/7/1、全量读取失败计数 0/0/10、批量禁用和路由目标回收、无重复 connection-check、两次重绘无自动读请求、显式重检恢复 2/8 与 8 个候选。原有全部工作台检查同时通过。
 - 同一新增检查指向修复前的真实生产资产时失败：读取失败后未出现“未知 10”，证明能检出原缺陷。此修补为源码后续，尚未替换 KF 的 03:15 应用包。
+
+## Latest main merge (2026-11-16 03:47)
+
+Merged fork/main 0372636b4 without conflicts. Updated isolated review launcher
+for the new explicit XDG_CONFIG_HOME/sub2agent configuration; .portable no
+longer isolates internal builds. Targeted workspace/curve/model tests pass,
+appdir suite passes with native Windows temporary paths, and settings migration
+checks pass. The full settings suite is not green: issue tracked locally below.
+
+### Open verification issue: Windows settings allocation threshold
+
+TestSharedCheckedReadsOnceAndKnowsUnknown fails on Go 1.26.8 Windows intranet:
+14 allocations for SharedChecked vs 31 for LoadChecked (threshold <=6 and 4x).
+Even settling file time gives 11 vs 28; path caching does not resolve this.
+Experimental changes were reverted. The observed read/copy allocation assertion
+fails; no production optimization or raised threshold has been shipped.
+GitHub issue lookup is unavailable because gh is not installed. This remains
+an explicit verification limitation; do not describe the full suite as passing.

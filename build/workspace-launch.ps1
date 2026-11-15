@@ -1,10 +1,11 @@
 param([Parameter(Mandatory=$true)][string]$BuildPath)
 $ErrorActionPreference='Stop'
 $runtimeRoot=(Resolve-Path -LiteralPath $BuildPath).Path
-if(!(Test-Path -LiteralPath (Join-Path $runtimeRoot '.portable')) -or !(Test-Path -LiteralPath (Join-Path $runtimeRoot 'manifest.json'))){throw 'An isolated intranet portable build is required'}
+if(!(Test-Path -LiteralPath (Join-Path $runtimeRoot 'manifest.json'))){throw 'An intranet review build is required'}
 $qaHome=Join-Path $runtimeRoot 'qa-home'
-New-Item -ItemType Directory -Path $qaHome,(Join-Path $qaHome 'AppData/Roaming'),(Join-Path $qaHome 'AppData/Local'),(Join-Path $runtimeRoot 'data') -Force | Out-Null
-$settingsPath=Join-Path $runtimeRoot 'data/settings.json'
+$qaConfig=Join-Path $qaHome 'XDG_CONFIG_HOME/sub2agent'
+New-Item -ItemType Directory -Path $qaHome,(Join-Path $qaHome 'AppData/Roaming'),(Join-Path $qaHome 'AppData/Local'),$qaConfig -Force | Out-Null
+$settingsPath=Join-Path $qaConfig 'settings.json'
 if(!(Test-Path -LiteralPath $settingsPath)){'{"port":19893,"lang":"zh","theme":"light","guideHidden":true,"featuresOff":["library","middleware","otel","redact","search","tools","warmups"]}' | Set-Content -LiteralPath $settingsPath -Encoding utf8}
 $startInfo=[Diagnostics.ProcessStartInfo]::new((Join-Path $runtimeRoot 'sub2agent.exe'))
 $startInfo.Arguments='web --addr 127.0.0.1:19894 --no-open'
