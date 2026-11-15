@@ -79,6 +79,7 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
   const wb = deps.workbuddyAdapter || workBuddyAdapter(loginNetwork(fetchImpl,()=>undefined));
   const catalogs=new Map();
   const catalogNow=deps.now || Date.now;
+  const catalogKey=bundle=>JSON.stringify([bundle.userId,bundle.enterpriseId]);
   const trae = deps.traeAdapter || createTraeSubscriptionAdapter({fetchImpl});
   const initial = cb ? await cb.inspectLocalState() : {models:[]};
 
@@ -129,7 +130,12 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
           let bundle;
           try { bundle = await adapter.resolveAccount(login.state,token); }
           catch (e) { if (Number(e.code) === 12151) return null; throw e; }
-          return success({...bundle,...await adapter.listModels(bundle)});
+          const discovered=await adapter.listModels(bundle);
+          // The first post-login listing uses the catalog we just validated,
+          // rather than repeating discovery before the editor can open.
+          if(catalogs.size>=64)catalogs.delete(catalogs.keys().next().value);
+          catalogs.set(catalogKey(bundle),{until:catalogNow()+5*60_000,promise:Promise.resolve(discovered)});
+          return success({...bundle,...discovered});
         }); }};
     }
     const callbackPath = '/authorize/' + randomUUID();
@@ -185,7 +191,7 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
       if(!auth?.access)return provider.models;
       const bundle=readBundle(auth);
       if(kind!=='workbuddy')return modelSet(modelsFor(bundle));
-      const key=JSON.stringify([bundle.userId,bundle.enterpriseId]);
+      const key=catalogKey(bundle);
       let cached=catalogs.get(key);
       if(!cached || cached.until<catalogNow()) {
         const previous=cached?.promise;
