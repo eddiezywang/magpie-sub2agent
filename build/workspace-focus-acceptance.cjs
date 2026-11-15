@@ -1,0 +1,53 @@
+// Async native route-control refresh must preserve keyboard intent.
+const {chromium,webkit}=require('playwright'),{open}=require('./workspace-acceptance.cjs');
+const assert=require('node:assert/strict');
+(async()=>{for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
+ const browser=await type.launch(engine==='chromium'?{channel:'chrome'}:{});
+ try{
+  const page=await open(browser),group=page.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true});
+  await group.waitFor();await group.focus();await group.evaluate(e=>qa.oldRoute=e);
+  await page.evaluate(()=>{qa.holdGroups=true;magpie.call('workspace','render')});
+  await page.waitForFunction(()=>typeof qa.releaseGroups==='function');
+  assert(await group.evaluate(e=>e===document.activeElement),'pending group read keeps focused control');
+  await page.evaluate(()=>{qa.groupsReleased=false;qa.releaseGroups()});
+  await page.waitForFunction(()=>qa.groupsReleased);
+  await page.waitForFunction(()=>!qa.oldRoute.isConnected);
+  await group.waitFor();assert(await group.evaluate(e=>e===document.activeElement),'replacement restores same group focus');
+  await page.evaluate(()=>{qa.releaseGroups=null;qa.holdGroups=true;magpie.call('workspace','render')});
+  await page.waitForFunction(()=>typeof qa.releaseGroups==='function');
+  await page.locator('#pvQ').focus();
+  await page.evaluate(()=>{qa.groupsReleased=false;qa.releaseGroups()});
+  await page.waitForFunction(()=>qa.groupsReleased);
+  assert(await page.locator('#pvQ').evaluate(e=>e===document.activeElement),'late read does not steal focus from provider search');
+  await group.focus();
+  await page.evaluate(()=>{qa.rejectGroups=true;magpie.call('workspace','render')});
+  await page.getByText('synthetic group read refused',{exact:true}).waitFor();
+  assert(await group.evaluate(e=>e===document.activeElement),'failed read preserves focused controls and exposes status');
+  await page.evaluate(()=>qa.rejectGroups=false);
+  await page.locator('#ws-route-controls .proto').click();
+  await page.locator('.proto-menu').waitFor();
+  await page.locator('.proto-menu button').first().focus();
+  await page.evaluate(()=>renderProviders());
+  assert(await page.locator('.proto-menu').isVisible(),'provider-only refresh leaves another surface menu open');
+  await page.evaluate(()=>magpie.call('workspace','render'));
+  await page.locator('.proto-menu').waitFor({state:'detached'});
+  assert(await page.locator('#ws-route-controls .proto').evaluate(e=>e===document.activeElement),'refresh closes the old anchored menu and restores chooser focus');
+  await group.focus();
+  await page.evaluate(()=>{qa.releaseGroups=null;qa.holdGroups=true;magpie.call('workspace','render')});
+  await page.waitForFunction(()=>typeof qa.releaseGroups==='function');
+  await page.evaluate(()=>show('agents'));await page.locator('#nav button[data-view=agents]').focus();
+  await page.evaluate(()=>{qa.groupsReleased=false;qa.releaseGroups()});
+  await page.waitForFunction(()=>qa.groupsReleased);
+  assert(await page.locator('#nav button[data-view=agents]').evaluate(e=>e===document.activeElement),'late workspace read does not steal focus after leave');
+  assert.equal(await page.locator('#view-workspace #view-routing').count(),0);
+  await page.evaluate(()=>show('workspace'));await group.waitFor();await group.focus();
+  await page.evaluate(()=>{workspaceSamples.groups.splice(workspaceSamples.groups.findIndex(g=>g.id==='steady'),1);magpie.call('workspace','render')});
+  await page.waitForFunction(()=>!document.querySelector('[data-ws-focus="group/steady"]'));
+  assert(await page.locator('#ws-route-controls .proto').evaluate(e=>e===document.activeElement),'vanished focused group returns keyboard focus to Agent chooser');
+  await page.evaluate(()=>{state.agents.forEach(a=>a.wired=false);renderAgents()});
+  await page.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
+  assert(await page.locator('#ws-agents summary').evaluate(e=>e===document.activeElement),'no eligible target returns focus to Agent disclosure');
+  assert.deepEqual(page.errors,[]);await page.close();
+  console.log(`${engine}: route refresh retains keyboard focus and ignores user focus/navigation changes`);
+ }finally{await browser.close()}
+}})().catch(e=>{console.error(e);process.exitCode=1});

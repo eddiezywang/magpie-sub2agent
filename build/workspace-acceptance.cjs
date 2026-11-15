@@ -17,6 +17,7 @@ async function fixture(page){
     if(qa.connectionReadFails)return new Response(JSON.stringify({error:'synthetic connection read failed'}),{status:503});
     const response=await original(input,init),data=await response.json();
     if(qa.unknownAgent)data.checks[qa.unknownAgent]={status:'unknown'};
+    if(qa.unmanagedAgent)data.checks[qa.unmanagedAgent]={status:'configured',managed:false};
     return Response.json(data);
    }
    if(url.pathname==='/api/set'){
@@ -25,6 +26,7 @@ async function fixture(page){
     if(qa.holdPick){qa.holdPick=false;await new Promise(resolve=>qa.releasePick=resolve);}
    }
    if(url.pathname==='/api/provider/save')qa.providerSaves=(qa.providerSaves||0)+1;
+   if(url.pathname==='/api/groups'&&qa.rejectGroups)return Response.json({error:'synthetic group read refused'},{status:503});
    if(url.pathname==='/api/groups'&&qa.holdGroups){
     qa.holdGroups=false;const response=await original(input,init);
     await new Promise(resolve=>qa.releaseGroups=resolve);qa.groupsReleased=true;return response;
@@ -130,6 +132,17 @@ async function test(browser,engine){
  }finally{await locking.close();}
  const connections=await open(browser);
  try{
+  await connections.evaluate(async()=>{qa.unmanagedAgent='codex';await import('/agentconnections.js').then(m=>m.refresh())});
+  await connections.locator('#ws-agents summary').click();
+  const legacy=connections.locator('#agents .agent[data-id=codex]');
+  await legacy.getByText('适配现有接入',{exact:true}).waitFor();
+  assert.equal(await legacy.locator('.connection-adapt,.connection-check').count(),0);
+  assert.equal(await legacy.locator('.ag-conn').count(),1);
+  await legacy.locator('.ag-conn').click();
+  await connections.waitForFunction(()=>state.agents.find(a=>a.id==='codex').wired&&!window.agentConnectionBusy('codex'));
+  assert.equal(await connections.evaluate(()=>qa.calls.filter(x=>x.endsWith('/codex')).length),1);
+  await connections.evaluate(async()=>{qa.unmanagedAgent=null;workspaceSamples.agents.find(a=>a.id==='codex').wired=false;await import('/agentconnections.js').then(m=>m.refresh())});
+  await connections.locator('#ws-agents summary').click();
   await connections.evaluate(async()=>{qa.unknownAgent='codex';await import('/agentconnections.js').then(m=>m.refresh())});
   await connections.locator('#ws-agent-counts').getByText('已接入 2 · 未接入 7 · 未知 1',{exact:true}).waitFor();
   await connections.locator('#ws-agents summary').click();
@@ -222,7 +235,7 @@ async function test(browser,engine){
   const summary=history.locator('#ws-agents summary');await summary.focus();await history.keyboard.press('Enter');assert(await history.locator('#ws-agents').evaluate(e=>e.open));
   await history.keyboard.press('Enter');assert.equal(await history.locator('#ws-agents').evaluate(e=>e.open),false);
   await history.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').ready=false;workspaceSamples.groups.push({id:'manual',name:'手工配置组',ref:'group/manual',ready:true});magpie.call('workspace','render')});
-  await history.waitForFunction(()=>document.querySelector('#ws-route-controls button[aria-pressed]')?.disabled===false);
+  await history.waitForFunction(()=>[...document.querySelectorAll('#ws-route-controls button[aria-pressed]')].some(b=>b.textContent==='稳定优先'&&b.disabled));
   assert(await history.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).isDisabled());
   assert.equal(await history.locator('#ws-route-controls').getByRole('button',{name:'手工配置组',exact:true}).count(),0);
   await history.evaluate(()=>{workspaceSamples.groups.splice(0);magpie.call('workspace','render')});await history.getByText('暂无已配置的预定义路由组',{exact:true}).waitFor();

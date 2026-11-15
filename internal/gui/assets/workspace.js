@@ -29,18 +29,26 @@
   }));
   function counts(){if(!active||!state?.agents)return;const list=state.agents.filter(a=>!a.hidden);const unknown=list.filter(a=>window.agentConnectionStatus?.(a.id)==='unknown').length;const on=list.filter(a=>a.wired&&window.agentConnectionStatus?.(a.id)!=='unknown').length;main.querySelector('#ws-agent-counts').textContent=t('Connected {on} · Not connected {off}',{on,off:list.length-on-unknown})+(unknown?t(' · Unknown {n}',{n:unknown}):'');const stamp=JSON.stringify(list.map(a=>[a.id,a.wired,window.agentConnectionStatus?.(a.id),a.fields.find(f=>f.key==='model')?.value]));if(stamp!==routeStamp){routeStamp=stamp;routeControls();}}
   async function routeControls(){
-    const visit=generation,request=++routeRequest,box=main.querySelector('#ws-route-controls');box.replaceChildren();
+    const visit=generation,request=++routeRequest,box=main.querySelector('#ws-route-controls');
     try{
       const data=await api('groups');if(!active||visit!==generation||request!==routeRequest)return;
+      // Read focus when the response arrives: a user may have moved elsewhere
+      // while it was pending. Keep the old controls mounted until this point.
+      const ownMenu=protoMenu&&box.contains(protoMenu.anchor);
+      const focus=box.contains(document.activeElement)?document.activeElement.dataset.wsFocus:ownMenu&&protoMenu.box.contains(document.activeElement)?'agent':null;
+      if(ownMenu)closeProtoMenu();
+      box.replaceChildren();
       const eligible=(state?.agents||[]).filter(a=>a.wired&&window.agentConnectionStatus?.(a.id)!=='unknown'&&a.fields.some(f=>f.key==='model'&&f.options?.length));
-      if(!eligible.length){box.textContent=t('Connect an Agent to choose a routing group');return;}
+      if(!eligible.length){box.textContent=t('Connect an Agent to choose a routing group');if(focus)main.querySelector('#ws-agents summary').focus({preventScroll:true});return;}
       let target=eligible.find(a=>a.id===box.dataset.agent)||eligible[0];box.dataset.agent=target.id;
-      const choose=magpie.ui.menu(eligible.map(a=>({v:a.id,name:a.name})),target.id,'Agent',id=>{box.dataset.agent=id;routeControls();});
+      const choose=magpie.ui.menu(eligible.map(a=>({v:a.id,name:a.name})),target.id,'Agent',id=>{box.dataset.agent=id;for(const b of box.querySelectorAll('[aria-pressed]'))b.disabled=true;routeControls();});
+      choose.dataset.wsFocus='agent';
       const current=target.fields.find(f=>f.key==='model'),groups=(data.groups||[]).filter(g=>g.templateKind&&['plan','smart','thrifty','steady'].includes(g.templateKind));
       box.append(choose);const saved=el('span','note',optionFor(current,current.value)?.label||current.value||t('Default'));box.append(saved);
-      for(const g of groups){const b=el('button','text',g.name);b.disabled=!g.ready;b.setAttribute('aria-pressed',String(current.value===g.ref));b.onclick=async()=>{for(const x of box.querySelectorAll('button'))x.disabled=true;try{await setPick(target,current,g.ref,{value:g.ref,ref:g.ref,label:g.name});}catch(err){statusErr(err)}finally{if(active&&visit===generation)routeControls();}};box.append(b);}
+      for(const g of groups){const b=el('button','text',g.name);b.dataset.wsFocus=g.ref;b.disabled=!g.ready;b.setAttribute('aria-pressed',String(current.value===g.ref));b.onclick=async()=>{if(!active||visit!==generation||box.dataset.agent!==target.id)return;for(const x of box.querySelectorAll('button'))x.disabled=true;try{await setPick(target,current,g.ref,{value:g.ref,ref:g.ref,label:g.name});}catch(err){statusErr(err)}finally{if(active&&visit===generation)routeControls();}};box.append(b);}
       if(!groups.length)box.append(el('span','note',t('No predefined routing groups configured')));
-      const edit=el('button','text',t('Edit routing groups')+' ›');edit.onclick=()=>show('groups');box.append(edit);
-    }catch(err){if(active&&visit===generation&&request===routeRequest){box.textContent=err.message;}}
+      const edit=el('button','text',t('Edit routing groups')+' ›');edit.dataset.wsFocus='edit';edit.onclick=()=>show('groups');box.append(edit);
+      if(focus){const same=[...box.querySelectorAll('[data-ws-focus]')].find(b=>b.dataset.wsFocus===focus&&!b.disabled);(same||choose).focus({preventScroll:true});}
+    }catch(err){if(active&&visit===generation&&request===routeRequest){let note=box.querySelector('.ws-route-error');if(!note){note=el('span','note ws-route-error');note.setAttribute('role','status');box.append(note);}note.textContent=err.message;}}
   }
 })();

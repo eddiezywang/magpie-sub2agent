@@ -5442,7 +5442,8 @@ function renderProviders(quiet) {
   keepIcons($("#providers"), $("#offProviders"), $("#addSheet"), $("#excluded"));
   view.classList.remove("loading");
   view.removeAttribute("aria-busy");
-  closeProtoMenu();
+  // In the workspace another native surface can own the open menu.
+  if (!intranet || !document.body.classList.contains("workspace-active") || !protoMenu || view.contains(protoMenu.anchor)) closeProtoMenu();
   syncURL();
   const onList = $("#providers"), offList = $("#offProviders");
   onList.replaceChildren();

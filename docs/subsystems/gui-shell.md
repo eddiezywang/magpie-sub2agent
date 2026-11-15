@@ -1378,3 +1378,11 @@ valid native save and byte-identical Agent configuration after rejection.
 The workspace observes Agent state changes to refresh target eligibility and
 current model; superseded group reads cannot replace newer controls. Throughput
 polling starts with the active workspace, independently of group read latency.
+Group refresh keeps existing route controls mounted until a current response
+arrives. It restores focus only when it still belongs to those controls or
+their menu; user focus changes and navigation win. Failed reads retain the
+controls and expose an inline status. Removed choices return focus to the
+Agent chooser, or the Agent disclosure if no connected target remains.
+Provider refresh in the workspace closes only its own anchored menu, leaving
+the sibling native Agent and routing menus alone. These transitions are covered
+by build/workspace-focus-acceptance.cjs in Chromium and WebKit.

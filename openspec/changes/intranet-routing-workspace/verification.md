@@ -183,3 +183,30 @@ C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-043758\sub2agent-windo
 Actual package Add sheet also verified native TIG/CIB names and image assets,
 then captured runtime-provider-add.png and inspected it before publication.
 No authentication screen was published. Local runtime 11448 remains available.
+
+### Clean merged build delivery 050727
+
+Fetched fork/main at 0372636b4 and verified it is already an ancestor of the
+workspace head. Built clean detached worktree 9d41908e8 (workingTreeChanges
+false), excluding in-progress changes in the original checkout. ZIP SHA256:
+0eec2a06af87521e4c9674b5f87edef5349c2e2bf42d0047d05d718dfa27b839.
+Isolated Windows runtime PID 53604 replaces the earlier QA runtime. All ten
+pages, seven streamed loopback replies, attributed 180-point throughput,
+group persistence/request and TIG preset checks passed. Core script budget
+passed. Selected Playwright captures published at
+http://124.220.199.224:8805/workspace-review-20261116/delivery-050727.html.
+Laptop and KF ZIP hashes match; KF verified all 54 manifest files. KF executable:
+C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-050727\sub2agent-windows-x64-20261116-050727\sub2agent.exe
+It has not been launched there. This is targeted verification, not a claim
+that the previously recorded full-suite failures have been resolved.
+
+### Route focus and native adaptation follow-up
+
+Both Chromium and WebKit passed workspace-focus-acceptance.cjs: retain focused
+controls during pending reads, restore matching focus on replacement, retain
+controls and status on read failure, preserve another surface's open menu,
+ignore moved focus and departed pages, and fall back when a group or target
+disappears. Existing unmanaged connections now use the native status/switch
+without an additional adaptation button; workspace-acceptance checks that
+one native switch performs exactly one connect write. The fixture resets its
+authoritative Agent object before subsequent unknown-snapshot cases.

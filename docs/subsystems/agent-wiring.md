@@ -485,3 +485,6 @@ Native row writes and the bulk queue share the connection gate. Results retain
 success/failure/skipped counts together with individual errors, including after
 a redraw. Missing-CLI exclusion and partial-failure result preservation are
 covered in build/workspace-acceptance.cjs in Chromium and WebKit.
+An existing unmanaged connection uses the native status line and switch for
+adaptation. It adds no second connection button or diagnostic row. Unknown
+snapshots retain the native unknown status and explicit toolbar recheck.

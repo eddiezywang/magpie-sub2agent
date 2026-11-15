@@ -33,8 +33,9 @@ function draw(){
   if(check.status==='unknown'){
    const line=row.querySelector('.ag-st-t')||row.querySelector('.sub');if(line){line.textContent=t('Could not read connection configuration');line.setAttribute('role','status');const status=line.closest('.ag-st');status?.classList.remove('on','bad');status?.classList.add('wait');}
   }else if(check.status==='configured'&&!check.managed){
-   const details=el('button','text connection-adapt',t('Adapt existing connection'));
-   details.onclick=()=>run((state.agents||[]).filter(a=>a.id===row.dataset.id));row.querySelector('.who')?.append(details);
+   const line=row.querySelector('.ag-st-t')||row.querySelector('.sub');
+   if(line)line.textContent=t('Adapt existing connection');
+   const control=row.querySelector('.ag-conn');if(control)control.title=t('Adapt existing connection');
   }
  }
 }
