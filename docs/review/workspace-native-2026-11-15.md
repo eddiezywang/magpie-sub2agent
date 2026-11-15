@@ -13,7 +13,7 @@ Group selection demonstrates selection state; it does not apply routing rules.
 Native editor saves, sign-in and other unsupported mutations return an explicit
 preview-only error. Production integration and backend telemetry are pending.
 Throughput refreshes each second using a trailing five-second average; charts
-retain 60 samples. Each series tracks its own peak rather than summing peaks.
+retain 180 samples. Each series tracks its own peak rather than summing peaks.
 
 Verification: `node build/review-workspace-preview.cjs` with Playwright installed.
 Chrome and WebKit passed at 1440, 1024 and 390px: native colors and border,
@@ -25,3 +25,7 @@ JavaScript syntax and git diff whitespace checks passed.
 Milestone screenshots are under `design-preview/workspace-review/`; all contain
 only fixtures. They are ready for the review site; this step has not uploaded
 them to the remote review server.
+
+Follow-up: restored TIG/CIB original pixel icons and hyphenated preset names;
+expanded sparklines to 220px on wide surfaces and the rolling window to 180s.
+Playwright checks also assert loaded logos and exactly 180 points per series.
