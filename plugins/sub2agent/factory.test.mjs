@@ -7,6 +7,22 @@ const client={auth:{set:async()=>{throw new Error('Unexpected credential write')
 const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
 const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
 
+test('WorkBuddy first post-login listing reuses discovery until its cache expires',async()=>{
+ let calls=0,now=0;
+ const adapter={requestLoginLink:async()=>({state:'s',url:'https://login.example.invalid'}),
+  pollToken:async()=>({accessToken:'fixture'}),resolveAccount:async()=>({userId:'u',enterpriseId:'e'}),
+  listModels:async()=>{calls++;return models;}};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:adapter,now:()=>now});
+ const flow=await plugin.auth.methods[0].authorize();
+ const auth=await flow.callback();
+ const first=await plugin.provider.models({models:{}},{auth});
+ assert.ok(first['Enterprise Model']);
+ assert.equal(calls,1,'opening the editor must not repeat login discovery');
+ now=5*60_000+1;
+ await plugin.provider.models({models:{}},{auth});
+ assert.equal(calls,2,'later refresh still discovers new models');
+});
+
 test('WorkBuddy uses measured wire-byte headroom instead of a token clamp',async()=>{
  const model='glm-5.3-flash-maas-fixture';let calls=0;
  const auth={access:JSON.stringify({models:[model],defaultModel:model,accessToken:'fixture',expiresAt:Date.now()+3600000,userId:'u',enterpriseId:'e'})};

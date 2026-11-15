@@ -1,0 +1,17 @@
+[Unit]
+Description=Sub2Agent read-only application release mirror
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+ExecStart=/usr/bin/python3 /opt/sub2agent-release-mirror/serve.py --root /var/www/sub2agent-update-8899 --port 8899
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

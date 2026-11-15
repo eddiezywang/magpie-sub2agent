@@ -11,44 +11,73 @@ import (
 	"github.com/yetone/magpie/internal/distribution"
 )
 
-var internalReleaseSources = []string{distribution.Base + "/sub2agent/releases", distribution.AppMirror}
+var internalReleaseSources = []string{distribution.AppMirror, distribution.Base + "/sub2agent/releases", distribution.AppPublicMirror}
 
-// latestInternal prefers the primary publication and only consults the
-// independent copy if that source cannot deliver a valid signed feed.
+// latestInternal checks the domain first, then the two independent hosts. It
+// chooses the newest valid signed feed so a stale mirror cannot hide a release;
+// equally recent feeds retain source order.
 func latestInternal(ctx context.Context, lang string) (*Release, error) {
+	type result struct {
+		index   int
+		release *Release
+		err     error
+	}
+	ch := make(chan result, len(internalReleaseSources))
+	for i, base := range internalReleaseSources {
+		go func(i int, base string) {
+			attempt, cancel := context.WithTimeout(ctx, 8*time.Second)
+			defer cancel()
+			r, err := latestFrom(attempt, base+"/latest.json", lang)
+			ch <- result{i, r, err}
+		}(i, base)
+	}
 	var failures []string
-	for _, base := range internalReleaseSources {
-		attempt, cancel := context.WithTimeout(ctx, 8*time.Second)
-		r, err := latestFrom(attempt, base+"/latest.json", lang)
-		cancel()
-		if err == nil {
-			return r, nil
-		}
-		failures = append(failures, err.Error())
-		if ctx.Err() != nil {
+	var latest *Release
+	bestIndex := len(internalReleaseSources)
+	for range internalReleaseSources {
+		select {
+		case got := <-ch:
+			if got.err != nil {
+				failures = append(failures, got.err.Error())
+				continue
+			}
+			if latest == nil || Newer(got.release.Version, latest.Version) || (got.release.Version == latest.Version && got.index < bestIndex) {
+				latest, bestIndex = got.release, got.index
+			}
+		case <-ctx.Done():
+			if latest != nil {
+				return latest, nil
+			}
 			return nil, ctx.Err()
 		}
+	}
+	if latest != nil {
+		return latest, nil
 	}
 	return nil, fmt.Errorf("update sources failed: %s", strings.Join(failures, "; "))
 }
 
-// internalAlternateAsset maps only a versioned release path between the two
-// administrator-controlled sources; the signed checksum remains unchanged.
-func internalAlternateAsset(raw string) string {
+// internalAssetSources maps a versioned release path to the configured sources
+// in priority order. The asset checksum remains the one from the signed feed.
+func internalAssetSources(raw string) []string {
 	u, err := url.Parse(raw)
 	if err != nil || u.RawQuery != "" || u.Fragment != "" || u.User != nil || path.Clean(u.Path) != u.Path {
-		return ""
+		return nil
 	}
-	for i, base := range internalReleaseSources {
+	for _, base := range internalReleaseSources {
 		prefix := base + "/"
 		if !strings.HasPrefix(raw, prefix) {
 			continue
 		}
 		rest := strings.TrimPrefix(raw, prefix)
 		if rest == "" || strings.Contains(rest, "%") || !strings.Contains(rest, "/") {
-			return ""
+			return nil
 		}
-		return internalReleaseSources[1-i] + "/" + rest
+		var sources []string
+		for _, target := range internalReleaseSources {
+			sources = append(sources, target+"/"+rest)
+		}
+		return sources
 	}
-	return ""
+	return nil
 }

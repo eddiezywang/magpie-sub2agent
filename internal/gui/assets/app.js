@@ -11380,6 +11380,18 @@ function renderModels(p) {
     };
     bulk.append(freeOn);
   }
+  if (intranet && p.id.startsWith("sub2agent-workbuddy")) {
+    const maasOn = el("button", "text action", t("MaaS only"));
+    maasOn.title = t("Pick only MaaS models, unpicking the others");
+    maasOn.onclick = () => {
+      draft.chosen = p.models.filter((m) => /-maas(?:-|$)/i.test(m.id) && !noAPI(m)).map((m) => m.id);
+      draft.none = true;
+      draft.best = false;
+      draft.picking = !draft.chosen.length;
+      draw();
+    };
+    bulk.append(maasOn);
+  }
   // unpicks those whose last test failed (H20 on Discord)
   const workOn = el("button", "text action works-only", t("Working only"));
   const failedPicks = () => {

@@ -552,7 +552,13 @@ func (a *Agent) Pick(key, v string) error {
 			}
 		}
 	}
-	return a.Apply(key, v)
+	if err := a.Apply(key, v); err != nil {
+		return err
+	}
+	if a.afterPick != nil {
+		return a.afterPick(key, v)
+	}
+	return nil
 }
 
 // Connect puts magpie into the agent's config, the Agents page's switch
@@ -671,6 +677,15 @@ func (a *Agent) connect() (Connection, error) {
 	now := a.Values()
 	b, _ := json.Marshal(now)
 	stash(map[string]string{a.ID + ".connect.was": string(b)})
+	// A model already selected in the agent's config wins over a historical
+	// reconnect snapshot, including routing groups and their context suffix.
+	if f := a.Field("model"); f != nil && magpieValue(a, *f, now[f.Key], now) {
+		if err := a.Apply(f.Key, now[f.Key]); err != nil {
+			return Connection{}, err
+		}
+		forget(a.ID + ".reconnect")
+		return Connection{How: "same", Field: f.Key, Value: now[f.Key]}, nil
+	}
 	// switched off and on again: the models it was on, as they were
 	if ok, err := a.reconnect(now); ok || err != nil {
 		return Connection{How: "again"}, err

@@ -2352,6 +2352,24 @@ func claudeIn(at place) *Agent {
 
 	var self *Agent
 	self = &Agent{
+		afterPick: func(key, value string) error {
+			if key != "model" || groupNamed(value) == "" {
+				return nil
+			}
+			// Choosing a routing group applies it to Claude's named tiers too;
+			// stale tier overrides must not bypass the selected routing policy.
+			tiers := map[string]string{}
+			for _, tier := range claudeTiers {
+				tiers[tier] = follow(tier, value)
+			}
+			if err := writeTiers(value, tiers); err != nil {
+				return err
+			}
+			for _, tier := range claudeTiers {
+				forget(ownKey(tier))
+			}
+			return nil
+		},
 		ID: "claude", Name: "Claude Code", Icon: "claudecode-color", Aliases: []string{"cc", "claude-code"},
 		UA:  []string{"claude-cli", "claude-code"},
 		Bin: "claude", Dir: filepath.Dir(path), Path: path,

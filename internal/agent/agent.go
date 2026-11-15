@@ -120,13 +120,15 @@ type Field struct {
 
 // Agent is one supported coding agent.
 type Agent struct {
-	ID      string
-	Name    string
-	Icon    string // bundled icon name (internal/gui/assets/icons)
-	Aliases []string
-	Bin     string // executable name, used for detection
-	Dir     string // config directory, used for detection
-	Path    string // config file magpie edits
+	// afterPick applies dependencies of an explicit UI selection, never Sync.
+	afterPick func(key, value string) error
+	ID        string
+	Name      string
+	Icon      string // bundled icon name (internal/gui/assets/icons)
+	Aliases   []string
+	Bin       string // executable name, used for detection
+	Dir       string // config directory, used for detection
+	Path      string // config file magpie edits
 	// Plugin is the spec of the plugin that adds this agent (plugged.go),
 	// "" for magpie's own
 	Plugin string

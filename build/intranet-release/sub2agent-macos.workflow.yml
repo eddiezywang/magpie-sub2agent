@@ -1,0 +1,90 @@
+name: Sub2Agent macOS internal build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (for example 0.1.3913-sub2agent.6)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: amd64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Require a private build repository
+        env:
+          PRIVATE_REPOSITORY: ${{ github.event.repository.private }}
+          SOURCE_REPOSITORY: ${{ vars.SUB2AGENT_SOURCE_REPOSITORY }}
+          SOURCE_REF: ${{ vars.SUB2AGENT_SOURCE_REF }}
+          SOURCE_TOKEN: ${{ secrets.SUB2AGENT_SOURCE_TOKEN }}
+          BILLING_KEY: ${{ secrets.BILLING_SIGNING_KEY }}
+        run: |
+          if [[ "$PRIVATE_REPOSITORY" != true ]]; then
+            echo 'This build contains private code and an embedded billing key; use a private repository.' >&2
+            exit 1
+          fi
+          if [[ -z "$SOURCE_REPOSITORY" || -z "$SOURCE_REF" || -z "$SOURCE_TOKEN" || -z "$BILLING_KEY" ]]; then
+            echo 'Configure the private source repository, pinned ref, source token and billing key first.' >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.SUB2AGENT_SOURCE_REPOSITORY }}
+          ref: ${{ vars.SUB2AGENT_SOURCE_REF }}
+          token: ${{ secrets.SUB2AGENT_SOURCE_TOKEN }}
+          path: .ci/sub2agent
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: magpie-community/plugins
+          ref: e90d6f011a7320372c5570600e9b267f75b34714
+          path: .ci/community
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install provider build dependencies
+        working-directory: .ci/sub2agent
+        run: npm ci
+      - name: Build internal test archive
+        env:
+          VERSION: ${{ inputs.version }}
+          BILLING_KEY: ${{ secrets.BILLING_SIGNING_KEY }}
+          SUB2AGENT_SOURCE: ${{ github.workspace }}/.ci/sub2agent
+          MAGPIE_COMMUNITY_SOURCE: ${{ github.workspace }}/.ci/community
+          MACOS_ARCH: ${{ matrix.arch }}
+          MACOS_SIGN_MODE: adhoc
+          MACOS_OUTPUT_DIR: ${{ runner.temp }}/sub2agent-output
+          BILLING_KEY_FILE: ${{ runner.temp }}/sub2agent-billing-key
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$BILLING_KEY" > "$BILLING_KEY_FILE"
+          trap 'rm -f "$BILLING_KEY_FILE"' EXIT
+          unset BILLING_KEY
+          bash build/intranet-macos.sh "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sub2agent-macos-${{ matrix.arch }}
+          path: ${{ runner.temp }}/sub2agent-output/magpie-darwin-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 7
