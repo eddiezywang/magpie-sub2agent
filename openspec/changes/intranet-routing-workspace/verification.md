@@ -316,3 +316,12 @@ passes (6.107s). No product code changed. The previous package timeout occurred
 when the 240s package budget elapsed with TestProviderSaveModelPrefs only 1s
 into its execution; its isolated pass is evidence against calling that test
 itself a reproduced hang. Remaining suite/profile/lifecycle issues stay open.
+
+At 6f4528fbd, regenerated actual intranet packed assets and ran:
+`go test -tags production,packedassets,intranet ./internal/gui ./internal/distribution ./internal/appdir -run 'TestIntranet|TestWorkspace|TestAsset|TestCoreScriptBudget|TestInternalConfig|TestFX|TestAgentConnectAPI|TestProviderSaveModelPrefs' -count=1 -timeout 120s`.
+All three packages passed (GUI 7.951s, distribution 0.121s, appdir 0.967s).
+Matching gateway/GUI workspace, isolation, FX and native connect/model-prefs
+tests passed under -race (gateway 2.691s, GUI 9.279s). Logs are local
+workspace-focused-6f4528.log and workspace-race-6f4528.log. This is a relevant
+packed/profile/race pass; it does not erase the remaining full-suite failures
+or close tasks 1.4/5.5. No application binary change in this test-only step.
