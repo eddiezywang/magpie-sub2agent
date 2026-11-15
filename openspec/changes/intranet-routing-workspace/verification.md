@@ -36,3 +36,4 @@
 - `build/intranet.ps1 -BunArchive .../bun-windows-x64-baseline-1.4.2.zip` 生成完整 Windows x64 便携包 `sub2agent-windows-x64-20261116-022615.zip`，含 Bun，73,272,417 字节，SHA-256 `0c894f1f57267ecf50fd593ef812f2be22464d31e33023055ba78b32c04383f2`。清单 sourceCommit 为 c0712c51f；workingTreeChanges=true 由用户既有未跟踪 .github 目录导致，构建时已跟踪源码无未提交差异。
 - 合并后的 packed-assets Chromium/WebKit 工作台回归再次全部通过。实际新程序在隔离 HOME 和 portable data 启动，10 个保留页面无脚本错误；Claude/Codex 原生接入、真实预定义组持久化及 8 次本机合成流式响应验证通过，180 点接口含正数及供应商/模型/会话归属。首次运行验证期间统计读取返回暂时不可用，等待后完整重跑通过；该次未记为通过。
 - 审查页已更新为此构建截图；Playwright 验证 14 张图片均 HTTP 200，页面含合并版本。只上传截图和脱敏 JSON，归档 SHA-256 `0461c86de9c34f7f201b47568fcd74898d034c8f2ca7b09875345a3fbfbf356e`。
+- 便携包已按用户要求经本机 → laptop → 个人 iDisk → KF 传输，三端 ZIP SHA-256 一致。laptop 路径 `C:\Users\eddiewang\Downloads\sub2agent-windows-x64-20261116-022615.zip`；KF 压缩包和解压目录位于 `C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-022615`。KF 已独立计算 ZIP 摘要，并逐一验证 manifest 中 55 个文件的 SHA-256，均一致；应用未在 KF 自动运行，原有安装未覆盖。
