@@ -115,3 +115,17 @@ The standalone 034732 delivered bundle predates this follow-up; rebuild is
 required before representing these two fixes as delivered.
 
 Latest current-head race run passed TestWorkspace*, TestSessionCurve*, TestModelSpeeds*, TestModelLoads* in gateway and GUI. Reviewed tests cover all 4.6/4.7 cases, including retry attribution, distinct same-named models, owner/held-key/LAN rejection and Sessions compatibility. Core script budget and all four i18n guards also passed. Tasks 4.6/4.7 are now checked; broader native operation and full acceptance gates remain unchecked.
+
+### Bulk follow-up packaged review (04:05)
+
+Current production source 135d0c36e. Build sub2agent-windows-x64-20261116-040524.zip
+is 73,276,101 bytes; SHA256
+9e7fee46a3088e75932969a16d3720d8950c44a1385371b44f1f950d9358e6c9.
+Started isolated runtime PID 6720. Actual ten-page Chrome checks passed with
+positive calibrated loopback output and native group save/persistence/request.
+Final packed Chrome/WebKit run passed after the last snapshot-presence guard.
+The verifier now polls and retains one validated API response in Node, avoiding
+ambiguous asynchronous waitForFunction return serialization and a second read.
+Updated sanitized review screenshots at workspace-review-20261116; inspected
+actual runtime-throughput.png visually after trusted wheel scrolling. Confirmed
+HTTP 200 and review source 135d0c36e. No real supplier accounts were used.

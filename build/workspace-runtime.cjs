@@ -40,8 +40,17 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
   // The web process reads the gateway owner; while it starts or reloads it
   // can correctly return unavailable without a total. Wait for the actual
   // calibrated snapshot instead of throwing on that supported state.
-  const observed=await page.waitForFunction(async()=>{const r=await fetch('/api/gateway/throughput');if(!r.ok)return false;const d=await r.json();return d.total?.points?.some(v=>typeof v==='number'&&v>0)?d:false},null,{timeout:15000});
-  const measured=await page.evaluate(async()=>{const r=await fetch('/api/gateway/throughput');return r.json()});await observed.dispose();
+  let measured;
+  const deadline=Date.now()+15000;
+  while(Date.now()<deadline){
+   const response=await page.request.get('http://127.0.0.1:19894/api/gateway/throughput');
+   if(response.ok()){
+    const data=await response.json();
+    if(data.total?.points?.some(v=>typeof v==='number'&&v>0)){measured=data;break;}
+   }
+   await page.waitForTimeout(250);
+  }
+  assert(measured,'gateway must return a calibrated snapshot within 15 seconds');
   assert(measured.total.points.some(v=>typeof v==='number'&&v>0),'measured snapshot must retain calibrated output');
   assert(measured.providers.some(p=>p.id==='workspace-qa'));assert(measured.models.length>0);assert(measured.sessions.length>0);
   const routing=await page.evaluate(async port=>{
