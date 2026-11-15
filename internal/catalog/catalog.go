@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"maps"
 	"net/http"
@@ -854,6 +855,11 @@ func syncLock(ctx context.Context, onlyIfMissing bool) error {
 	case syncCh <- struct{}{}:
 	}
 	defer func() { <-syncCh }()
+	// Internal production builds never fetch the public catalog. Tests may
+	// inject a local server to verify sync and failure semantics.
+	if distribution.Internal && modelsDevURL == "https://models.dev/api.json" {
+		return nil
+	}
 	if onlyIfMissing && Source() != "" {
 		return nil
 	}
@@ -1704,6 +1710,9 @@ func renamed(b string) (string, int, bool) { return renamedBy(b, true) }
 func renamedBy(b string, channels bool) (string, int, bool) {
 	if _, ok := found(b, listed); ok || canonical[b] {
 		return "", 0, false
+	}
+	if alias := DeploymentModel(b); alias != b && knownModel(alias) {
+		return alias, 0, true
 	}
 	r, w := unmarked(b)
 	if r != b {

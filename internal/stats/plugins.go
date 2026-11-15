@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"net/http"
 	"os"
 	"strings"
@@ -56,6 +57,10 @@ type Counts struct {
 
 // PluginCounts asks usemagpie.ai each plugin's counts, by Discover's key.
 func PluginCounts(ctx context.Context) (map[string]Counts, error) {
+	if distribution.Internal {
+		return map[string]Counts{}, nil
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", Site()+"/api/plugins/stats", nil)
@@ -86,6 +91,10 @@ func PluginCounts(ctx context.Context) (map[string]Counts, error) {
 // this computer's id; the answer is its likes now. The page lets only a
 // plugin installed here be liked (gui), and the like says it is.
 func Like(ctx context.Context, name string, on bool) (int, error) {
+	if distribution.Internal {
+		return 0, fmt.Errorf("public plugin ratings are unavailable")
+	}
+
 	id, err := installID()
 	if err != nil {
 		return 0, err

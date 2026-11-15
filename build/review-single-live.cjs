@@ -1,0 +1,106 @@
+// Read-only Playwright verification of the retained, running internal app.
+// node build/review-single-live.cjs <isolated-portable-data> <screenshots>
+// Requires an isolated light app on web 18990, gateway 18989.
+const {chromium}=require('playwright');
+const fs=require('node:fs/promises');
+const path=require('node:path');
+const assert=require('node:assert/strict');
+(async()=>{
+  const [data,output]=process.argv.slice(2);
+  assert.ok(data&&output);
+  await fs.mkdir(output,{recursive:true});
+  const {key}=JSON.parse(await fs.readFile(path.join(data,'web-page.json'),'utf8'));
+  const browser=await chromium.launch({channel:'chrome',headless:true});
+  const report={views:[]};
+  try {
+    const page=await browser.newPage({viewport:{width:1440,height:1000}});
+    page.setDefaultTimeout(15000);
+    const errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    await page.route('**/api/open',r=>r.fulfill({json:{}}));
+    await page.goto('http://127.0.0.1:18990/?k='+encodeURIComponent(key));
+    report.version=await page.evaluate(()=>window.bootPrefs.version);
+    assert.equal(report.version,'0.1.3913-sub2agent.18');
+    for(const view of ['agents','sessions','providers','routing','groups','gateway','usage','plugins','settings']) {
+      await page.goto('http://127.0.0.1:18990/?view='+view);
+      await page.locator('#side button[data-view="sessions"]').waitFor();
+      await page.waitForTimeout(1000);
+      assert.doesNotMatch(await page.locator('body').innerText(),/172\.21\.0\.177/,view+' exposes infrastructure');
+      assert.equal(await page.title(),'sub2agent');
+      if(view==='settings') {
+        await page.locator('#internalSettings [data-setting=uninstall]').waitFor();
+        assert.deepEqual(await page.locator('#internalSettings > [data-setting]').evaluateAll(ns=>ns.map(n=>n.dataset.setting)),['gateway','login','lightweight','data','log','cli','remote','uninstall']);
+        assert.equal(await page.locator('#setTabs:visible,#setQ:visible,.nav-sub[data-view=settings]:visible').count(),0);
+      }
+      if(view==='plugins') {
+        await page.locator('.pm-connection').waitFor();
+        assert.equal(await page.locator('.pm-server,.pm-registry').count(),0);
+        await page.screenshot({path:path.join(output,'18-live-market.png'),fullPage:true});
+        await page.getByRole('tab',{name:'内置',exact:true}).click();
+        const mapping=page.locator('.feat-row[data-id="modelmap"]');
+        await mapping.waitFor();
+        assert.equal(await mapping.getByRole('switch').getAttribute('aria-checked'),'true');
+        await mapping.scrollIntoViewIfNeeded();
+        await page.screenshot({path:path.join(output,'18-live-modelmap.png'),fullPage:true});
+        const managed=await page.evaluate(async()=>{
+          const data=await fetch('/api/plugins').then(r=>r.json());
+          return data;
+        });
+        for(const entry of managed.plugins||[]) {
+          assert.equal(entry.version,'1.0.3');
+          if (/codebuddy|trae/.test(entry.spec)) assert.equal(entry.off,true);
+        }
+        report.managedPackages=JSON.stringify(managed).match(/@sub2agent\/[a-z]+/g);
+        for(const name of ['codebuddy','workbuddy','trae','aiep']) assert.ok(report.managedPackages.includes('@sub2agent/'+name),name);
+        const row=page.locator('.feat-row[data-id="accounting"]');
+        await row.getByRole('switch',{name:'埋点上报',exact:true}).waitFor();
+        assert.equal(await row.getByRole('switch').count(),1);
+        assert.equal(await page.locator('.feat-set[data-of="accounting"]').count(),0);
+        assert.doesNotMatch(await row.innerText(),/v3|分钟|旧版|172\./);
+        for(const theme of ['light','dark']) {
+          await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
+          await row.scrollIntoViewIfNeeded();
+          await page.screenshot({path:path.join(output,'18-live-reporting-'+theme+'.png'),fullPage:true});
+        }
+        const metadata=await page.evaluate(async()=>{
+          const list=await fetch('/api/plugins/builtin').then(r=>r.json());
+          const reporting=list.find(p=>p.id==='accounting');
+          const plugins=await fetch('/api/plugins').then(r=>r.json());
+          return {fields:Object.keys(reporting.schema?.properties||{}),config:reporting.config||{},registry:plugins.registry};
+        });
+        assert.deepEqual(metadata.fields,[]);
+        assert.deepEqual(metadata.config,{});
+        assert.ok(!metadata.registry?.url);
+        report.reporting={switches:1,configurationFields:0,addressesVisible:false};
+      } else {
+        await page.screenshot({path:path.join(output,'18-live-'+view+'.png'),fullPage:true,mask:view==='sessions'?[page.locator('#view-sessions')]:[],maskColor:'#dfe3eb'});
+      }
+      assert.deepEqual(errors,[],view);
+      report.views.push(view);
+    }
+    await page.goto('http://127.0.0.1:18990/?view=providers');
+    await page.locator('#addProvider').click();
+    const scope=await page.evaluate(async()=>fetch('/api/providers').then(r=>r.json()));
+    assert.deepEqual(scope.plugins.map(p=>p.pid),['sub2agent-workbuddy']);
+    assert.deepEqual(scope.presets.map(p=>p.id),['aiep-coding-plan','cib-zht-apikey']);
+    const sheet=page.locator('#addSheet');
+    for(const name of ['WorkBuddy 企业','TIG Coding Plan','CIB-智汇通-APIKEY']) assert.ok((await sheet.innerText()).includes(name));
+    assert.doesNotMatch(await sheet.innerText(),/CodeBuddy|Trae 企业|ChatGPT|Claude Code/);
+    assert.ok(await sheet.locator('[data-pick=custom]').evaluate(e=>e.previousElementSibling.textContent.includes('CIB-智汇通-APIKEY')));
+    assert.equal(await sheet.locator('[data-pick=custom]').innerText(),'自定义 API Key');
+    await page.screenshot({path:path.join(output,'18-live-provider-scope.png'),fullPage:true});
+    report.providerScope={workbuddy:true,tig:true,zht:true,otherSubscriptions:false};
+    await page.locator('#addSheet button').filter({hasText:'TIG Coding Plan'}).click();
+    const editor=page.locator('.editor.new');
+    await editor.locator('.coding-plan-notice').waitFor();
+    assert.equal(await editor.locator('input.endpoint').inputValue(),'http://172.21.11.82/public');
+    assert.equal(await editor.locator('input[type=password]:visible').inputValue(),'');
+    assert.equal(await editor.locator('.auth-header:visible').count(),0);
+    assert.doesNotMatch(await editor.innerText(),/eddiewang|真实key|172\.21\.0\.177/);
+    await editor.screenshot({path:path.join(output,'18-live-codingplan.png')});
+    report.codingPlan={baseCorrect:true,keyEmpty:true,headerSelectorHidden:true};
+    report.pageErrors=errors;
+    await fs.writeFile(path.join(output,'18-live-report.json'),JSON.stringify(report,null,2));
+    console.log(JSON.stringify(report));
+  }finally{await browser.close()}
+})().catch(e=>{console.error(e.message.replace(/https?:\/\/\S+/g,'[address]'));process.exitCode=1});

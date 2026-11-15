@@ -1,5 +1,8 @@
 # Library: instructions, MCP servers, skills, hooks, subagents, RTK and billion-context
 
+Internal distribution: the `intranet` build omits this feature and its agent
+file synchronization. See [internal build contracts](../intranet-build.md#library-removal).
+
 The library keeps what every agent should know in one place: the
 instructions each agent reads before a conversation, the MCP servers it can
 call, the skills it can load, the hooks it runs at points of its turn, and

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log"
 	"maps"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
@@ -41,6 +42,11 @@ type Manifest struct {
 	// Essential plugins are on in the Essentials preset, when the user
 	// picks it; every built-in is on otherwise, a new install's too
 	Essential bool
+	// MigrateRow projects retired settings onto the current row without I/O.
+	// It must not mutate the input's maps. Load and Compose both apply it, so
+	// clients cannot receive obsolete settings and the next user write keeps
+	// the migrated choice rather than resurrecting retired configuration.
+	MigrateRow func(Row) Row
 	// Name and Sub say what it is, in English; the window translates them
 	Name, Sub string
 	// One and Many say what of it is in use, of 1 or of {n}
@@ -73,6 +79,9 @@ type Manifest struct {
 	// (schema.go): the window draws their form, and SetConfig takes only
 	// what it allows. Register adds them to Defaults.
 	Settings any
+	// RestartOnConfig disposes and reapplies this plugin when its composed
+	// backend settings change. Others retain their existing lifecycle.
+	RestartOnConfig bool
 	// Client are its files in the window, under assets/plugins/<id>/: its
 	// scripts register its parts with the window's kernel (kernel.js), its
 	// i18n.js says its words in each language, and a .css is its styles.
@@ -236,7 +245,8 @@ func (rt *Runtime) Reconcile(on map[string]bool, config map[string]map[string]an
 			if going[id] {
 				continue
 			}
-			if !p.wanted || rt.needsGoing(p, going) {
+			changed := p.m.RestartOnConfig && p.ctx != nil && !reflect.DeepEqual(p.ctx.Config, config[id])
+			if !p.wanted || changed || rt.needsGoing(p, going) {
 				going[id], more = true, true
 			}
 		}

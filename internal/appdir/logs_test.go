@@ -1,6 +1,7 @@
 package appdir
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"path/filepath"
 	"testing"
 )
@@ -20,10 +21,10 @@ func TestLogsOnEachSystem(t *testing.T) {
 	t.Setenv("LOCALAPPDATA", filepath.Join(r, "local"))
 	t.Setenv("XDG_STATE_HOME", filepath.Join(r, "state"))
 	for goos, want := range map[string]string{
-		"darwin":  filepath.Join(home, "Library", "Logs", "magpie"),
-		"windows": filepath.Join(r, "local", "magpie", "logs"),
-		"linux":   filepath.Join(r, "state", "magpie"),
-		"freebsd": filepath.Join(r, "state", "magpie"),
+		"darwin":  filepath.Join(home, "Library", "Logs", distribution.DataDir),
+		"windows": filepath.Join(r, "local", distribution.DataDir, "logs"),
+		"linux":   filepath.Join(r, "state", distribution.DataDir),
+		"freebsd": filepath.Join(r, "state", distribution.DataDir),
 	} {
 		if got := logsOn(goos); got != want {
 			t.Errorf("%s: logs in %q, want %q", goos, got, want)
@@ -34,10 +35,10 @@ func TestLogsOnEachSystem(t *testing.T) {
 	for _, v := range []string{"", "relative"} {
 		t.Setenv("LOCALAPPDATA", v)
 		t.Setenv("XDG_STATE_HOME", v)
-		if got, want := logsOn("windows"), filepath.Join(home, "AppData", "Local", "magpie", "logs"); got != want {
+		if got, want := logsOn("windows"), filepath.Join(home, "AppData", "Local", distribution.DataDir, "logs"); got != want {
 			t.Errorf("windows, LOCALAPPDATA %q: logs in %q, want %q", v, got, want)
 		}
-		if got, want := logsOn("linux"), filepath.Join(home, ".local", "state", "magpie"); got != want {
+		if got, want := logsOn("linux"), filepath.Join(home, ".local", "state", distribution.DataDir); got != want {
 			t.Errorf("linux, XDG_STATE_HOME %q: logs in %q, want %q", v, got, want)
 		}
 	}

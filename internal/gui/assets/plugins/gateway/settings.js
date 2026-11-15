@@ -814,7 +814,7 @@ function renderRemote(asked) {
     r.append(who, val);
     return r;
   };
-  const addr = input(remoteDraft.url ?? s.url, "https://magpie.example.com");
+  const addr = input(remoteDraft.url ?? s.url, window.bootPrefs?.intranet ? "http://server:8990" : "https://magpie.example.com");
   addr.className = "words remote-url";
   addr.setAttribute("aria-label", t("Address"));
   addr.oninput = () => { remoteDraft.url = addr.value; };

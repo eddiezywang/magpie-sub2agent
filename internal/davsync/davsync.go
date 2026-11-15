@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"maps"
 	"net/url"
@@ -720,7 +721,12 @@ var mu sync.Mutex
 func Now(ctx context.Context) error { return syncNow(ctx, false) }
 
 // SyncNow is Now asked for: usage is shared whatever the time.
-func SyncNow(ctx context.Context) error { return syncNow(ctx, true) }
+func SyncNow(ctx context.Context) error {
+	if distribution.Internal {
+		return fmt.Errorf("cloud synchronization is not included in this distribution")
+	}
+	return syncNow(ctx, true)
+}
 
 func syncNow(ctx context.Context, force bool) error {
 	if _, ok := Load(); !ok { // off: no lock taken, so none made
@@ -800,7 +806,12 @@ var poll = time.Minute
 // ctx ends — less often while the server is limiting requests, and never
 // while sync is set to run only when asked. A failure is logged once, not
 // on every try.
-func Run(ctx context.Context) { run(ctx, 20*time.Second) }
+func Run(ctx context.Context) {
+	if distribution.Internal {
+		return
+	}
+	run(ctx, 20*time.Second)
+}
 
 func run(ctx context.Context, first time.Duration) {
 	t := time.NewTimer(first)

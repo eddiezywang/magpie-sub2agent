@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 // A release's files are trusted by one signature, not by the feed's word.
@@ -29,6 +31,9 @@ import (
 // signingKey is the public half (base64, raw 32 bytes) of the release
 // signing key. A var for tests.
 var signingKey = "3XuYQEohIRDF+zxGQry1iXGZ1cfKYFX3vsST6GSSbYQ="
+
+// The public release key is embedded; its private key stays with the administrator.
+var internalSigningKey = "vZLjKd13KX+3te66w3nBbJRkLGwd81sJNx3UgCrqJ9Y="
 
 // firstSigned is the first release published with a SHA256SUMS.sig.
 const firstSigned = "0.1.3862"
@@ -57,12 +62,16 @@ func signedRequired(version string) bool {
 // fails, or whose feed hash differs from the signed one is an error.
 func (rel *Release) verify() error {
 	if rel.Signed == nil {
-		if signedRequired(rel.Version) {
+		if distribution.Internal || signedRequired(rel.Version) {
 			return fmt.Errorf("release %s is not signed; not installed", rel.Version)
 		}
 		return nil
 	}
-	pub, err := base64.StdEncoding.DecodeString(signingKey)
+	key := signingKey
+	if distribution.Internal {
+		key = internalSigningKey
+	}
+	pub, err := base64.StdEncoding.DecodeString(key)
 	if err != nil || len(pub) != ed25519.PublicKeySize {
 		return errors.New("update signing key is not valid")
 	}

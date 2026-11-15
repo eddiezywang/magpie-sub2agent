@@ -291,6 +291,7 @@ type packagedJSON struct {
 
 // check asks the feed and, when it can, stages the new version.
 func (u *updater) check() {
+
 	if u.begin() {
 		u.run()
 	}

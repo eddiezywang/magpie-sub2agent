@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"strings"
@@ -54,6 +55,10 @@ const group = "magpie"
 // Push sends title and body to t. The error names the server's answer,
 // never the device key.
 func Push(ctx context.Context, t Target, title, body string) error {
+	if distribution.Internal {
+		return errors.New("Bark notifications are not included in this distribution")
+	}
+
 	if !t.On() {
 		return errors.New("no Bark device key is set")
 	}

@@ -1,5 +1,8 @@
 # Sync and backup
 
+The `intranet` build disables cloud sync workers and explicit cloud sync;
+local backups remain available. See [internal build contracts](../intranet-build.md).
+
 `internal/backup` collects magpie's portable setup into a passphrase-sealed
 bundle. `internal/davsync` keeps that bundle in a WebDAV folder, an S3 bucket
 or a GitHub repository. It merges changes between computers; it does not

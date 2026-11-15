@@ -15,6 +15,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"os"
 	"os/exec"
@@ -288,6 +289,10 @@ func testsLeaveTheMachine() {
 }
 
 func init() {
+	if distribution.Internal {
+		return
+	}
+
 	testsLeaveTheMachine()
 	npxSynced = func() {
 		if _, err := Sync(); err != nil {

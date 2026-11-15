@@ -52,6 +52,9 @@ type candidate struct {
 	p     provider.Provider
 	model string
 	rest  string // what rests after a failure: the provider, or one of its keys
+	// compactRescue answers only a failed MaaS summary; it must not move
+	// the conversation away from the model that handles ordinary turns.
+	compactRescue bool
 	// effort is the reasoning the group's member it is of is fixed at
 	// ("provider/model:low"); "" for one that follows the agent or the group
 	effort string

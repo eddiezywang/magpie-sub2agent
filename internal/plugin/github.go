@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"net/url"
 	"os"
 	"path"
@@ -162,6 +163,10 @@ func (e *TaggedMissing) Unwrap() error { return e.Why }
 // (till on Discord: GitHub unreachable from their desktop, and the
 // section just wasn't there).
 func TaggedRepos(ctx context.Context) ([]Tagged, error) {
+	if distribution.Internal {
+		return []Tagged{}, nil
+	}
+
 	taggedMu.Lock()
 	defer taggedMu.Unlock()
 	if taggedL != nil && time.Since(taggedAt) < taggedTTL {

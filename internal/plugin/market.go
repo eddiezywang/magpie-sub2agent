@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"net/url"
@@ -50,6 +51,7 @@ const MarketURL = "https://raw.githubusercontent.com/magpie-community/plugins/ma
 // shows it to a search alone, under its publisher; it is never browsed,
 // suggested as an agent or called by a short name.
 type Listing struct {
+	Bundle    *InternalBundle   `json:"bundle,omitempty"` // curated, complete offline artifact
 	Package   string            `json:"package"`
 	Name      string            `json:"name"`
 	Icon      string            `json:"icon,omitempty"`
@@ -94,12 +96,14 @@ func ownIcon(said string) string {
 }
 
 var (
-	marketMu   sync.Mutex
-	marketList []Listing
-	marketAt   time.Time
-	marketErr  error // why marketList isn't a list just fetched; nil when it is
-	npmMu      sync.Mutex
-	npmCache   map[string]npmEntry // nil until read from npmCacheFile
+	marketMu      sync.Mutex
+	marketList    []Listing
+	marketAt      time.Time
+	marketErr     error // why marketList isn't a list just fetched; nil when it is
+	marketChecked time.Time
+	marketUpdated time.Time
+	npmMu         sync.Mutex
+	npmCache      map[string]npmEntry // nil until read from npmCacheFile
 )
 
 // npmEntry is what npm said of a package, and when; kept on disk beside
@@ -199,7 +203,7 @@ func parseMarket(b []byte) ([]Listing, error) {
 			out = append(out, l)
 		}
 	}
-	if len(out) == 0 {
+	if len(out) == 0 && !(distribution.Internal && r.Plugins != nil && len(r.Plugins) == 0) {
 		return nil, errors.New("the list has no plugins")
 	}
 	return out, nil
@@ -230,15 +234,24 @@ func Market(ctx context.Context) []Listing {
 func market(ctx context.Context) ([]Listing, error) {
 	marketMu.Lock()
 	defer marketMu.Unlock()
+	return marketLocked(ctx)
+}
+
+// marketLocked holds one snapshot across its list and connection status.
+func marketLocked(ctx context.Context) ([]Listing, error) {
 	if marketList != nil && time.Since(marketAt) < 6*time.Hour {
 		return marketList, marketErr
 	}
 	src := os.Getenv("MAGPIE_PLUGIN_MARKET")
+	if distribution.Internal {
+		src = distribution.Market
+	}
 	if src == "" {
 		src = MarketURL
 	}
 	ferr := errors.New("the list is off (MAGPIE_PLUGIN_MARKET=off)")
 	if src != "off" {
+		marketChecked = time.Now()
 		c, cancel := context.WithTimeout(ctx, 6*time.Second)
 		// the list names the packages installed: a copy of the very file
 		// may stand in for it (with 「国内镜像」), a proxy may not
@@ -248,20 +261,33 @@ func market(ctx context.Context) ([]Listing, error) {
 			l, perr := parseMarket(b)
 			if perr == nil {
 				marketList, marketAt, marketErr = l, time.Now(), nil
+				marketUpdated = marketAt
 				_ = os.MkdirAll(filepath.Dir(marketCache()), 0o755)
 				_ = os.WriteFile(marketCache(), b, 0o644)
 				return l, nil
 			}
-			err = perr
+			err = &marketCatalogError{perr}
 		}
 		ferr = err
 		if b, err := os.ReadFile(marketCache()); err == nil {
 			if l, err := parseMarket(b); err == nil {
+				if st, err := os.Stat(marketCache()); err == nil {
+					marketUpdated = st.ModTime()
+				}
 				// tried again in a minute, not six hours
 				marketList, marketAt, marketErr = l, time.Now().Add(-6*time.Hour+time.Minute), ferr
 				return l, ferr
 			}
 		}
+	}
+	if distribution.Internal {
+		if marketList != nil && !marketUpdated.IsZero() {
+			marketAt, marketErr = time.Now().Add(-6*time.Hour+time.Minute), ferr
+			return marketList, ferr
+		}
+		marketList, marketAt, marketErr = []Listing{}, time.Now().Add(-6*time.Hour+time.Minute), ferr
+		marketUpdated = time.Time{}
+		return marketList, ferr
 	}
 	l, _ := parseMarket(builtinMarket)
 	marketList, marketAt, marketErr = l, time.Now().Add(-6*time.Hour+time.Minute), ferr
@@ -797,7 +823,13 @@ func Installed(spec string) string {
 // gives in magpie.icon, as ownIcon takes one: the plugin's own, for its
 // row, apart from those its providers give themselves in the auth hook
 // (#1775). "" for none, or a plugin that is one file.
-func InstalledIcon(spec string) string { return ownIcon(installedOwn(spec).Icon) }
+func InstalledIcon(spec string) string {
+	if distribution.Internal && shippedKind(Name(spec)) != "" {
+		icons := map[string]string{"@sub2agent/codebuddy": "codebuddy-color", "@sub2agent/workbuddy": "workbuddy-color", "@sub2agent/trae": "trae", "@sub2agent/aiep": "tig-color", "@sub2agent/native-api": "openai", "@magpie-community/opencode-antigravity-auth": "antigravity-color", "@magpie-community/opencode-commandcode-auth": "commandcode", "@magpie-community/opencode-cursor-auth": "cursor", "@magpie-community/opencode-devin-auth": "devin", "@magpie-community/opencode-factory-auth": "factory", "@magpie-community/opencode-grok-auth": "grok", "@magpie-community/opencode-kiro-auth": "kiro-color", "@magpie-community/opencode-mimo-auth": "mimocode", "@magpie-community/opencode-qoder-auth": "qoder", "@magpie-community/opencode-workbuddy-auth": "workbuddy-color", "@magpie-community/opencode-zcode-auth": "zcode", "@magpie-community/opencode-zed-auth": "zed"}
+		return icons[Name(spec)]
+	}
+	return ownIcon(installedOwn(spec).Icon)
+}
 
 // InstalledName is the name the installed plugin spec's package.json
 // gives itself in magpie.name, for its row when the community's list

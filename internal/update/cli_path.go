@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/proc"
 )
@@ -223,9 +224,9 @@ func cliNames() []string {
 	if runtime.GOOS == "windows" {
 		// PATHEXT's order: magpie.com, the console program magpie writes
 		// beside the app (com.go), runs before magpie.exe
-		return []string{"magpie.com", "magpie.exe", "magpie.cmd", "magpie.bat"}
+		return []string{comName, distribution.Name + ".exe", shimName, distribution.Name + ".bat"}
 	}
-	return []string{"magpie"}
+	return []string{distribution.Name}
 }
 
 // findCLI is the magpie a shell with PATH dirs runs, "" none.
@@ -286,7 +287,7 @@ func profileLine(shell string) string {
 	return `export PATH="$HOME/.local/bin:$PATH"`
 }
 
-const profileMark = "# added by magpie (Settings › Command line)"
+const profileMark = "# added by " + distribution.Name + " (Settings › Command line)"
 
 // addToProfile adds line to the profile at path, unless it has it.
 func addToProfile(path, line string) error {
@@ -364,18 +365,18 @@ func tildeHome(p string) string {
 // it replaces the program where it is, under its name.
 
 // shimName is the file a shim is written to.
-const shimName = "magpie.cmd"
+const shimName = distribution.Name + ".cmd"
 
 // shimText is the magpie.cmd that runs the program exe in its folder.
 func shimText(exe string) string {
 	name := filepath.Base(strings.ReplaceAll(exe, `\`, "/"))
-	return "@echo off\r\nrem added by magpie (Settings > Command line): the magpie command runs " + name + " in this folder\r\n\"%~dp0" + name + "\" %*\r\n"
+	return "@echo off\r\nrem added by " + distribution.Name + " (Settings > Command line): the " + distribution.Name + " command runs " + name + " in this folder\r\n\"%~dp0" + name + "\" %*\r\n"
 }
 
 // needsShim says whether the program exe can't be run as `magpie` by its
 // own name.
 func needsShim(exe string) bool {
-	return !strings.EqualFold(filepath.Base(strings.ReplaceAll(exe, `\`, "/")), "magpie.exe")
+	return !strings.EqualFold(filepath.Base(strings.ReplaceAll(exe, `\`, "/")), distribution.Name+".exe")
 }
 
 // writeShim writes the magpie.cmd for exe beside it, when its name needs

@@ -2,13 +2,14 @@ package autostart
 
 import (
 	"errors"
+	"github.com/yetone/magpie/internal/distribution"
 
 	"golang.org/x/sys/windows/registry"
 )
 
 const (
 	runKey = `Software\Microsoft\Windows\CurrentVersion\Run`
-	name   = "magpie"
+	name   = distribution.DataDir
 	// where Task Manager's Startup apps keeps an entry switched off: an odd
 	// first byte is off
 	approvedKey = `Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run`

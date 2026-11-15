@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"maps"
 	"os"
@@ -842,6 +843,10 @@ func SyncLinked() (*Result, error) {
 // process did, and the copy an update left finishing its requests went
 // on writing the agents' files beside the new one (#4938).
 func KeepLinked(ctx context.Context, interval time.Duration) {
+	if distribution.Internal {
+		return
+	}
+
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for ctx.Err() == nil {

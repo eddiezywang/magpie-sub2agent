@@ -3,6 +3,7 @@ package gui
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"net/http"
 
 	"github.com/yetone/magpie/internal/gateway"
@@ -123,6 +124,9 @@ func searchesNow() []string {
 // boot.js to hide them before the page paints.
 func builtinsOff(list []builtinJSON) []string {
 	out := []string{}
+	if distribution.Internal {
+		out = append(out, distribution.Removed...)
+	}
 	for _, b := range list {
 		if !b.On {
 			out = append(out, b.ID)

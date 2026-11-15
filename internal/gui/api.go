@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"io/fs"
 	"maps"
@@ -1147,6 +1148,13 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		// once another answers in its place (visamzh on X), as after its
 		// own restart to update (backAsNew)
 		boot["version"] = Version
+		if distribution.Internal {
+			boot["intranet"] = true
+			boot["noVideo"] = true
+			if !isWeb(w) && retroMainFrameEnabled() {
+				boot["retroFrame"] = true
+			}
+		}
 		// and the clock the system shows, 12 or 24 hours, which no webview
 		// tells the page (iXerol on X); a browser tab keeps its own
 		if !isWeb(w) {
@@ -1306,6 +1314,17 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// pending says to ask again soon
 	// the Agents page's refresh: looks for the agents on this machine again,
 	// the answers kept a while because asking was slow forgotten (#844)
+	mux.HandleFunc("GET /api/agents/connections", func(rw http.ResponseWriter, r *http.Request) {
+		agent.RescanLocal()
+		out := map[string]agent.ConnectionCheck{}
+		found := []agentJSON{}
+		for _, a := range agent.DetectedIn(heldAgents()) {
+			check := agent.CheckConnection(a, gateway.URL())
+			out[a.ID] = check
+			found = append(found, agentJSON{ID: a.ID, Name: a.Name, Icon: a.Icon, Path: tilde(a.Path), Fields: agentFields(a, a.Values()), Wired: check.Managed})
+		}
+		writeJSON(rw, map[string]any{"checks": out, "agents": found})
+	})
 	mux.HandleFunc("POST /api/agents/rescan", func(rw http.ResponseWriter, r *http.Request) {
 		agent.Rescan()
 		writeJSON(rw, state())
@@ -1576,7 +1595,9 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	httpsRoutes(mux, w)
 	uninstallRoutes(mux, w)
 	archiveRoutes(mux)
-	libraryRoutes(mux, w)
+	if !distribution.Internal {
+		libraryRoutes(mux, w)
+	}
 	updateRoutes(mux, w)
 	whatsNewRoutes(mux)
 	cliBehindRoutes(mux)
@@ -1588,8 +1609,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		appPageRoutes(mux)
 		remoteRoutes(mux, w)
 	}
-	privacyModelRoutes(mux)
-	maskingRoutes(mux)
+	if !distribution.Internal {
+		privacyModelRoutes(mux)
+		maskingRoutes(mux)
+	}
 	builtinRoutes(mux)
 	mux.HandleFunc("GET /api/settings", func(rw http.ResponseWriter, r *http.Request) {
 		access.MigrateLegacyLANKeyBestEffort()
@@ -2134,6 +2157,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// written (jessyoungyu on X): "" masks it as before; else a model whose
 	// every route the user set to go unmasked (gateway.MaskRoute)
 	mux.HandleFunc("POST /api/settings/redact-route", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct{ Model string }
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			fail(rw, err)
@@ -2715,6 +2742,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// the user's own masking rules, all of them each time: set on their own,
 	// so a pattern that doesn't compile is said and the rest are kept (#195)
 	mux.HandleFunc("POST /api/settings/redact-rules", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct{ Rules []redact.Rule }
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			fail(rw, err)
@@ -2732,6 +2763,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// At, which must still be Was, becomes Rule, checked as an added one is.
 	// A rule that can't be used is said and every rule is kept as it was.
 	mux.HandleFunc("POST /api/settings/redact-rule", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct {
 			At   int         `json:"at"`
 			Was  redact.Rule `json:"was"`
@@ -2757,6 +2792,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// what is done with a value of a kind found, other than masking it
 	// (warn, block), all of them each time (#1977)
 	mux.HandleFunc("POST /api/settings/redact-actions", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct {
 			Actions map[string]string `json:"actions"`
 		}
@@ -2774,6 +2813,10 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	})
 	// the values masking lets go as written, all of them each time (#1977)
 	mux.HandleFunc("POST /api/settings/redact-allow", func(rw http.ResponseWriter, r *http.Request) {
+		if distribution.Internal {
+			http.NotFound(rw, r)
+			return
+		}
 		var in struct {
 			Allow []string `json:"allow"`
 		}

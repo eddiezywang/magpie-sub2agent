@@ -506,3 +506,51 @@ real `~/.codex`, `~/.claude`, `~/.config/gcloud` or `~/.config/magpie` files.
 Vertex AI's tests send Vertex AI, Google's token endpoint and IAM Credentials
 to a server of their own (`VertexForTest`). Check a change
 against real accounts in a sandbox HOME, as [Code standards](../code-standards.md#acceptance-criteria) describes.
+
+## Intranet AIEP Coding Plan
+
+The intranet picker includes `aiep-coding-plan` alongside private authentication
+plugins. It is a native API-key provider, not an account-login plugin. Its
+Anthropic base is `http://172.21.11.82/public`; the shared endpoint builder
+appends `/v1/messages`. The editor exposes the base and the masked key using
+the existing provider sheet. Shared URL normalization also accepts an
+accidentally pasted full messages URL without duplicating its suffix.
+
+`FromPreset`, persistence normalization and request authentication select
+Bearer alone. Model discovery has its own `WithListAuth` context, also fixed
+to Bearer; it must not fall back to the catalog's two-header default. There
+is no header-mode selector or invented model list for this preset. If discovery
+is unsupported, the normal manual model entry remains available.
+
+The lazy `codingplan.js` notice quotes the enterprise WeChat security
+instructions and links to AIEP and the institutional documentation. Personal
+key aliases and actual keys are never shipped in source or review fixtures.
+`TestCodingPlanDefaultsAndSavedAuthentication` covers defaults and persistence;
+`TestCodingPlanRequestAndModelDiscovery` records local HTTP requests for the
+model list and inference, checking the exact messages path and Bearer alone.
+
+### Old Sub2Agent TIG imports
+
+Startup recognizes the managed TIG host with either `/public` or `/public/v1`
+(including pasted protocol endpoints), retaining the saved protocol and key.
+New imports use `sub2agent-tigcodingplan` (a numbered suffix for a distinct
+provider). `repairImportedCodingPlans` also revisits already imported `legacy-*`
+records before reading the old application's file or import marker. It uses the
+shared provider Rename path: groups/settings follow, Was keeps old model refs
+working, and saved keys, enabled state and model selections remain intact.
+Only imported records at the exact managed host are reclassified; arbitrary
+custom gateways and explicitly assigned other presets are left alone.
+
+### Internal deployment model names
+
+The internal catalog recognizes the exact deployment suffixes `-zp`,
+`-zp-openai`, `-maas`, and `-maas-<account>` for GLM, DeepSeek, MiniMax and
+Hunyuan identifiers. `catalog.DeploymentModel` feeds capability/name/price
+fallbacks and model-family matching without changing upstream request IDs.
+Exact catalog entries and explicit provider prices retain precedence. No
+shorter-prefix guessing or image-generation capability is invented. A suffix
+can only borrow metadata when the full base model is known by the catalog.
+
+The intranet distribution offers the existing Remote magpie protocol as **Remote sub2agent**, retaining the `remote-magpie` preset ID for compatibility. Its Settings page exposes local network sharing so another installation can use its gateway address and key.
+
+The intranet `@sub2agent/native-api` bundled plugin gates Magpie native API preset discovery and saved providers. It starts disabled. Enabling it makes the original presets available with their existing protocols and fields; disabling it hides those providers from routing without deleting their records. The internal presets and Remote sub2agent remain available independently.

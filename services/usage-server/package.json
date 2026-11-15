@@ -1,0 +1,16 @@
+{
+  "name": "sub2agent-usage-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Central usage/billing collector for Sub2Agent clients: ingests token usage events, maintains a pricing table and serves daily/weekly reports (JSON + SVG/PNG card).",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}

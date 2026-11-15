@@ -83,7 +83,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
   for (const lang of Object.keys(words)) {
     const w = words[lang];
     test(`${engine} ${lang}: a routing group is added from a template in a click`, async (t) => {
-      const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: "chromium" }));
+      const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: process.env.CHROMIUM_CHANNEL || "chromium" }));
       const page = await (await browser.newContext({ viewport: { width: 420, height: 1400 }, reducedMotion: "reduce" })).newPage();
       t.after(async () => {
         if (process.env.ARTIFACT_DIR) {
@@ -152,7 +152,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
     });
 
     test(`${engine} ${lang}: a template picked from the menu opens filled in, in view`, async (t) => {
-      const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: "chromium" }));
+      const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: process.env.CHROMIUM_CHANNEL || "chromium" }));
       const page = await (await browser.newContext({ viewport: { width: 420, height: 900 }, reducedMotion: "reduce" })).newPage();
       t.after(async () => {
         if (process.env.ARTIFACT_DIR) await page.screenshot({ path: path.join(process.env.ARTIFACT_DIR, `${engine}-${lang}-group-template-menu.png`) });
@@ -186,7 +186,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
     });
 
     test(`${engine} ${lang}: Edit first opens a template in the editor`, async (t) => {
-      const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: "chromium" }));
+      const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: process.env.CHROMIUM_CHANNEL || "chromium" }));
       const page = await (await browser.newContext({ viewport: { width: 420, height: 1400 }, reducedMotion: "reduce" })).newPage();
       t.after(async () => {
         if (process.env.ARTIFACT_DIR) await page.screenshot({ path: path.join(process.env.ARTIFACT_DIR, `${engine}-${lang}-group-template-edit.png`), fullPage: true });

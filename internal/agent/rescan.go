@@ -38,3 +38,9 @@ func Rescan() {
 	almaRead.gen++
 	almaRead.Unlock()
 }
+
+// RescanLocal forgets local discovery only; no release, WSL or vendor probes.
+func RescanLocal() {
+	proc.Forget()
+	forgetLooks()
+}

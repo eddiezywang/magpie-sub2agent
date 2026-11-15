@@ -255,14 +255,6 @@ button.row.lib-hubfolded:hover { background: var(--pill); }
 .lib-signin-link { display: flex; align-items: center; gap: 4px; margin-top: 5px; min-width: 0; }
 .lib-signin-link code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--code-style, normal) var(--code-weight, 400) 11px/1.3 var(--code-font, var(--code)); font-stretch: var(--code-stretch, 100%); color: var(--fg-2); padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); user-select: all; -webkit-user-select: all; cursor: text; }
 
-/* the switch */
-.lib-switch { flex: none; position: relative; width: 32px; height: 19px; border-radius: 10px; background: var(--line); transition: background .2s var(--ease); }
-.lib-switch i { position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .22s var(--ease); }
-.lib-switch.on { background: var(--fg); }
-.lib-switch.on i { transform: translateX(13px); background: var(--card); }
-:root[data-theme="dark"] .lib-switch.on i { background: var(--bg); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lib-switch.on i { background: var(--bg); } }
-
 /* the sets of shared instructions: a radio picks the one the agents read */
 .lib-sets .lib-cardhead { padding-bottom: 8px; }
 .lib-radio { flex: none; width: 17px; height: 17px; border-radius: 50%; border: 1.5px solid var(--faint); display: grid; place-items: center; transition: border-color .14s; }

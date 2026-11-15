@@ -992,6 +992,11 @@ func claudeIn(at place) *Agent {
 		long := false
 		if s := settings.Load().ForAgent("claude"); n == 0 && !claudeModel(main) && !provider.ClaudeGroup(main) {
 			n, long = s.Compact(), true
+			if s.CompactAt == 0 && !s.FullContext {
+				if budget := provider.WorkBuddyCompactWindow(main); budget > 0 {
+					n = min(n, budget)
+				}
+			}
 			// magpie's default gives way to an autoCompactWindow the user
 			// set in Claude Code (/autocompact, its settings), which the env
 			// would take precedence over; one typed in magpie doesn't (#876).
@@ -1298,6 +1303,12 @@ func claudeIn(at place) *Agent {
 			// 272K (henglu486729 on X). A threshold they typed still wins
 			if s.CompactAt == 0 && listed1M {
 				return -1
+			}
+
+			if s.CompactAt == 0 && !s.FullContext {
+				if budget := provider.WorkBuddyCompactWindow(ref); budget > 0 {
+					return min(s.Compact(), budget)
+				}
 			}
 			return cmp.Or(s.Compact(), -1)
 		}

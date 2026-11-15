@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"log"
 	"net/http"
@@ -107,6 +108,10 @@ var partnerID = lazyre.New(`^[a-z0-9][a-z0-9-]{1,40}$`)
 func partnerCacheFile() string { return filepath.Join(appdir.Cache(), "partners.json") }
 
 func partnersSource() string {
+	if distribution.Internal {
+		return "off"
+	}
+
 	src := os.Getenv("MAGPIE_PARTNERS")
 	if src == "" {
 		if testing.Testing() {

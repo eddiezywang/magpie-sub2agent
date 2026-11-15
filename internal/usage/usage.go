@@ -1,7 +1,8 @@
 // Package usage keeps the token count of every call the gateway serves, so
 // magpie can show what each agent and model consumed and roughly what it cost.
 // Records go to one JSON-lines file next to providers.json. Metadata leaves
-// the machine only when OTLP export is explicitly enabled.
+// the machine through enabled observers; the intranet distribution's accounting
+// observer sends only its explicit numeric projection, never message bodies.
 package usage
 
 import (

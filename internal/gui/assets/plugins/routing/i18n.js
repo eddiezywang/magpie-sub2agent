@@ -2,6 +2,8 @@
 // kernel adds them to i18n.js's (magpie.strings).
 magpie.strings({
   zh: {
+    "Balanced first": "均衡优先",
+    "Stability first": "稳定优先",
     "Turn on Routing": "开启路由",
     "Their page is on Routing, which is off": "它们的页面在路由里，而路由已关闭",
     "sign-in refused (answered since)": "登录曾被拒（之后已应答）",
@@ -749,6 +751,8 @@ magpie.strings({
     "Bound to some keys, the group is theirs alone: any other gateway key neither sees it in its model list nor can use it. A request from this computer without a key still can.": "绑定到某些密钥后，这个组只归它们用：其他网关密钥既不会在模型列表里看到它，也用不了它。本机不带密钥的请求仍然可以用。",
   },
   "zh-TW": {
+    "Balanced first": "均衡優先",
+    "Stability first": "穩定優先",
     "Turn on Routing": "開啟路由",
     "Their page is on Routing, which is off": "它們的頁面在路由裡，而路由已關閉",
     "sign-in refused (answered since)": "登入曾被拒（之後已應答）",
@@ -1496,6 +1500,8 @@ magpie.strings({
     "Bound to some keys, the group is theirs alone: any other gateway key neither sees it in its model list nor can use it. A request from this computer without a key still can.": "綁定到某些金鑰後，這個組只歸它們用：其他閘道金鑰既不會在模型列表裡看到它，也用不了它。本機不帶金鑰的請求仍然可以用。",
   },
   ja: {
+    "Balanced first": "バランス優先",
+    "Stability first": "安定性優先",
     "Turn on Routing": "ルーティングをオンにする",
     "Their page is on Routing, which is off": "ページはルーティングの中にあり、ルーティングはオフです",
     "sign-in refused (answered since)": "サインイン拒否（その後は応答あり）",
@@ -2243,6 +2249,8 @@ magpie.strings({
     "Bound to some keys, the group is theirs alone: any other gateway key neither sees it in its model list nor can use it. A request from this computer without a key still can.": "キーを紐づけると、このグループはそのキー専用になります。ほかのゲートウェイキーではモデル一覧に表示されず、使うこともできません。このコンピューターからキーなしで送るリクエストは引き続き使えます。",
   },
   de: {
+    "Balanced first": "Ausgewogen zuerst",
+    "Stability first": "Stabilität zuerst",
     "Turn on Routing": "Weiterleitung einschalten",
     "Their page is on Routing, which is off": "Ihre Seite liegt unter Weiterleitung, und die ist aus",
     "sign-in refused (answered since)": "Anmeldung abgelehnt (seitdem beantwortet)",

@@ -1,0 +1,41 @@
+{
+  "version": "0.1.3913-sub2agent.26",
+  "sourceCommit": "dade91d",
+  "behavior": {
+    "trigger": "recognized WorkBuddy MaaS compact receives 413",
+    "candidates": [
+      "hy4free"
+    ],
+    "normalInference": "original MaaS model",
+    "outputBudget": "at least 32768 for rescue only"
+  },
+  "liveSuccess": true,
+  "nativeClaudeCode": {
+    "context": {
+      "trigger": "auto",
+      "pre_tokens": 300848,
+      "post_tokens": 2168,
+      "duration_ms": 166595
+    },
+    "incomingSummaryBytes": 1223681,
+    "clientOutputBudget": 1500,
+    "rescueOutputBudget": 32768,
+    "summaryUsage": {
+      "input_tokens": 290745,
+      "output_tokens": 7714,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "output_tokens_details": {
+        "thinking_tokens": 5557
+      }
+    },
+    "markerRetained": true
+  },
+  "limitation": "Synthetic test, not a guarantee of every summary quality; another run returned an acknowledgment instead of a useful summary. Only Claude Code verified.",
+  "pageVerification": {
+    "version": "0.1.3913-sub2agent.26",
+    "pages": 9,
+    "pageErrors": 0,
+    "badIcons": 0
+  }
+}

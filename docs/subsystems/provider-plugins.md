@@ -1,5 +1,86 @@
 # Provider and plugin ownership
 
+Internal marketplace packages override the embedded baseline after manifest
+verification, provided their version is at least the embedded version. An older
+cached package cannot mask fixes shipped in an application update; newer valid
+market releases remain authoritative. Offline fallback does not overwrite the
+installed package, credentials, options or enablement state.
+
+WorkBuddy 1.0.4 preserves maxAllowedSize, maxInputTokens and maxOutputTokens from
+the authenticated enterprise discovery responses. Model names resolve through
+the vendor's exact modelMap ID; deployment caps take precedence over a build-time
+vendor model snapshot and generic catalog estimates. The plugin coalesces reads
+per account for five minutes, retaining the last successful list after failure.
+List refresh never rewrites authentication, so it cannot overwrite a concurrent
+token renewal. The bundled vendor snapshot supplies offline Hy4 limits without
+encoding prices. Auto remains unknown when its vendor gives no fixed cap. Input
+caps and whole-context windows remain separate; normal user overrides still win.
+
+WorkBuddy 1.0.6 removes the 1.0.5 blanket 100K/32K clamp. Discovery and
+snapshot token capacities remain model metadata, not a conversion of the
+separate request-byte guard or a promise of end-to-end capacity. Unknown Auto
+capacity remains unknown. Byte-budget handling and Agent compaction must be
+validated separately; ordinary model declarations and explicit user overrides
+remain unchanged.
+
+The measured 2026-11-14 MaaS path brackets a 1 MiB upstream request cap.
+The private resolver in WorkBuddy 1.0.6 guards the final serialized body at
+1020 KiB (4 KiB forwarding margin), warns at 900 KiB and normalizes a nested
+upstream Nginx 413 wrapped in HTTP 500/business 10000 into request_too_large.
+Authentication, rate errors and ordinary 500s retain their status. An isolated
+Claude Code summary of 1,037,025 wire bytes succeeded and retained its marker
+after ~255K estimated tokens compacted to 861; this does not verify every Agent
+or guarantee arbitrary images/tool schemas fit. The legacy config writer uses
+272K only as a default compaction window, preserving explicit user settings;
+it no longer uses the frontend virtual alias to decide if the source is MaaS.
+
+The internal Sub2Agent login transport bounds each vendor authentication JSON
+request, including its body, to 12 seconds. Timeout, refused connection, DNS,
+unreachable server and HTTP 5xx/404 failures have actionable Chinese messages
+without upstream URLs or credentials. User cancellation remains cancellation;
+business authentication responses such as 401 still reach the private adapter.
+Inference streaming keeps its original transport. See
+[`login-network.mjs`](../../plugins/sub2agent/login-network.mjs).
+
+## Sub2Agent intranet distribution
+
+The intranet executable ships complete local CodeBuddy, WorkBuddy enterprise
+and Trae enterprise provider plugins from its adjacent `providers` directory. CodeBuddy and Trae start disabled and can be enabled in Plugins; older installations that previously forced them off remain off until explicitly enabled.
+Magpie retains ownership of add/edit sheets, account selection and persistence,
+model selection, routing and client protocol handling. Each local plugin reuses
+the private Sub2Agent checkout's authentication adapters, credential services,
+source resolvers and protocol kernel to speak its enterprise wire protocol.
+No second HTTP gateway is started. These providers share the normal subscription
+picker with Codex and Claude; upstream API presets and other native subscription
+discovery are excluded. Custom direct endpoints retain Magpie's editor.
+
+`build/sub2agent-providers.mjs` requires an authorized Sub2Agent source checkout
+and its pinned dependencies. It generates the offline runtime locally (ignored
+by Git), recording the source commit, and the portable builder includes it.
+CodeBuddy's IDE auth-file writes are redirected to memory. Persistent credentials
+stay in Magpie's account-scoped plugin store; WorkBuddy keeps enterprise SSO,
+tenant headers, model discovery and coalesced refresh, and Trae validates its
+loopback callback and login state before retaining credentials. User cancellation
+must leave no account behind. Tests: `plugins/sub2agent/factory.test.mjs` after
+building with `SUB2AGENT_TEST_BUNDLE=1`.
+
+Trae binds a random loopback port and a nonce-scoped path before generating
+the login link. It declares `callbackUrl` explicitly from authorize; the plugin
+host forwards that optional field even when the login page wraps its redirect.
+Magpie exposes its normal manual callback form alongside automatic listening.
+Pasted callbacks are relayed only to this sign-in's loopback port and exact
+declared path, then pass through the same private credential parser and enterprise
+login validation as browser callbacks. Invalid callbacks can be corrected without
+restarting the flow, and accepted callbacks are consumed once. Cancel and completion
+close the listener. The command line uses the same explicit target and checks.
+Plugins without that declaration retain URL-based inference. CodeBuddy and
+WorkBuddy enterprise keep their actual server-polling protocols, rather than
+inventing a local browser redirect their vendors do not provide.
+
+The `intranet` build fixes plugin resources to the internal server and supports
+local complete plugin folders in its offline trial. Network installation is
+refused. See [internal distribution](../intranet-build.md#plugin-distribution).
+
 Some built-in subscriptions are deprecated and have community plugins that provide the same service. A subscription can still use its built-in implementation or move to its plugin. That ownership determines where sign-in, refresh, model discovery, requests, usage, and errors are handled.
 
 ## Responsibilities and sources of truth
@@ -382,3 +463,242 @@ personal-key entry for it; ordinary API methods still require a key.
 its account slot and the account action says Sign in again. Existing records
 are not deleted. Other plugins keep multiple accounts. OpenCode ignores
 these optional fields; no provider id is special-cased in magpie.
+
+## Intranet managed baselines
+
+The four distribution adapters have stable package identities:
+`@sub2agent/codebuddy`, `@sub2agent/workbuddy`, `@sub2agent/trae`, and
+`@sub2agent/aiep`. `shipped` projects legacy portable paths onto these IDs,
+retaining Off, Options and provider preferences. Cached provider specs are
+projected too; account IDs and auth entries remain unchanged.
+
+`Target` resolves a verified installation in the user's plugin data directory
+first, then the distribution's offline baseline. Directory releases use the
+executable-relative providers folder. Single-file releases (`embeddedproviders`)
+embed a privately generated ZIP and materialize its eight declared files in a
+content-addressed application cache generation. Complete generations are published
+by rename, verified with per-file receipts, and repaired from embedded bytes if
+damaged. A changed embedded archive gets a different generation; marketplace
+installations and existing account/configuration files are never replaced.
+Legacy executable-relative specs are projected onto the same canonical package
+identities, retaining Off, Options and preferences. Only installs with the
+installer's receipt and matching per-file SHA-256 hashes are selected over the
+baseline. Hashes are cached while the receipt/file metadata stay unchanged.
+The installer always writes to the data directory, never into the portable
+baseline. Updating the executable cannot overwrite a marketplace plugin.
+All four adapters have explicit semantic versions and receive automatic
+newer-version checks from the managed internal registry. Failed downloads and
+validation keep the prior installed package; unavailable registry keeps local
+operation. Explicit Off and options survive both projection and update.
+
+AIEP deliberately retains the native key-based editor, existing providers.json
+credentials, model picks and IDs. Its small packaged adapter declares
+`magpie.nativeProvider` defaults. New configurations read the selected adapter's
+Anthropic base and links; saved addresses remain user-owned. Native Anthropic
+transport and mandatory Bearer signing remain host-owned; installing the
+adapter creates no second login provider or credential copy. The three other
+adapters keep their private subscription implementations and account store.
+
+
+The internal publisher and installer also accept format 2 offline archives with
+an exact files list and declared provider, hooks and/or page entries. Nested
+JS/HTML/CSS assets are supported without dependency resolution or install scripts.
+Extraction rejects undeclared/missing files, case collisions, links, unsafe paths,
+Windows device names and oversized archives. Format 1 single-file packages remain
+compatible. `build/prepare-plugin-market.py` prepares all four provider packages
+and the pinned optional upstream notify package; it does not deploy a server.
+Notify retains its upstream hooks and settings page, with empty channels and
+message bodies disabled by default. See the internal marketplace deployment guide.
+
+Windows x64 light packages omit Bun. When no explicit or bundled runtime exists,
+the internal build downloads the pinned `@oven/bun-windows-x64-baseline@1.4.2`
+package from `http://wnpm.weoa.com:8001`. It requests npm metadata and tarball
+directly without npm, install scripts or public fallback. Tarball URLs are routed
+through that mirror, and redirects cannot leave it. Only the fixed executable
+entry is extracted; its independent SHA-256 pin must match before installation.
+The versioned application cache is reused offline and validated before execution.
+Download, parsing and checksum failures preserve prior files and show a sanitized
+network/retry message. The shared Bun lock serializes concurrent installation.
+Other platforms still require a bundled runtime in this internal distribution.
+
+`build/intranet.ps1 -SingleFile` emits a ZIP containing only `Sub2Agent.exe`,
+without portable markers, provider folders, Bun or external license files.
+License texts are embedded and accessible through `licenses` and About. The
+build manifest is kept beside the release archive, outside the user package.
+Without a portable marker/data directory, existing appdir rules use the user's
+application directories; replacing an old portable EXE retains its current data.
+
+### CIB ZHT API key source
+
+The intranet provider picker includes `cib-zht-apikey` with the bundled CIB
+logo and both protocol bases. Chat appends `/chat/completions` to its `/v1`
+base; Anthropic appends `/v1/messages` to `/anthropicproxy`. The normal key
+editor and provider persistence own credentials; no key is preconfigured.
+
+`internal/gui/zht.go` invokes an already installed `zht-dt-cli api-key`
+(or `zht-cli apikey` when only that executable exists) after the user clicks
+Get Key. The CLI owns browser login. The app does not install or upgrade a
+CLI automatically: the editor displays the approved internal npm command.
+CLI stdout is bounded to 1 MiB and parsed in memory despite banners before
+or after the JSON result; neither stdout nor stderr is logged or returned.
+Only nonempty, unexpired credentials whose `apiKeyId` contains `8899` are
+returned over the authenticated, no-store local API. One is filled into the
+masked key field; several require selection; none produces an explicit error.
+Errors never contain CLI output. The original key remains until the user
+chooses a returned credential and saves the provider. Actual enterprise CLI
+login and gateway inference require internal-network verification.
+
+### Temporarily retained provider scope
+
+Intranet releases expose WorkBuddy enterprise, the existing Coding Plan,
+CIB ZHT, and the normal custom endpoint editor. Coding Plan is displayed as
+TIG Coding Plan; its existing `aiep-coding-plan` ID, gateway and keys are retained. Native subscription discovery
+returns before reading Claude/Codex credentials. Other preset definitions are
+unavailable and saved providers outside this scope are excluded from the
+routing catalog without deleting their records. Native and plugin sign-in
+entry points enforce the same policy. CodeBuddy and Trae bundled entries
+remain on disk for compatibility but the effective host list forces them off,
+regardless of saved switches; the provider cache exposes only WorkBuddy.
+
+### Automatic login with an explicit vendor callback fallback
+
+An authorization may expose `submitCallback(url, {signal})` alongside its
+ordinary automatic `callback`. The host returns `manualCallback: true` and
+keeps the session while the one automatic Finish is pending. GUI and CLI pass
+pasted URLs to the new `submitCallback` RPC; the host never fetches them.
+Invalid input leaves the automatic flow running. Finish remains single-use
+and removes the session on completion or cancellation. The GUI waits for the
+original completion and credentials are saved exactly once.
+
+WorkBuddy accepts only its official HTTPS `/login` or `/login/` return page,
+`platform=workbuddy`, and exactly one `state` equal to the current login.
+That page carries no code or token: submission triggers an immediate token
+check against the existing trusted adapter, with concurrent token checks
+coalesced; enterprise identity and models still pass the ordinary checks.
+An unfinished authorization produces a retryable message after 30 seconds,
+while automatic polling continues. Callback addresses are never persisted.
+Trae's existing nonce-scoped loopback callback remains supported while its
+provider is disabled by distribution policy. TIG and ZHT use API keys and
+do not present a browser OAuth callback form.
+
+### Read-only migration from the old Sub2Agent profile
+
+Startup runs `provider.ImportSub2AgentAuth` after settings migration and before
+provider discovery or services start. The source is the original user's
+`~/.sub2agent/data/proxy.json` version 1 desktop source manifest plus the
+referenced `data/secrets/*.json` entries. Windows CurrentUser DPAPI decrypts
+the original null-entropy format directly, without spawning a helper. No
+legacy file is changed. Other operating systems cannot decrypt Windows keys.
+Only ready, enabled WorkBuddy enterprise subscriptions and ready custom key
+endpoints are eligible. Disabled subscription credentials remain untouched.
+Legacy `auth_profiles`/`tokens` belong to CodeBuddy and are not relabelled as
+WorkBuddy or TIG now that CodeBuddy is disabled.
+
+WorkBuddy credentials retain tenant identity, models and private model map;
+`plugin.EditAuth` merges them atomically under the shared host auth lock.
+Existing credentials for the same user and enterprise win. Endpoints retain
+protocol, models and enabled state; an existing endpoint at the same bases
+wins. The known Coding Plan base maps to the unchanged AIEP preset ID with
+the TIG label and Bearer auth. No legacy telemetry settings are imported.
+Successful imports (including a newer credential already present) are marked
+by a hash of source identity in `sub2agent-auth-import.json`. Deleted imported
+accounts are never resurrected. Partial failures retry on the next launch;
+malformed sources or migration markers never overwrite existing files.
+Only generic, credential-free errors reach startup output.
+
+### API access provider editor
+
+The intranet add sheet labels key-based sources as “API access” (API 接入),
+with “Configure a gateway and API key” as its hint. Provider kind and stored
+IDs remain unchanged. TIG uses the supplied SVG's three logo paths and two
+linear gradients; wordmark geometry, raster pattern and text resources are
+excluded from the bundled `tig-color.svg`.
+
+The ZHT editor exposes separate editable Anthropic and OpenAI base URLs next
+to the existing masked key field. Changes update the same provider draft and
+save payload as custom providers; the CLI helper only fills the key and never
+resets addresses. The generic custom provider editor also labels its base URL
+as Gateway URL in the intranet distribution. Defaults remain protocol bases,
+so `/v1/messages` and `/chat/completions` are appended once by transport.
+This UI change is previewed from source assets without rebuilding or replacing
+the installed application; review screenshots use only isolated fixture keys.
+
+Validation: Chromium and WebKit each cover desktop light/dark and narrow light
+layouts, masked CLI key selection, custom ZHT protocol base URL save payloads,
+and generic custom gateway/key saves. Provider tests round-trip both custom
+ZHT URLs and the key and check final transport paths. The eight localization
+checks and core JavaScript budget check pass. No application build was run.
+
+### Custom API key with protocol detection
+
+The intranet picker places Custom API key after ZHT in the API access grid,
+removing the header Custom provider action. Its editor asks for the gateway
+and key without protocol tabs or additional protocol endpoint fields. Saving
+loads the lazy autogateway module and calls the existing provider/detect API,
+which retrieves candidate models and sends a minimal request per protocol.
+Only successful protocol bases are saved, with unsupported draft bases
+cleared. An empty result or request failure keeps the editor and input open;
+users may enter a model if the gateway offers no model list. Changes during
+an in-flight probe invalidate its result, and concurrent clicks cannot save
+before the probe completes. Preset gateways and subscription login are unchanged.
+
+Validation: the Playwright preview checks tile order, hidden protocol controls,
+successful automatic adoption of Anthropic + Responses with Chat rejected,
+and no save when all protocols fail, in Chromium/WebKit at three layouts.
+Existing provider detection tests and core script budget are also checked.
+
+Release .15: single-file/no-Bun package built from 0ec9924. Packed asset,
+intranet and embedded-provider checks pass. Playwright checked all nine
+retained views on the actual executable. The live custom fixture drives the
+real detection API against a local Responses-only server and verifies the
+saved base/API excludes the three rejected protocols. No live enterprise
+gateway credentials were exercised.
+
+### Internal WorkBuddy model discovery
+
+The internal WorkBuddy plugin adds the supported `hy4free` ID when a signed-in
+account's model discovery omits it, deduplicating the list. The same list reaches
+the private resolver so requests use that upstream ID. This does not assign a
+permanent zero price: promotions and their end date belong to the server price
+catalog. Model discovery alone does not establish tenant access; upstream errors
+continue through the existing fallback path.
+
+### WorkBuddy MaaS usage fallback
+
+The private protocol kernel bundled by the internal provider build already
+fills missing usage for WorkBuddy MaaS requests. The resolver recognizes MaaS
+through the selected model and its upstream model mapping. The gateway requests
+stream usage; the kernel preserves reported counters, including explicit zero,
+and estimates only missing counters from request messages, tool definitions,
+reasoning, text and tool-call output. Completed SSE replies receive a usage-only
+chunk before `DONE`; aggregated non-streaming replies receive JSON usage.
+Errors and unfinished streams are not turned into successfully measured replies.
+This fallback is MaaS-specific, not a guarantee for every provider/model.
+
+The normal gateway decoder collects that final chunk. Anthropic clients receive
+the counters in `message_delta`, and Responses clients in `response.completed`.
+This supplies context accounting for clients that use response usage when
+deciding whether to compact. A correct model context limit and the client's own
+compaction policy are still required. Image/document content is not tokenized
+by the text estimator, so these counts are approximate and must not be described
+as authoritative vendor billing. The private Chat response marks estimated
+usage, but protocol conversion does not promise to retain that extra marker.
+
+Verification: `plugins/sub2agent/factory.test.mjs` exercises the bundled kernel
+through the real provider loader with missing and reported usage. Gateway
+`TestPromptUsageOnMessageStart` covers final Anthropic counters;
+`TestChatTranslationKeepsUsageAfterFinish` covers final Responses counters.
+
+The intranet baseline includes the twelve retired Magpie community subscription plugins from the pinned community checkout. They start disabled, preserve user enablement, and share package identities with the intranet marketplace. Their manifest icon names resolve to the packaged pixel artwork. The bundled `@sub2agent/native-api` plugin controls Magpie native API presets as a group and defaults off. Turning it off hides their saved providers from routing without deleting credentials or settings; enabling it restores them. Subscription logins still in core are not included.
+
+WorkBuddy 1.0.7 advertises a transport-aware working context/input window of
+at most 256,000 tokens and a default output budget of at most 32,000 tokens
+for MaaS deployments, including mapped aliases and
+unknown non-Auto deployments. Smaller discovered limits and ordinary models
+(including hy4free) remain unchanged. Raw discovery/snapshot metadata is kept
+separately; this is an operational window, not a newly claimed vendor limit.
+The observed ~1 MiB transport cap cannot be expressed exactly in tokens.
+Default Claude Code/Codex compact thresholds are 224,000 for MaaS and groups
+containing it, leaving room for turn growth and summary overhead. Existing
+user windows/thresholds and full-context preferences retain their precedence.
+The compact-413 hy4free rescue remains a separate second layer.

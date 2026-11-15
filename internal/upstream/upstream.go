@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"slices"
@@ -141,6 +142,10 @@ var (
 // read within Fresh is asked for again in the background; until it
 // answers, the last reading (or an unread one) stands. Of never waits.
 func Of(ids ...string) []Status {
+	if distribution.Internal {
+		return []Status{}
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 	var out []Status

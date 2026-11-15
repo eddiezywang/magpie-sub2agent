@@ -761,6 +761,9 @@ func AuthHeaders(p Provider, proto Protocol) map[string]string {
 	if p.Key == "" || p.IsVertex() {
 		return map[string]string{}
 	}
+	if p.isCodingPlan() {
+		return map[string]string{"Authorization": "Bearer " + p.Key}
+	}
 	if p.IsAzure() {
 		if proto == Anthropic {
 			return map[string]string{"x-api-key": p.Key}

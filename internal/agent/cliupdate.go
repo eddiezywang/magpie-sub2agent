@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"log"
 	"net/http"
@@ -1137,6 +1138,10 @@ var updateTimeout = 10 * time.Minute
 // UpdateCLI brings the agent's CLI up to date the way it was installed, and
 // says what it is afterwards.
 func (a *Agent) UpdateCLI() (CLI, error) {
+	if distribution.Internal {
+		return CLI{}, fmt.Errorf("agent updates are managed outside this distribution")
+	}
+
 	if a.WSL != "" {
 		return a.updateWSL()
 	}

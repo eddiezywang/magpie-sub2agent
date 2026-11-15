@@ -1,5 +1,28 @@
 # Gateway routing and fallback
 
+The Sub2Agent WorkBuddy provider has a compaction-only size fallback. A
+recognized MaaS compact request first runs on its original model. Only after
+413 does the gateway send the Agent's original summary prompt and complete
+history to hy4free on the same account. No DeepSeek fallback is inserted.
+Ordinary turns, 429, authentication errors and other failures do not trigger
+this path. Hy4free must be selected in the explicit list or live plugin catalog
+and allowed for the account. The main model and conversation affinity remain
+unchanged; trace and usage attribute the rescued summary to hy4free.
+Rescued summaries get at least 32,768 output tokens because smaller budgets
+exhausted hy4free's reasoning without producing a summary in native Claude
+Code probes. Larger requested budgets are preserved; ordinary request budgets
+are untouched. The gateway does not replace or rewrite conversation history.
+The private transport owns each model's byte budget, avoiding a shared learned
+image cap. Failure of hy4free follows the existing error path without a cycle.
+
+The internal cheap template prefers WorkBuddy's hy4free, then MaaS deployments,
+then other WorkBuddy models even when the managed relative-price service is
+unreachable. This is an offline ordering preference, not a free-price or balance
+claim. A positive managed score for hy4free removes its free-first preference;
+the server remains responsible for prices and promotions. Within each tier the
+existing managed-price/model ranking remains. Template-backed groups recompute
+their members; manually edited groups retain their explicit order.
+
 The gateway is magpie's local LLM endpoint (`127.0.0.1:3425` by default). It
 serves Chat Completions, Responses, Anthropic Messages and Gemini. It finds
 the provider, key or account and model for each request. When the upstream
@@ -3178,3 +3201,38 @@ go test -tags nogui ./internal/provider -run 'TestGroup|TestCodexCreditsSwitch|T
 
 The gateway's `TestMain` gives the package a home of its own, so these tests
 never read real providers or accounts.
+
+## Internal routing choices
+
+The internal template picker offers plan, smart (Balanced first), thrifty and
+steady only. Models are selected using the existing catalog prices, release
+metadata and capabilities, without binding templates to model IDs. The group's
+advanced picker omits free-first and expiring-free-quota strategies; existing
+saved strategies are not rewritten. TIG Coding Plan defaults to plan billing,
+while an explicit user billing value still wins.
+
+A known zero output price is distinct from unknown pricing. Zero-priced models
+are eligible as the cheap member and classifier; a changed price removes that
+eligibility when templates are regenerated through the same algorithm. Saved
+groups created before managed templates remain explicit user configuration.
+New internal templates retain their kind and rebuild members when discovery or
+the managed catalog changes; saving an explicit group edit opts out. Plan-first
+chooses a non-tiny small Coding Plan model, then a low-cost alternate source.
+No model ID is hard-coded in a template. Server routing scores prioritize the
+enterprise MaaS deployments over unclassified WorkBuddy built-in deployments.
+A classifier still prefers a decision
+API, else the cheapest known-price non-reasoning/non-tiny model, else the cheap
+member. No promotion is permanently encoded by model name.
+
+The internal catalog refreshes server routing scores every five minutes,
+independent of telemetry opt-out. Bounded failures retain the last valid cache;
+the document expires after 24 hours and promotions can expire earlier. Expired
+scores become unknown even during an outage. Scores are relative scheduling
+weights, separate from USD prices and remaining allowance.
+
+Pricing multipliers and peak/off-peak billing rules belong on the accounting
+server. They must not change quota-rest/reset timestamps or imply remaining
+allowance. Existing 429 classification reads natural-language quota/rate/credit
+messages as well as structured error codes and reset headers. Vendor-specific
+formats still need representative sanitized responses before new parsers are
+asserted to support them.

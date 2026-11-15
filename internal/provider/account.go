@@ -35,6 +35,7 @@ import (
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/claudecode"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/filelock"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/plugin"
@@ -921,6 +922,9 @@ func refreshFailed(status int, agent, msg string) error {
 
 // Accounts lists the signed-in agents as providers.
 func Accounts() []Provider {
+	if distribution.Internal {
+		return pluginAccounts()
+	}
 	if settings.AccountDiscoveryOff() {
 		return pluginAccounts() // the public plugins' alone (publicPlugin)
 	}

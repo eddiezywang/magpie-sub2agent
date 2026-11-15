@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gen2brain/h265/heic"
-
 	"github.com/yetone/magpie/internal/provider"
 )
 
@@ -229,17 +227,6 @@ func heicKeep(k [32]byte, r heicResult) {
 
 // encodeHEIC decodes a HEIC, turned as it says it is shown, and writes it
 // as JPEG, or as PNG when it has transparency; "", nil when it can't.
-func encodeHEIC(raw []byte) (string, []byte) {
-	cfg, err := heic.DecodeConfig(bytes.NewReader(raw))
-	if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || int64(cfg.Width)*int64(cfg.Height) > heicMaxPixels {
-		return "", nil
-	}
-	img, err := heic.Decode(bytes.NewReader(raw), heic.Options{AutoRotate: true, FrameSizeLimit: heicMaxPixels})
-	if err != nil {
-		return "", nil
-	}
-	return pictureWritten(img, cfg.Width*cfg.Height)
-}
 
 // pictureWritten is img written as JPEG, or as PNG when it has
 // transparency, its longest side heicMaxSide at most; "", nil when it

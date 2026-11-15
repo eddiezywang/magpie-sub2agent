@@ -1,3 +1,60 @@
+function renderRedact(s, keep) {
+  const box = $("#redactList"), find = $("#findList");
+  box?.replaceChildren();
+  find?.replaceChildren();
+  const rowIn = (into, name, sub, ...tools) => {
+    const r = el("div", "row pref");
+    const who = el("div", "who");
+    who.append(el("div", "name", name), el("div", "sub", sub));
+    const val = el("div", "val");
+    val.append(...tools);
+    r.append(who, val);
+    into.append(r);
+    return r;
+  };
+  const row = (...a) => rowIn(box, ...a);
+  const onOff = (on, fn) => segs([["off", t("Off")], ["on", t("On")]], on ? "on" : "off", (v) => fn(v === "on"));
+  featOff(box, s, "redact", t("Nothing is masked until it is on. Choosing anything to mask below turns it on"));
+  row(t("Mask secrets"), t("API keys, private keys, tokens and passwords go to vendors as placeholders, and come back as they were"),
+    onOff(s.redact, (redact) => savePrefs({ ...keep, redact })));
+  if (s.redact) row(t("Keep a key's form"), t("A key goes as a made-up one of the same form (sk_… stays sk_…), not a placeholder, and comes back as it was"),
+    onOff(s.redactShape, (redactShape) => savePrefs({ ...keep, redactShape }))).id = "redactShapeRow";
+  row(t("Mask personal data"), t("Emails, phone numbers, ID and bank card numbers too"),
+    onOff(s.redactPersonal, (redactPersonal) => {
+      if (redactPersonal) window.hideAccounts?.set(true, true);
+      savePrefs({ ...keep, redactPersonal });
+    }));
+  if (s.redactPersonal) for (const [id, name, sub, on] of REDACT_KINDS) {
+    const kinds = s.redactKinds || {};
+    const r = el("div", "row pref redact-kind");
+    r.dataset.redact = id;
+    const who = el("div", "who");
+    who.append(el("div", "name", t(name)), el("div", "sub", t(sub)));
+    const val = el("div", "val");
+    val.append(onOff(kinds[id] ?? on, (v) => savePrefs({ ...keep, redactKinds: { ...kinds, [id]: v } })));
+    r.append(who, val);
+    box.append(r);
+  }
+  row(t("Masked words in any case"), t("A word also matches in other capitals: Nightjar masks NIGHTJAR and nightjar too"),
+    onOff(s.redactWordsAnyCase, (redactWordsAnyCase) => savePrefs({ ...keep, redactWordsAnyCase }))).id = "redactWordsAnyCaseRow";
+  row(t("Whole words only"), t("A word is not masked inside a longer one: ABC masks ABC and 'ABC' but not XABCD, and 123456 not 0.123456"),
+    onOff(s.redactWordsWhole, (redactWordsWhole) => savePrefs({ ...keep, redactWordsWhole }))).id = "redactWordsWholeRow";
+  renderRedactRules(s, row);
+  renderMaskActions(s);
+  renderMaskTry(s);
+  const masking = s.redact || s.redactPersonal;
+  const why = t("Turn on Mask secrets or Mask personal data first");
+  privacyModelRow(find, masking ? "" : why);
+  const always = el("span", "static-pill" + (masking ? " on" : ""), masking ? t("Always on") : t("Off"));
+  rowIn(find, t("Rules"), masking ? t("Keys, tokens, emails and numbers whose checksum adds up: patterns that are certain, checked on every request") : why, always).id = "maskRulesRow";
+  if (!featureHides($('#nav button[data-view="masking"]'))) {
+    const open = el("button", "", t("Open"));
+    open.type = "button";
+    open.onclick = () => openMaskRecord(0);
+    box.prepend(rowIn(box, t("What was masked"), t("Each request masking changed, what the vendor saw, and how, on Insights › Masking"), open));
+  }
+}
+
 // Settings › Privacy's Instead of masking, send to, and Masked words and
 // Never mask as lists, Masked words as dots until Show (the redact
 // plugin's part of Settings). Run after app.js, whose helpers it shares

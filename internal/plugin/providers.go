@@ -437,7 +437,7 @@ func refreshProvidersWithRetry(ctx context.Context, epoch uint64) {
 func refreshProvidersInBackground(ctx context.Context, epoch uint64) {
 	defer refreshing.Done()
 	for {
-		if Running() || HasBun() {
+		if CanStart() {
 			refreshProvidersWithRetry(ctx, epoch)
 		}
 		provMu.Lock()
@@ -555,7 +555,7 @@ func keepUnloaded(ps, last []Provider) []Provider {
 		told[p.Spec], ids[p.ID] = true, true
 	}
 	installed := map[string]bool{}
-	for _, e := range list().Plugins {
+	for _, e := range effectiveList().Plugins {
 		installed[e.Spec] = true
 	}
 	for _, p := range last {
@@ -686,7 +686,7 @@ func Settle() {
 // provider's sign-in is read afresh from plugin-auth.json.
 func Cached() []Provider {
 	checkList()
-	l := list() // one read of plugins.json for the whole call
+	l := effectiveList() // the same effective entries the host loaded
 	provMu.Lock()
 	ps := provCache
 	good := provGood
@@ -706,6 +706,7 @@ func Cached() []Provider {
 		}
 	}
 	for _, p := range ps {
+		p.Spec = canonicalShippedSpec(p.Spec)
 		if !on[p.Spec] {
 			continue
 		}
@@ -980,10 +981,14 @@ func Validate(ctx context.Context, provider string, method int, key, value strin
 // the plugin waits for it itself ("auto") or needs the code the page
 // shows pasted back ("code").
 type Authorization struct {
-	Session      string `json:"session"`
-	URL          string `json:"url"`
-	Instructions string `json:"instructions"`
-	Method       string `json:"method"`
+	Session string `json:"session"`
+	URL     string `json:"url"`
+	// CallbackURL is an optional explicit loopback return address. Login
+	// pages may wrap or omit it, so it cannot always be inferred from URL.
+	CallbackURL    string `json:"callbackUrl"`
+	ManualCallback bool   `json:"manualCallback"`
+	Instructions   string `json:"instructions"`
+	Method         string `json:"method"`
 	// Opened is a page the plugin (its vendor's CLI) opened already, not
 	// to be opened again
 	Opened bool `json:"opened"`
@@ -1048,6 +1053,22 @@ func Finish(ctx context.Context, session, code string) (Saved, error) {
 		return Saved{}, failure(r.Error)
 	}
 	return r.Saved, nil
+}
+
+// SubmitCallback supplements the automatic completion without starting a
+// second Finish or saving credentials twice.
+func SubmitCallback(ctx context.Context, session, raw string) error {
+	var r struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	if err := Call(ctx, "submitCallback", map[string]any{"session": session, "url": raw}, &r); err != nil {
+		return err
+	}
+	if !r.OK {
+		return failure(r.Error)
+	}
+	return nil
 }
 
 // APIKey signs in to account (a key, or NewAccount) with a key, as an

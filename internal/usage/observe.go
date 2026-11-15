@@ -30,6 +30,17 @@ type Observer interface {
 	Ledger(Record)
 }
 
+// NotifyAppQuit tells interested observers that the native application is
+// actually exiting. Gateway stops and plugin reconfiguration do not call it.
+// Implementations must only persist local state here, never wait for HTTP.
+func NotifyAppQuit() {
+	for _, observer := range Observers() {
+		if q, ok := observer.(interface{ AppQuit() }); ok {
+			q.AppQuit()
+		}
+	}
+}
+
 // Watch is one request an Observer watches.
 type Watch interface {
 	// Attempt is each routing attempt, unbilled failures and retries

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -27,6 +28,9 @@ type Masker struct{}
 
 // Wanted says settings st ask for anything to be masked.
 func Wanted(st settings.Settings) bool {
+	if distribution.Internal {
+		return false
+	}
 	return st.Redact || st.RedactPersonal || len(st.RedactWords) > 0
 }
 
@@ -81,6 +85,9 @@ func optionsCtx(ctx context.Context) redact.Options {
 // on, or left it as it is, on by default. One who had a model downloaded,
 // or picked, with it off before it was on by default had turned it off.
 func ModelWanted(st settings.Settings) bool {
+	if distribution.Internal {
+		return false
+	}
 	switch {
 	case st.RedactModel:
 		return true
