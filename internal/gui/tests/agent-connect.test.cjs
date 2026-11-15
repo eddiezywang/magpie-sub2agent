@@ -14,7 +14,7 @@ const { test } = require("node:test");
 const { chromium, webkit } = require("playwright");
 
 const assets = path.resolve(__dirname, "../assets");
-const options = [{ value: "gpt-5.4", label: "GPT-5.4" }, { value: "relay/m1", label: "m1", ref: "relay/m1", note: "Relay · via magpie" }];
+const options = [{ value: "gpt-5.4", label: "GPT-5.4" }, { value: "relay/m1", label: "m1", ref: "relay/m1", note: "Relay · via magpie" }, { value: "group/test", label: "Test group", ref: "group/test", group: "Routing groups" }];
 const fresh = () => ({
   agents: [
     { id: "codex", name: "Codex", icon: "generic", path: "/fixture/codex", fields: [{ key: "model", label: "model", value: "gpt-5.4", options }] },
@@ -23,7 +23,7 @@ const fresh = () => ({
   profiles: [],
 });
 
-function server(lang, posts) {
+function server(lang, posts, hold) {
   let cur = fresh();
   const reply = (route) => route.fulfill({ json: { ...cur, settings: { lang, theme: "light", guideHidden: true } } });
   return async (route) => {
@@ -32,9 +32,17 @@ function server(lang, posts) {
     if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:true};` });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return reply(route);
+    if (url.pathname === "/api/set" && hold) {
+      posts.push(url.pathname);
+      await hold.promise;
+      cur.agents[0].wired = true;
+      cur.agents[0].fields[0].value = "group/test";
+      return reply(route);
+    }
     const act = url.pathname.match(/^\/api\/agents\/(connect|disconnect)\/(\w+)$/);
     if (act) {
       posts.push(url.pathname);
+      if (hold) await hold.promise;
       cur = JSON.parse(JSON.stringify(cur));
       const a = cur.agents.find((x) => x.id === act[2]);
       if (act[1] === "connect") { a.wired = true; a.fields[0].value = "relay/m1"; }
@@ -116,3 +124,35 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
     });
   }
 }
+
+// Hold the real page's requests open to check the waiting state and that a
+// model pick cannot race a second connect request.
+test("chromium: pending agent changes show progress and block a racing connect", async (t) => {
+  const browser = await chromium.launch({ channel: "chromium" });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const posts = [];
+  let release;
+  const hold = { promise: new Promise((resolve) => { release = resolve; }) };
+  await page.route("**/*", server("en", posts, hold));
+  await page.goto("http://magpie.test/?view=agents");
+  const row = page.locator('.row.agent[data-id="codex"]');
+  await row.locator('.ag-start').click();
+  await page.locator('#list li', { hasText: 'Test group' }).first().click();
+  await page.waitForFunction(() => document.querySelector('.row.agent[data-id="codex"] .ag-conn')?.getAttribute('aria-busy') === 'true');
+  assert.equal(await row.locator('.ag-conn').isDisabled(), true);
+  assert.deepEqual(posts, ['/api/set']);
+  release();
+  await page.waitForFunction(() => document.querySelector('.row.agent[data-id="codex"] .ag-conn')?.getAttribute('aria-checked') === 'true');
+  assert.deepEqual(posts, ['/api/set']);
+  assert.match(await row.locator('.ag-start').textContent(), /Test group/);
+  hold.promise = new Promise((resolve) => { release = resolve; });
+  await row.locator('.ag-conn').click();
+  const go = page.locator('.disconnect-ask .bar button.primary');
+  await go.click();
+  await page.waitForFunction(() => document.querySelector('.disconnect-ask .agent-wait')?.getAttribute('aria-busy') === 'true');
+  assert.equal(await go.textContent(), 'Saving…');
+  assert.equal(await go.isDisabled(), true);
+  release();
+  await page.locator('.disconnect-ask').waitFor({ state: 'detached' });
+});

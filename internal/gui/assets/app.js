@@ -1207,8 +1207,12 @@ function libSwitch(cls, on, label) {
   b.append(el("i"));
   return b;
 }
+const agentPickPending = new Set();
+const agentConnectPending = new Set();
+
 function connectSwitch(a) {
   const s = libSwitch("ag-conn", a.wired, t("Connect {agent} to magpie", { agent: a.name }));
+  if (agentPickPending.has(a.id) || agentConnectPending.has(a.id)) { s.disabled = true; s.classList.add("agent-wait"); s.setAttribute("aria-busy", "true"); }
   s.title = a.wired ? t("Connected · switch off to put back what {agent} had before magpie", { agent: a.name }) : t("Switch on and {agent}'s model list gets magpie's models", { agent: a.name });
   // the list opened from a failed connect, drawn again while it is open
   if (!a.wired) holdAgentModels(a, s);
@@ -1216,16 +1220,21 @@ function connectSwitch(a) {
     e.stopPropagation();
     if (a.wired) { askDisconnect(a); return; }
     if (s.disabled) return;
+    agentConnectPending.add(a.id);
     s.disabled = true;
-    s.classList.add("on");
+    s.classList.add("on", "agent-wait");
+    s.setAttribute("aria-busy", "true");
     try {
       state = await api("agents/connect/" + a.id, {});
+      agentConnectPending.delete(a.id);
       renderAgents();
       const msg = connectedSaid(a, state.connected);
       saidOk(msg, msg !== t("{agent} is connected to magpie", { agent: a.name }) ? 7000 : undefined);
     } catch (err) {
+      agentConnectPending.delete(a.id);
       s.disabled = false;
-      s.classList.remove("on");
+      s.classList.remove("on", "agent-wait");
+      s.removeAttribute("aria-busy");
       // every model taken out of its list: the Pick that puts one back is
       // in a connected agent's row only, so its list opens here (塔哥 on
       // Discord: Grok Build, all hidden, then switched off, couldn't be
@@ -1809,7 +1818,7 @@ function guideCard(g) {
       b.dataset.id = a.id;
       b.append(icon(a.icon), el("span", "", a.name));
       const ready = connectKind(a) === "ok";
-      b.disabled = !ready || !!guideBusy;
+      b.disabled = !ready || !!guideBusy || agentPickPending.has(a.id) || agentConnectPending.has(a.id);
       b.classList.toggle("busy", guideBusy === a.id);
       b.title = ready ? t("Switch on and {agent}'s model list gets magpie's models", { agent: a.name }) : t("Add a key or a subscription first; then there are models to connect");
       b.onclick = (e) => { e.stopPropagation(); guideConnect(a, e); };
@@ -1877,7 +1886,7 @@ function guideRedraw() {
 }
 
 async function guideConnect(a, ev) {
-  if (guideBusy) return;
+  if (guideBusy || agentPickPending.has(a.id) || agentConnectPending.has(a.id)) return;
   guideBusy = a.id;
   guideRedraw();
   try {
@@ -2414,7 +2423,10 @@ function askDisconnect(a) {
     e.stopPropagation();
     if (previewBlocked) return;
     go.disabled = true;
-    go.classList.add("busy");
+    go.classList.add("busy", "agent-wait");
+    go.setAttribute("aria-busy", "true");
+    const label = go.textContent;
+    go.textContent = t("Saving…");
     try {
       state = await api("agents/" + (offline ? "disconnect-offline/" : "disconnect/") + a.id, offline ? { revision } : {});
       closeConfirmAsk();
@@ -2425,7 +2437,9 @@ function askDisconnect(a) {
       saidOk(msg);
     } catch (err) {
       go.disabled = false;
-      go.classList.remove("busy");
+      go.classList.remove("busy", "agent-wait");
+      go.removeAttribute("aria-busy");
+      go.textContent = label;
       if (!offline && err.code === "runtime_unavailable" && err.offline === "disconnect" && revision) {
         offline = true;
         head.querySelector("b").textContent = t("Restore saved settings and remove magpie?");
@@ -5650,6 +5664,7 @@ async function setPick(agent, field, value, opt) {
   // seconds (every agent's lists are read again for it). The answer then
   // draws what the config really says; a refused pick puts the old one back.
   const was = field.value;
+  if (agentPickPending.has(agent.id)) return;
   if (agent.native) {
     try { state = await api("set", { agent: agent.id, field: field.key, value }); renderAgents(); }
     catch (err) {
@@ -5671,6 +5686,7 @@ async function setPick(agent, field, value, opt) {
   }
   const leaving = leavesMagpie(agent, field, value, opt);
   const seq = commit.seq = (commit.seq || 0) + 1;
+  agentPickPending.add(agent.id);
   field.value = value;
   const picked = performance.now();
   // the green flash runs on through the row drawn again with the answer
@@ -5685,8 +5701,9 @@ async function setPick(agent, field, value, opt) {
   flash();
   try {
     const next = await api("set", { agent: agent.id, field: field.key, value });
+    agentPickPending.delete(agent.id);
     // a later pick is already on its way: its answer is the one to draw
-    if (seq !== commit.seq) return;
+    if (seq !== commit.seq) { renderAgents(); return; }
     state = next;
     renderAgents();
     flash();
@@ -5697,6 +5714,7 @@ async function setPick(agent, field, value, opt) {
     else status(`${agent.name} ${t(field.label)} → ${shown}`, "ok");
     if (providers) loadProviders();
   } catch (e) {
+    agentPickPending.delete(agent.id);
     if (seq === commit.seq && field.value === value) {
       field.value = was;
       renderAgents();

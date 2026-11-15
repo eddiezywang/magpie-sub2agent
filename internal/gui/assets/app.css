@@ -5300,3 +5300,9 @@ body .row.agent .ag-prefs .row.pref .who { display: block; }
 .zht-gateways label { display: grid; grid-template-columns: 145px minmax(0, 1fr); align-items: center; gap: 12px; font-size: 12px; }
 .zht-gateways span { color: var(--muted); }
 @media (max-width: 600px) { .zht-gateways label { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
+
+/* Agent changes can take time while the configuration and state are read. */
+.ag-conn.agent-wait::after, .disconnect-ask .agent-wait::before { content: ""; display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+.ag-conn.agent-wait::after { position: absolute; left: 9px; top: 2px; color: var(--fg); }
+.disconnect-ask .agent-wait { display: inline-flex; align-items: center; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .ag-conn.agent-wait::after, .disconnect-ask .agent-wait::before { animation: none; } }
