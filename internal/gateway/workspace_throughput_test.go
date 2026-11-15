@@ -1,13 +1,81 @@
 package gateway
 
 import (
+	"encoding/json"
+	"github.com/yetone/magpie/internal/access"
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/provider"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestWorkspaceThroughputRetriesKeepDeliveredAttribution(t *testing.T) {
+	freshRates(t)
+	second := int64(4000)
+	meter := throughputMeter{now: func() time.Time { return time.Unix(second, 0) }}
+	const content = "synthetic-private-output"
+	// Same model name, different providers: retries must retain both actual
+	// attributions. The failed attempt's already delivered content still counts.
+	for i, pid := range []string{"workspace-retry-a", "workspace-retry-b"} {
+		for n := 0; n < liveRateMin; n++ {
+			liveRates.learn(pid, "same-model", int64(len(content)), len(content)*(i+1))
+		}
+		f := &inflight{agent: "codex", throughput: &meter}
+		l := liveBegin(f, "same-model", provider.Chat)
+		l.routed(pid, "same-model")
+		l.observe([]byte(`data: {"choices":[{"delta":{"content":"` + content + `"}}]}` + "\n\n"))
+		l.observe([]byte(`data: {"usage":{"completion_tokens":999999}}` + "\n\n"))
+		l.observe([]byte(": keepalive\n\n"))
+		l.finish(i == 0, 999999)
+		l.finish(false, 999999) // finalization is idempotent
+	}
+	second++
+	out := meter.snapshot()
+	if out.Total.Points[179] == nil || *out.Total.Points[179] != float64(3*len(content)) {
+		t.Fatalf("usage, keepalive or duplicate finalization changed delivered total: %+v", out.Total)
+	}
+	if len(out.Models) != 2 || out.Models[0].Name != out.Models[1].Name || out.Models[0].ID == out.Models[1].ID {
+		t.Fatal("same-named models from different providers collided")
+	}
+	if len(out.Sessions) != 1 || out.Sessions[0].Name != "Unidentified session" {
+		t.Fatal("missing session did not use the explicit unidentified series")
+	}
+	b, err := json.Marshal(out)
+	if err != nil || strings.Contains(string(b), content) || strings.Contains(string(b), "completion_tokens") {
+		t.Fatalf("throughput exposed delivered text or raw usage: %v", err)
+	}
+}
+
+func TestWorkspaceThroughputHeldKeysCannotReadOtherSessions(t *testing.T) {
+	if !distribution.Internal {
+		t.Skip("internal endpoint")
+	}
+	fresh(t)
+	keys, secrets := newCaller(t, "Workspace owner", "Workspace models")
+	if _, err := access.Update("models-key", access.Change{Key: keys[1].ID, Models: []string{"workspace/*"}}); err != nil {
+		t.Fatal(err)
+	}
+	srv := New()
+	srv.throughput.add("codex", "private-workspace-session", "workspace", "m", 10, 1, true)
+	h := lanGuard(srv.Handler())
+	for i, secret := range secrets {
+		r := httptest.NewRequest("GET", "/v1/magpie/throughput", nil)
+		r.RemoteAddr = "127.0.0.1:12345"
+		r.Header.Set("Authorization", "Bearer "+secret)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if i == 0 {
+			if w.Code != 200 || !strings.Contains(w.Body.String(), "private-workspace-session") {
+				t.Fatalf("owner could not read its series: %d %s", w.Code, w.Body)
+			}
+		} else if w.Code != 403 || strings.Contains(w.Body.String(), "private-workspace-session") {
+			t.Fatalf("held key learned other sessions: %d %s", w.Code, w.Body)
+		}
+	}
+}
 
 func TestWorkspaceThroughputWindowAndAttribution(t *testing.T) {
 	second := int64(1000)

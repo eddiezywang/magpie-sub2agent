@@ -50,6 +50,37 @@ func TestWorkspaceThroughputOwnerAndUnavailable(t *testing.T) {
 	}
 }
 
+func TestWorkspaceThroughputKeepsSessionsSpeedsContract(t *testing.T) {
+	if !distribution.Internal {
+		t.Skip("internal endpoint")
+	}
+	previous := served.Load()
+	served.Store(gateway.New())
+	t.Cleanup(func() { served.Store(previous) })
+	mux := http.NewServeMux()
+	workspaceThroughputRoutes(mux)
+	sessionManageRoutes(mux, nil)
+	// Reading or initializing workspace statistics must not manufacture a
+	// session or replace the existing speeds endpoint with a dashboard object.
+	for _, endpoint := range []string{"/api/speeds", "/api/gateway/throughput", "/api/speeds"} {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", endpoint, nil))
+		if w.Code != 200 {
+			t.Fatalf("%s: %d", endpoint, w.Code)
+		}
+		if endpoint == "/api/speeds" {
+			if strings.TrimSpace(w.Body.String()) != "[]" {
+				t.Fatalf("workspace read changed empty session speeds: %s", w.Body)
+			}
+		} else {
+			var out gateway.ThroughputState
+			if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || len(out.Total.Points) != 180 {
+				t.Fatalf("workspace sequence missing: %v", err)
+			}
+		}
+	}
+}
+
 func TestWorkspaceThroughputRejectsUnsupportedOwner(t *testing.T) {
 	for _, body := range []string{`{"version":0}`, `{"version":1,"epoch":1,"windowSeconds":180,"total":{"points":[]}}`, `invalid`} {
 		t.Run(body, func(t *testing.T) {

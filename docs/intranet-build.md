@@ -127,3 +127,51 @@ Generated implementations are excluded from Git; see
 Limitations: real provider accounts remain unverified; WebView2 must be installed;
 shared backend dependencies are not all pruned; production account and full
 desktop UI validation are not covered by the package-size experiment.
+
+## Workspace review builds
+
+Workspace is internal-only. The packed index loads workspace-i18n.js,
+workspace.js, workspace-throughput.js and workspace.css; upstream defaults and
+the tray panel remain separate. Agent, Routing and Providers keep one native
+DOM host each, including their normal dialogs and API writes. Sessions remains
+available. Do not copy design-preview fixtures into a release or implement the
+composition with an iframe.
+
+The live meter is process memory, not a usage ledger: 180 complete one-second
+buckets, five-second mean output token/s and independent peaks since the
+process/series started. The conversion rate is fixed when output arrives;
+unknown rates remain null. Provider/model/session dimensions cap at 128/512/256,
+evict the least recently heard series, and mark truncation without changing the
+total. GUI GET /api/gateway/throughput can read a different loopback owner via
+GET /v1/magpie/throughput; unsupported/offline owners are unavailable, not idle.
+The owner endpoint refuses remote or held-key access. Request text, credentials
+and raw usage do not enter its response. Existing /api/speeds and Sessions'
+120-second curves retain their original contract. See
+[session statistics](subsystems/gateway-sessions.md#workspace-throughput-intranet).
+
+For a native review, build a fresh timestamped portable folder, then run:
+
+```powershell
+./build/workspace-launch.ps1 -BuildPath D:\path\to\fresh-portable-folder
+$env:QA_RUNTIME = 'D:\path\to\fresh-portable-folder'
+node build/workspace-runtime.cjs
+```
+
+The launcher uses a private HOME/USERPROFILE/APPDATA/XDG inside that fresh folder,
+clears Agent folder overrides, and uses local gateway/web ports 19893/19894.
+The verifier requires Playwright and Chrome. It creates only synthetic providers
+and test Agent configurations, checks native group saves and loopback streamed
+output, and captures retained pages. Its qa-web-key.txt and redirected logs stay
+local: never upload them, data/, qa-home/ or the whole runtime folder. The original
+ZIP is created before verification and contains no QA configuration. Browser
+fixture checks use build/workspace-acceptance.cjs against extracted packed assets
+via WORKSPACE_ASSETS; those fixtures are never part of the packaged app.
+
+Rollback uses a retained, checksum-verified portable bundle in a separate folder.
+Close only the review process started from its recorded path/PID; do not stop a
+user's existing gateway. Back up the review data before selecting another bundle
+and keep data directories separate. The meter has no persistent migration to
+reverse. Reverting application code requires rebuilding the complete embedded
+asset bundle as well; replacing only workspace.js cannot update a packed EXE.
+The current evidence and known failing checks are recorded in
+[workspace verification](../openspec/changes/intranet-routing-workspace/verification.md).

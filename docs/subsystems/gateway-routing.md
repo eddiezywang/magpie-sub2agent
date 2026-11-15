@@ -1,5 +1,17 @@
 # Gateway routing and fallback
 
+The intranet workspace is a second host for the original routing visualization.
+Its quick choices use existing groups carrying plan/smart/thrifty/steady
+templateKind, applied through the native main-model writer to one explicitly
+selected, connected Agent. It creates no global routing policy and creates no
+groups automatically. Manual groups remain actual current values but are not
+offered as predefined shortcuts; group editing opens the original Groups page.
+Missing/unreadable Agent connection checks remove that Agent from targets.
+The internal save API rejects group references deleted or disabled after a read
+before modifying Agent configuration. UI/lifecycle and verification contracts
+are in [GUI app shell](gui-shell.md#intranet-workspace-composition); request-time
+group selection and fallback below retain their existing semantics.
+
 The Sub2Agent WorkBuddy provider has a compaction-only size fallback. A
 recognized MaaS compact request first runs on its original model. Only after
 413 does the gateway send the Agent's original summary prompt and complete
