@@ -95,3 +95,9 @@ Updated runtime verifier reads the observed snapshot explicitly after readiness;
 this script-only change is not application code and does not alter the package.
 Review screenshots were replaced with this actual native build, synthetic data
 only. Full settings allocation assertion remains a documented limitation above.
+
+Delivery completed through laptop -> personal iDisk -> KF. Both remote ZIPs
+match local SHA256 528235ce71006390fb7058fb7cc2c79c92906935d8a2b25410d8e5681b369df9.
+KF extracted all 54 manifest files and verified each hash. Executable:
+C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-034732\sub2agent-windows-x64-20261116-034732\sub2agent.exe
+KF was not auto-launched. Review site returned HTTP 200 after screenshot update.
