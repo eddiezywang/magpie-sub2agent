@@ -34,5 +34,11 @@ END { if (!done) exit 3 }
 	echo "footprint-overlay.sh: sysUnusedOS not found in $src" >&2
 	exit 1
 }
-printf '{"Replace":{"%s":"%s"}}\n' "$src" "$(cd "$dir" && pwd)/mem_darwin.go" > "$dir/overlay.json"
-echo "-overlay=$(cd "$dir" && pwd)/overlay.json"
+outdir=$(cd "$dir" && pwd)
+# Git Bash's pwd uses /tmp/... while the Windows Go executable needs a
+# drive-qualified path. Forward slashes also keep the paths valid in JSON.
+case "$(uname -s)" in
+	MINGW*|MSYS*|CYGWIN*) src=$(cygpath -m "$src"); outdir=$(cygpath -m "$outdir") ;;
+esac
+printf '{"Replace":{"%s":"%s"}}\n' "$src" "$outdir/mem_darwin.go" > "$dir/overlay.json"
+echo "-overlay=$outdir/overlay.json"
