@@ -509,3 +509,28 @@ fails identity/allocation assertions; restoring the UTC query date fails only
 the Shanghai cross-midnight case with zero counters. gofmt/diff checks passed.
 No application code or billing/aggregation policy changed. Remaining unrelated
 profile/Windows broad-suite failures still require explicit tracking.
+
+### Open broad-suite tracking (remote Issues disabled)
+
+Current representative GUI failures were rechecked at a5b15728b:
+TestBackupLibraryRoundTrip, TestProviderBilling and TestBootSaysBuiltinsOff
+fail because their fixtures expect intentionally omitted intranet modules or
+providers. Their output was not marked green. Existing remote issues were
+searched/read first (none); attempting to create a concrete issue returned
+HTTP 410. Repository API confirms has_issues=false. No remote issue exists and
+repository settings were not changed. The issue is instead recorded as Open
+in docs/issues/intranet-suite-contracts.md with causes, reproduction, remaining
+observer-disposal investigation and closure conditions. This is a committed
+in-repository issue, not a claim of remote filing or a waiver of failures.
+
+A separate deterministic Windows cleanup cause was fixed in the test only:
+TestGatewayHeldByAContainer hard-linked the running parent executable, which
+cannot be unlinked on Windows even after the child exits. It now uses the same
+Windows-copy condition already present in gateway_replace/takeover tests.
+The corrected test passed (8.909s); mutation/race verification follows below.
+No product behavior or delivered executable changed.
+
+Windows cleanup overlay restored the old hard-link path and failed exactly at
+TempDir RemoveAll with Access is denied (9.417s), confirming the test fix reaches
+the observed cause. Full accounting/settings packages also passed -race under
+intranet (4.101s/12.920s). No races were called flaky or suppressed.
