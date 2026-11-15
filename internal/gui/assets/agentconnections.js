@@ -3,6 +3,12 @@ let active=false,generation=0,snapshot=null,busy=false,failures=[],resultText=''
 const pending=new Set();
 window.agentConnectionBusy=id=>busy||pending.has(id);
 window.agentConnectionStatus=id=>snapshot?.[id]?.status;
+// Native row writes and the bulk queue share a gate: each returns a full state.
+window.agentConnectionAcquire=id=>{
+ if(busy||pending.size)return false;
+ pending.add(id);draw();
+ return ()=>{pending.delete(id);draw();};
+};
 const visible=()=>!document.getElementById('view-agents')?.hidden;
 export function leave(){active=false;snapshot=null;generation++;}
 export async function refresh(){leave();await enter();return t('Agents looked for again');}
@@ -14,7 +20,7 @@ function draw(){
  if(!bar){bar=document.createElement('div');bar.className='agent-bulk';page.prepend(bar);}
  bar.replaceChildren();
  const button=el('button','text','一键全部接入');const count=candidates().length;
- button.disabled=busy||!count;button.textContent+=`（${count}）`;button.onclick=()=>run(candidates());bar.append(button);
+ button.disabled=busy||pending.size>0||!count;button.textContent+=`（${count}）`;button.onclick=()=>run(candidates());bar.append(button);
  const result=el('span','agent-bulk-result');result.setAttribute('role','status');result.textContent=resultText;bar.append(result);
  if(failures.length){const retry=el('button','text','重试失败项');retry.disabled=busy;retry.onclick=()=>run(failures.map(x=>state.agents.find(a=>a.id===x.id)).filter(a=>a&&!a.wired));bar.append(retry);result.textContent=failures.map(x=>x.name+'：'+x.error).join('；');}
  for(const row of document.querySelectorAll('#agents .agent[data-id]')){
@@ -29,7 +35,7 @@ function draw(){
  }
 }
 async function run(list){
- if(busy)return;busy=true;failures=[];const visit=generation;let success=0,skipped=0;
+ if(busy||pending.size)return;busy=true;failures=[];const visit=generation;let success=0,skipped=0;
  draw();
  for(let i=0;i<list.length;i++){
   if(visit!==generation||!visible()){skipped+=list.length-i;break;}
@@ -48,7 +54,6 @@ async function run(list){
   try{const next=await api('state');if(finishVisit!==generation||!visible())return;state=next;renderAgents();}catch(err){if(finishVisit===generation)statusErr(err)}
   if(finishVisit!==generation||!visible())return;
   snapshot=null;active=false;await enter();draw();
-  draw();
  }
 }
 export async function enter(){

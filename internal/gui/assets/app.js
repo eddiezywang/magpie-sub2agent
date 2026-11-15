@@ -1837,6 +1837,8 @@ function askDisconnect(a) {
   go.onclick = async (e) => {
     e.stopPropagation();
     if (previewBlocked) return;
+    const release = window.agentConnectionAcquire?.(a.id);
+    if (release === false) return;
     go.disabled = true;
     go.classList.add("busy");
     try {
@@ -1859,7 +1861,7 @@ function askDisconnect(a) {
         return;
       }
       status(t(err.message), "err");
-    }
+    } finally { release?.(); }
   };
   const cancel = el("button", "text", t("Cancel"));
   cancel.onclick = cancelAsk;
@@ -5065,68 +5067,6 @@ function askLeave(a, field, value, opt) {
   openModal(ed);
   $("#modal").classList.add("lib");
   cancel.focus(NO_SCROLL);
-}
-
-// setPick writes a value picked for an agent's field
-async function setPick(agent, field, value, opt) {
-  // The pick shows at once: the row is drawn with it before magpie has
-  // written the config and answered with the whole state, which can take
-  // seconds (every agent's lists are read again for it). The answer then
-  // draws what the config really says; a refused pick puts the old one back.
-  const was = field.value;
-  if (agent.native) {
-    try { state = await api("set", { agent: agent.id, field: field.key, value }); renderAgents(); }
-    catch (err) {
-      if (err.code === "runtime_unavailable" && err.offline === "stage") {
-        const ed = el("div", "editor disconnect-ask");
-        ed.append(el("p", "lib-confirm", t("Aside is unavailable. Save this model for its next start?")));
-        const bar = el("div", "bar"), cancel = el("button", "text", t("Cancel")), save = el("button", "text primary", t("Save for next start"));
-        cancel.onclick = () => closeConfirmAsk();
-        save.onclick = async () => {
-          save.disabled = true;
-          try { state = await api("agents/stage/" + agent.id, { field: field.key, value }); closeConfirmAsk(); renderAgents(); }
-          catch (err) { save.disabled = false; status(t(err.message), "err"); }
-        };
-        bar.append(cancel, save); ed.append(bar); confirmAsk = ed; openModal(ed);
-        cancel.focus(NO_SCROLL);
-      } else status(t(err.message), "err");
-    }
-    return;
-  }
-  const leaving = leavesMagpie(agent, field, value, opt);
-  const seq = commit.seq = (commit.seq || 0) + 1;
-  field.value = value;
-  const picked = performance.now();
-  // the green flash runs on through the row drawn again with the answer
-  const flash = () => {
-    const b = document.querySelector(`.agent[data-id="${CSS.escape(agent.id)}"] .field[data-key="${grouped(agent, field) ? "tiers" : field.key}"]`);
-    const gone = performance.now() - picked;
-    if (!b || gone > 1200) return;
-    b.style.animationDelay = `${-gone}ms`;
-    b.classList.add("flash");
-  };
-  renderAgents();
-  flash();
-  try {
-    const next = await api("set", { agent: agent.id, field: field.key, value });
-    // a later pick is already on its way: its answer is the one to draw
-    if (seq !== commit.seq) return;
-    state = next;
-    renderAgents();
-    flash();
-    const shown = opt?.label || value;
-    if (state.notice) status(withNotice(`${agent.name} → ${shown}`, state.notice), "warn", 9000);
-    else if (leaving && value === "") status(t(agent.id === "reasonix" ? "{agent} no longer goes through magpie; its own settings are back" : "{agent} no longer goes through magpie · on its own default", { agent: agent.name }), "ok", 6000);
-    else if (opt?.direct) status(`${agent.name} ${t(field.label)} → ${shown} · ${t("straight to {vendor}, not through magpie", { vendor: opt.direct })}`, "ok", 6000);
-    else status(`${agent.name} ${t(field.label)} → ${shown}`, "ok");
-    if (providers) loadProviders();
-  } catch (e) {
-    if (seq === commit.seq && field.value === value) {
-      field.value = was;
-      renderAgents();
-    }
-    statusErr(e);
-  }
 }
 
 // popGhost leaves a likeness of the picker where it was, to fade and sink

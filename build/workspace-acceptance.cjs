@@ -9,9 +9,10 @@ async function fixture(page){
  .replace('agents,checks:{}','agents,checks:Object.fromEntries(agents.map(a=>[a.id,{status:a.wired?"configured":"not-configured",managed:a.wired}]))');
  await page.addInitScript(source);
  await page.addInitScript(()=>{
-  const original=window.fetch;window.qa={failed:false,delay:0,calls:[],unavailable:false};
+  const original=window.fetch;window.qa={failed:false,delay:0,calls:[],sets:0,unavailable:false};
   window.fetch=async(input,init={})=>{
    const url=new URL(String(input),location.href);
+   if(url.pathname==='/api/set')qa.sets++;
    if(url.pathname==='/api/gateway/throughput'){
     const points=Array.from({length:180},(_,i)=>Math.round(40+18*Math.sin(i/9)+8*Math.cos(i/4)));
     const total={current:42,peak:68,points};
@@ -80,5 +81,21 @@ async function test(browser,engine){
   assert.equal(await leaving.evaluate(()=>qa.calls.length),1);assert.doesNotMatch(await leaving.locator('.agent-bulk-result').innerText(),/接入中/);
   assert.deepEqual(leaving.errors,[]);console.log(`${engine}: leave stops remaining bulk writes and clears progress`);
  }finally{await leaving.close();}
+ const locking=await open(browser);
+ try{
+  await locking.locator('#ws-agents summary').click();await locking.getByRole('button',{name:'一键全部接入（8）'}).waitFor();
+  await locking.evaluate(()=>qa.delay=600);
+  await locking.locator('#agents .agent[data-id=claude] .ag-conn').click();
+  await locking.waitForFunction(()=>qa.calls.length===1);
+  assert.equal(await locking.locator('.agent-bulk button').first().isDisabled(),true);
+  await locking.waitForFunction(()=>!window.agentConnectionBusy('claude'));
+  await locking.getByRole('button',{name:'一键全部接入（7）'}).click();
+  await locking.waitForFunction(()=>qa.calls.length===2);
+  await locking.evaluate(()=>{const a=state.agents.find(a=>a.id==='pi');return setPick(a,a.fields[0],'group/steady',{ref:'group/steady',label:'稳定优先'})});
+  assert.equal(await locking.evaluate(()=>qa.sets),0);
+  await locking.getByText('已接入 7 · 失败 0 · 跳过 0',{exact:true}).waitFor();
+  assert.equal(await locking.evaluate(()=>qa.calls.length),8);assert.deepEqual(locking.errors,[]);
+  console.log(`${engine}: native row, bulk connection and model saves share write locks`);
+ }finally{await locking.close();}
 }
 (async()=>{await fs.mkdir(output,{recursive:true});for(const [name,type]of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(name==='chromium'?{channel:'chrome'}:{});try{await test(browser,name)}finally{await browser.close();}}})().catch(err=>{console.error(err);process.exitCode=1;});

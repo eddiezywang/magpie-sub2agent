@@ -1332,6 +1332,10 @@ active host and returns them on leave. There is one original DOM tree per
 surface, with shared state, provider drafts, picker and modal. The native Agent
 renderers now live in plugins/agents/page.js, loaded before app.js; they execute
 only once application state has initialized. This keeps the core budget intact.
+The Agent model save helper lives with those renderers too. Intranet row connect,
+disconnect, model save and staged save acquire the same write gate as the bulk
+queue, preventing full-state responses from concurrent operations overwriting
+each other. Upstream builds have no intranet gate.
 
 Agent connection diagnostics no longer append duplicate configured/not-configured
 rows. agentconnections.js supplies the shared Agent toolbar's bulk connection
@@ -1344,3 +1348,6 @@ Workspace routing choices bind a declared target Agent's primary model field
 through setPick; choices come from existing templateKind groups and use their
 real ref. There is no global routing-policy preference or automatic template
 creation. Existing independent pages and Sessions remain navigable.
+The workspace observes Agent state changes to refresh target eligibility and
+current model; superseded group reads cannot replace newer controls. Throughput
+polling starts with the active workspace, independently of group read latency.
