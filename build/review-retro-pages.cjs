@@ -67,6 +67,7 @@ const lang=process.env.LANG_CASE||'zh';
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
     assert.ok(!overflow,`${view} ${engine} ${theme} ${width}: horizontal overflow`);
     assert.deepEqual(errors,[],`${view} ${engine} ${theme} ${width}: page errors`);
+    assert.doesNotMatch(await page.locator("body").innerText(), /\bmagpie\b/i, `${view} ${engine} ${theme} ${width}: old brand visible`);
     await page.screenshot({path:path.join(output,`${view}-${engine}-${lang}-${theme}-${width}.png`),fullPage:true});
     shots++;
     await page.close();

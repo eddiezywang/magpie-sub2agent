@@ -45,6 +45,16 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.locator('.row.agent[data-id="codex"]').waitFor();
   await page.waitForTimeout(400); // the header's delayed animation used to assume a bird
   assert.equal(await page.title(), 'Sub2Agent');
+  await t.test('product labels use the Sub2Agent name without rewriting paths', async () => {
+    const got = await page.evaluate(() => ({
+      brand: brandText('Magpie connects magpie'),
+      legacy: brandText('Sub2Agent Magpie'),
+      notice: tNotice('magpie could not connect'),
+      path: brandText('C:/users/test/magpie/config.json'),
+      command: brandText('magpie.cmd'),
+    }));
+    assert.deepEqual(got, {brand:'Sub2Agent connects Sub2Agent',legacy:'Sub2Agent',notice:'Sub2Agent could not connect',path:'C:/users/test/magpie/config.json',command:'sub2agent.cmd'});
+  });
   assert.equal(await page.locator('#view-library').count(), 0);
   assert.equal(await page.locator('#view-sessions').count(), 1);
   assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true);

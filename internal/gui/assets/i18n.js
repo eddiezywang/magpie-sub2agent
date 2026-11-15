@@ -20826,7 +20826,7 @@ function dateFmt(opts) {
 
 function brandText(s) {
   return window.bootPrefs?.intranet && typeof s === "string"
-    ? s.replace(/sub2agent[- ]magpie/gi, "sub2agent").replace(/sub2agent/gi, "sub2agent").replace(/(?<![\w./\\:{-])magpie\.(cmd|com)(?![\w./\\:}-])/gi, "sub2agent.$1").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "sub2agent").replace(/\bmagpies\b/gi, "sub2agent") : s;
+    ? s.replace(/sub2agent[- ]magpie/gi, "Sub2Agent").replace(/(?<![\w./\\:{-])magpie\.(cmd|com)(?![\w./\\:}-])/gi, "sub2agent.$1").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "Sub2Agent").replace(/\bmagpies\b/gi, "Sub2Agent") : s;
 }
 function t(s, vars) {
   let out = I18N[locale]?.[s] ?? s;
@@ -20842,8 +20842,8 @@ function t(s, vars) {
 // advice) reads as given.
 let noticeRes;
 function tNotice(s) {
-  if (!s || !I18N[locale]) return s;
-  if (I18N[locale][s]) return I18N[locale][s];
+  if (!s || !I18N[locale]) return brandText(s);
+  if (I18N[locale][s]) return brandText(I18N[locale][s]);
   noticeRes ??= NOTICES.map((en) => {
     const parts = en.split(/\{(\w+)\}/), names = [];
     let re = "";
@@ -20863,7 +20863,7 @@ function tNotice(s) {
       const m = n.re.exec(rest);
       if (m && (!hit || m[0].length > hit.m[0].length || (m[0].length === hit.m[0].length && n.fixed > hit.n.fixed))) hit = { n, m };
     }
-    if (!hit) return s;
+    if (!hit) return brandText(s);
     const vars = {};
     hit.n.names.forEach((k, i) => (vars[k] ??= hit.m[i + 1]));
     out.push(t(hit.n.en, vars));
