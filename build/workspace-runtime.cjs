@@ -82,7 +82,7 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
    await page.screenshot({path:path.join(output,'runtime-group-disabled.png'),animations:'disabled'});
   }finally{
    await page.evaluate(async id=>{const r=await api('groups/switch',{id,on:true});if(r.error)throw Error(r.error);magpie.call('workspace','render')},routing.id);
-   await page.waitForFunction(ref=>!document.querySelector(`[data-ws-focus="${ref}"]`)?.disabled,routing.ref);
+   await page.waitForFunction(ref=>{const choice=document.querySelector(`[data-ws-focus="${ref}"]`);return choice&&!choice.disabled},routing.ref);
   }
   const retained=['workspace','agents','providers','routing','groups','gateway','sessions','usage','plugins','settings'];
   for(const target of retained){

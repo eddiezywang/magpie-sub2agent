@@ -534,3 +534,28 @@ Windows cleanup overlay restored the old hard-link path and failed exactly at
 TempDir RemoveAll with Access is denied (9.417s), confirming the test fix reaches
 the observed cause. Full accounting/settings packages also passed -race under
 intranet (4.101s/12.920s). No races were called flaky or suppressed.
+
+### Final workspace delivery audit
+
+Completed acceptance-audit.md with every numbered plan task mapped to its
+implementation and observed checks, delivered package identity, runtime state,
+review artifacts and limitations. Task 5.5's related Go/GUI/packed/isolation/
+upstream scope is now evidenced; no all-repository green claim is made.
+The broader test-profile/lifecycle issue remains Open in its own document.
+GitHub Issues is disabled (HTTP 410), so tracking is explicitly local to Git.
+
+Added a positive upstream GUI endpoint-absence assertion alongside the existing
+intranet owner checks. GUI/gateway checks passed upstream (1.510s/0.364s) and
+production-packed-intranet (1.301s/0.398s). The actual upstream asset pack index
+was byte-identical to the source and loaded no workspace JS/CSS. The actual
+intranet build archive's four workspace files had no preview-fixture or iframe
+dependency. Strengthened actual runtime reenable wait to require the choice to
+exist as well as be enabled, then reran the ten-page/real-loopback runtime
+successfully. Product code remains bfc068858; subsequent changes are test/docs.
+
+Review root now points to 070219, preserving the older index under a separate
+name. HTTP 200 verified for the root HTML and all 14 referenced images.
+Local isolated process 27908 was confirmed to run the 070219 EXE; current ZIP
+SHA256 remains 98c532448e43a5dc4477d3fd5a1abd2976bc21310462aa059083ac82fcf7341e.
+Work is delivered for user review, not recorded as user-approved visuals or
+real enterprise-account production acceptance.

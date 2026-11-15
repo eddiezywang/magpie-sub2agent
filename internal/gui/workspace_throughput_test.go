@@ -14,7 +14,14 @@ import (
 
 func TestWorkspaceThroughputOwnerAndUnavailable(t *testing.T) {
 	if !distribution.Internal {
-		t.Skip("internal endpoint")
+		mux := http.NewServeMux()
+		workspaceThroughputRoutes(mux)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/gateway/throughput", nil))
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("upstream registered workspace throughput: %d", w.Code)
+		}
+		return
 	}
 	served.Store(nil)
 	owner := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
