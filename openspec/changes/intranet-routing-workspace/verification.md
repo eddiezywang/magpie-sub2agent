@@ -369,3 +369,23 @@ C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-062343\sub2agent-windo
 Previous packages were retained; KF application was not auto-started.
 This delivery does not close the separately recorded full-suite failures
 or the remaining broader workspace acceptance tasks.
+
+### Retained Gateway, Usage and internal Settings operations
+
+The native gateway-caller-keys suite now accepts the same opt-in
+MAGPIE_ASSETS/MAGPIE_INTRANET_TEST profile used by retained Sessions tests.
+Internal settings navigation uses the flat page; upstream retains its network
+tab. LAN rows are selected by their synthetic identity rather than branding.
+All four Chromium/WebKit x en/zh cases passed against production-packed
+intranet assets, and the same four passed against default upstream assets.
+They cover key create/copy/disable/enable/rename, usage key filtering/export,
+LAN enable/copy/rotation cancel+confirm/recreation, confirmed removal and
+560px overflow. Fixtures use fake credentials only; none were published.
+New build/workspace-settings-acceptance.cjs passed Chromium and WebKit:
+invalid port never posts, failed save retains its editable draft, retry saves,
+lightweight writes preserve an unrelated preference, and returning from
+Sessions rereads the saved port. Backend settings persistence is synthetic
+in this test; real packaged runtime checks remain separately recorded above.
+Node syntax checks passed for all three changed scripts. This step changes
+only test infrastructure and evidence; the KF-delivered f15ef0851 application
+remains the current product binary. Remaining broad acceptance gates stay open.

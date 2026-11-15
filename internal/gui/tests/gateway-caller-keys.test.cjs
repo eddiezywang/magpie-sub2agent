@@ -5,6 +5,7 @@ const { test } = require("node:test");
 const { chromium, webkit } = require("playwright");
 const { fixture, keyAction, confirmKeyAction } = require("./fixtures/caller-keys.cjs");
 const { openPart } = require("./reader.cjs");
+const intranet = process.env.MAGPIE_INTRANET_TEST === "1";
 
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
   for (const lang of ["en", "zh"]) {
@@ -73,7 +74,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       assert(events.some((e) => e.action === "export" && e.query.includes("callerKey=laptop") && !e.query.includes("key=") && !e.query.includes("user=")));
       await page.reload();
       await page.locator("#prefs").click();
-      await openPart(page, "network");
+      if (!intranet) await openPart(page, "network");
       const share = page.locator("#lanList").getByRole("button", { name: lang === "zh" ? "开启" : "On", exact: true });
       await share.waitFor();
       // Real wheel input lets the page remember the reader's scroll position.
@@ -86,7 +87,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
         "Settings does not duplicate key management");
       await page.locator("#nav").getByRole("button", { name: lang === "zh" ? "网关" : "Gateway", exact: true }).click();
       await page.waitForFunction(() => document.querySelectorAll("#gatewayKeys .acc[data-key]").length === 5);
-      let lanRow = page.locator("#gatewayKeys .acc[data-key]", { has: page.locator(".rename", { hasText: /^Magpie$/ }) });
+      let lanRow = page.locator('#gatewayKeys .acc[data-key^="lan-key-"]');
       const lanID = await lanRow.getAttribute("data-key");
       const before = await lanRow.locator(".plan").textContent();
       await lanRow.getByRole("button", { name: w.copy, exact: true }).click();
@@ -119,7 +120,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       await page.mouse.move(500, 400);
       await page.mouse.wheel(0, -2000);
       await page.waitForFunction(() => document.querySelector("#view-settings").scrollTop === 0);
-      await openPart(page, "network");
+      if (!intranet) await openPart(page, "network");
       await page.locator("#lanList .lan-address-row").waitFor();
       await page.locator("#lanList").getByRole("button", { name: lang === "zh" ? "关闭" : "Off", exact: true }).click();
       await page.locator("#lanList .lan-address-row").waitFor({ state: "detached" });
@@ -127,7 +128,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       await page.locator("#lanList .lan-address-row").waitFor();
       await page.locator("#nav").getByRole("button", { name: lang === "zh" ? "网关" : "Gateway", exact: true }).click();
       await page.waitForFunction(() => document.querySelectorAll("#gatewayKeys .acc[data-key]").length === 5);
-      lanRow = page.locator("#gatewayKeys .acc[data-key]", { has: page.locator(".rename", { hasText: /^Magpie$/ }) });
+      lanRow = page.locator('#gatewayKeys .acc[data-key^="lan-key-"]');
       assert.notEqual(await lanRow.getAttribute("data-key"), lanID, "recreated LAN key appears without a page reload");
       assert.equal(await page.locator(`#gatewayKeys .acc[data-key="${lanID}"]`).count(), 0);
       tablet = page.locator("#gatewayKeys .acc[data-key]", { hasText: "Travel" });

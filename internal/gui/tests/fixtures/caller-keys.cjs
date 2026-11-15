@@ -1,6 +1,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const assets = path.resolve(__dirname, "../../assets");
+const assets = path.resolve(process.env.MAGPIE_ASSETS || path.join(__dirname, "../../assets"));
+const intranet = process.env.MAGPIE_INTRANET_TEST === "1";
 
 const sum = (rows) => ({
   calls: rows.length, errors: rows.filter((r) => r.status >= 400).length,
@@ -72,7 +73,7 @@ function fixture(lang, theme, events, options = {}) {
   return async (route) => {
     const req = route.request(), url = new URL(req.url());
     const json = (data) => route.fulfill({ json: data });
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = ${JSON.stringify({ lang, theme, web: !!options.web,
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = ${JSON.stringify({ intranet, lang, theme, web: !!options.web,
       // with options.publicURL or options.bootGateway, where this process's
       // gateway listens, as magpie's boot.js says it, and while shared the
       // addresses other machines use, MAGPIE_PUBLIC_URL with them
