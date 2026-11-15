@@ -110,6 +110,7 @@ body.side-nav #nav.seg { border:0; background:transparent; }
 #providers > .row.provider .name, #offProviders > .row.provider .name { font-size:14px; font-weight:650; }
 #providers > .row.provider .sub, #offProviders > .row.provider .sub { font-size:12px; }
 #view-providers .pv-head { margin-top:12px; margin-bottom:18px; }
+#view-providers > .provider-discovery:not(.compact) { margin-top:16px; }
 #view-providers .pv-q { flex-basis:320px; }
 #addProvider { background:var(--accent); color:var(--accent-fg); border:2px solid var(--retro-ink); border-radius:4px; padding:8px 14px; box-shadow:var(--shadow); }
 #addProvider:hover { filter:brightness(.94); }
