@@ -4,6 +4,7 @@ package gui
 
 import (
 	"cmp"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"os"
 	"runtime"
@@ -43,7 +44,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 	winOpts, winBg := windowChrome(cmp.Or(os.Getenv("MAGPIE_THEME"), settings.Load().Theme))
 	w := h.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:             "main",
-		Title:            "magpie",
+		Title:            distribution.Name,
 		URL:              url,
 		Width:            width,
 		Height:           height,
@@ -51,6 +52,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 		MinHeight:        minH,
 		Zoom:             z,
 		Hidden:           true,
+		Frameless:        retroMainFrameEnabled(),
 		StartState:       state,
 		Mac:              mainMacWindow(),
 		Windows:          winOpts,
@@ -58,7 +60,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 	})
 	h.zoomWhenLoaded(w)
 	lowWhileHidden(w)
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && !retroMainFrameEnabled() {
 		w.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) { w.ExecJS(frameOnlyResizeJS) })
 	}
 	// A resize is kept once it settles (settle): the size, or that the

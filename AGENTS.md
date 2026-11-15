@@ -1,5 +1,20 @@
 # Notes for coding agents
 
+## Internal fork workflow
+
+- Commit and push proactively after each independently verified development
+  step, before beginning the next step. Record what was verified and any
+  remaining limitations in the commit message. If pushing fails, report it
+  explicitly and retry; never describe a local-only commit as pushed.
+- Develop the Sub2Agent distribution on `develop/intranet`; retain Magpie's
+  provider management interactions while integrating Sub2Agent authentication.
+- Validate every retained page and capture milestone screenshots for the user's
+  review site at http://124.220.199.224:8805/. Never publish credentials, tokens,
+  authentication callbacks or screenshots showing unmasked secrets.
+- Keep the original apps' credentials and data separate from this distribution.
+- Use Playwright for page verification and screenshots; do not use computer-use
+  for screenshots. Retain the Sessions page in the intranet distribution.
+
 ## Subsystem design and review
 
 Before changing a documented subsystem, read its

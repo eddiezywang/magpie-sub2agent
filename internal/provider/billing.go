@@ -62,6 +62,9 @@ func (p Provider) BillingKind() string {
 	if p.Billing != "" {
 		return p.Billing
 	}
+	if p.isCodingPlan() {
+		return BillingPlan
+	}
 	if p.Account != nil {
 		return BillingPlan
 	}

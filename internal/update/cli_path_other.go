@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/proc"
 )
 
@@ -66,7 +67,7 @@ func cliDir(exe string, dirs []string, cmd string) string {
 
 // cliPlace links exe as magpie in dir, over what is there.
 func cliPlace(exe, dir string) error {
-	dst := filepath.Join(dir, "magpie")
+	dst := filepath.Join(dir, distribution.Name)
 	if sameFile(dst, exe) {
 		return nil
 	}

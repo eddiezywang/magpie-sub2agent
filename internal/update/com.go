@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 // The Windows app is linked as a GUI program, so a double click opens no
@@ -35,7 +37,7 @@ import (
 const ComEnv = "MAGPIE_COM"
 
 // comName is the companion's file name; it runs as `magpie`.
-const comName = "magpie.com"
+const comName = distribution.Name + ".com"
 
 // comMagic ends magpie.com; the app it runs is named just before it,
 // after a NUL (launcher's targetName).
@@ -92,10 +94,10 @@ func comRuns(cmd, exe string) bool {
 // should run: a magpie.exe there is what `magpie` ran before, so another
 // copy beside it (magpie-windows-amd64 (1).exe) leaves it be.
 func comOwner(exe string) bool {
-	if strings.EqualFold(filepath.Base(exe), "magpie.exe") {
+	if strings.EqualFold(filepath.Base(exe), distribution.Name+".exe") {
 		return true
 	}
-	st, err := os.Stat(filepath.Join(filepath.Dir(exe), "magpie.exe"))
+	st, err := os.Stat(filepath.Join(filepath.Dir(exe), distribution.Name+".exe"))
 	return err != nil || st.IsDir()
 }
 

@@ -34,6 +34,29 @@ func chatToResponses(t *testing.T, chunks ...string) []map[string]any {
 	return out
 }
 
+// WorkBuddy's fallback may append a usage-only chunk after finish_reason.
+// Responses clients still need those counters on the completed response.
+func TestChatTranslationKeepsUsageAfterFinish(t *testing.T) {
+	out := chatToResponses(t,
+		`{"id":"x","choices":[{"index":0,"delta":{"content":"Hello"}}]}`,
+		`{"id":"x","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}`,
+		`{"id":"x","choices":[],"usage":{"prompt_tokens":1234,"completion_tokens":17,"total_tokens":1251},"usage_source":"estimated"}`,
+	)
+	for _, ev := range out {
+		if ev["type"] != "response.completed" {
+			continue
+		}
+		usage := ev["response"].(map[string]any)["usage"].(map[string]any)
+		for field, want := range map[string]float64{"input_tokens": 1234, "output_tokens": 17, "total_tokens": 1251} {
+			if usage[field] != want {
+				t.Fatalf("completed response usage = %v; want %s=%v", usage, field, want)
+			}
+		}
+		return
+	}
+	t.Fatal("no completed response")
+}
+
 // The translated reply has just one choice. Interleaved choices must not
 // mix text, thinking, tool calls, or a finish reason into the first choice.
 func TestChatTranslationKeepsFirstChoice(t *testing.T) {

@@ -1,6 +1,7 @@
 package appdir
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -127,10 +128,10 @@ func TestFolders(t *testing.T) {
 	t.Cleanup(func() { UseExecutable("") })
 
 	UseExecutable("")
-	if Portable() != "" || Config() != filepath.Join(r, "cfg", "magpie") || Cache() != filepath.Join(r, "cache", "magpie") {
+	if Portable() != "" || Config() != filepath.Join(r, "cfg", distribution.DataDir) || Cache() != filepath.Join(r, "cache", distribution.DataDir) {
 		t.Errorf("installed: portable %q, config %q, cache %q", Portable(), Config(), Cache())
 	}
-	if d, _ := SystemCache(); filepath.Base(d) != "magpie" {
+	if d, _ := SystemCache(); filepath.Base(d) != distribution.DataDir {
 		t.Errorf("installed system cache %q", d)
 	}
 
@@ -196,7 +197,7 @@ func TestResolveSharedFolder(t *testing.T) {
 		t.Errorf("nothing installed: Passed %q", got)
 	}
 	// installed magpie has its files: the data folder isn't taken
-	touch(t, filepath.Join(r, "cfg", "magpie", "providers.json"))
+	touch(t, filepath.Join(r, "cfg", distribution.DataDir, "providers.json"))
 	if got := Resolve(exe); got != "" {
 		t.Errorf("installed has files: %q, want installed", got)
 	}
@@ -205,7 +206,7 @@ func TestResolveSharedFolder(t *testing.T) {
 	}
 	t.Cleanup(func() { UseExecutable("") })
 	UseExecutable(exe)
-	if Config() != filepath.Join(r, "cfg", "magpie") {
+	if Config() != filepath.Join(r, "cfg", distribution.DataDir) {
 		t.Errorf("Config %q, want the installed folder", Config())
 	}
 	// asked for with .portable: portable
@@ -248,7 +249,7 @@ func TestResolveDownloads(t *testing.T) {
 	if got := Resolve(exe); got != data {
 		t.Errorf("portable run before: %q, want %q", got, data)
 	}
-	touch(t, filepath.Join(h, ".config", "magpie", "logins.json"))
+	touch(t, filepath.Join(h, ".config", distribution.DataDir, "logins.json"))
 	if got := Resolve(exe); got != "" {
 		t.Errorf("installed has files: %q, want installed", got)
 	}

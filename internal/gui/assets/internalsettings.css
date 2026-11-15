@@ -1,0 +1,18 @@
+.internal-settings { margin-top: 4px; }
+.internal-settings > .row { padding: 20px; gap: 24px; align-items: flex-start; }
+.internal-settings > .row > .who { min-width: 180px; flex: 1; }
+.internal-settings > .row > .val { flex-wrap: wrap; justify-content: flex-end; min-width: 0; max-width: 65%; }
+.internal-settings .gateway-port { width: 76px; flex: none; }
+.internal-settings .settings-path { white-space: normal; overflow-wrap: anywhere; }
+.internal-settings [data-setting=remote] { flex-wrap: wrap; }
+.internal-settings #remoteList { width: 100%; margin: 0; border: 0; }
+.internal-settings #remoteList .row { padding: 10px 0; }
+.internal-settings #remoteList .val { flex-wrap: wrap; min-width: 0; }
+.internal-settings #remoteList input { min-width: 0; max-width: 100%; }
+.internal-settings .cli-shells { margin-top: 8px; }
+@media (max-width: 640px) {
+  .internal-settings > .row { padding: 16px; gap: 10px; flex-wrap: wrap; }
+  .internal-settings > .row > .who { flex-basis: 100%; }
+  .internal-settings > .row > .val { max-width: 100%; justify-content: flex-start; }
+  .internal-settings #remoteList .row { flex-wrap: wrap; gap: 8px; }
+}

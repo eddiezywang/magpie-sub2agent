@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sub2Agent Magpie · 供应商管理（视觉原型·演示）</title>
+<style>
+:root{
+  --paper:#f6f2e9;
+  --paper-2:#efe9db;
+  --card:#fffdf7;
+  --ink:#1f1c17;
+  --ink-2:#5c564a;
+  --ink-3:#8f8778;
+  --line:#1f1c17;
+  --blue:#3d6bff;
+  --blue-soft:#e3ebff;
+  --orange:#ff8a3d;
+  --orange-soft:#ffe9d8;
+  --red:#e5484d;
+  --red-soft:#ffe3e3;
+  --shadow:4px 4px 0 var(--line);
+  --shadow-sm:3px 3px 0 var(--line);
+  --radius:6px;
+  --mono:"Courier New",ui-monospace,SFMono-Regular,monospace;
+  --sans:"Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{
+  font-family:var(--sans);
+  background:var(--paper);
+  color:var(--ink);
+  min-height:100vh;
+  /* 像素网点底纹 */
+  background-image:
+    radial-gradient(var(--paper-2) 1.5px, transparent 1.5px);
+  background-size:14px 14px;
+}
+/* ===== 顶栏 ===== */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;gap:14px;
+  padding:10px 18px;
+  background:var(--card);
+  border-bottom:3px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-name{font-weight:800;letter-spacing:1px;font-size:1.05rem}
+.brand-name .s{color:var(--blue)}
+.brand-sub{font-size:.7rem;color:var(--ink-3);font-family:var(--mono)}
+.demo-chip{
+  margin-left:auto;
+  font-family:var(--mono);font-size:.72rem;
+  background:var(--orange-soft);color:#9c4a00;
+  border:2px solid var(--line);border-radius:999px;
+  padding:4px 12px;box-shadow:var(--shadow-sm);
+  transform:rotate(-1deg);
+}
+/* ===== 布局 ===== */
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:calc(100vh - 53px)}
+/* ===== 侧栏 ===== */
+.sidebar{
+  background:var(--card);
+  border-right:3px solid var(--line);
+  padding:18px 14px;display:flex;flex-direction:column;gap:6px;
+}
+.nav-title{
+  font-family:var(--mono);font-size:.68rem;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:2px;margin:10px 6px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:var(--radius);
+  border:2px solid transparent;
+  font-size:.9rem;color:var(--ink-2);cursor:pointer;
+  background:none;text-align:left;width:100%;
+  font-family:var(--sans);
+}
+.nav-item:hover{border-color:var(--line);background:var(--paper)}
+.nav-item[aria-current="page"]{
+  border-color:var(--line);background:var(--blue-soft);
+  color:var(--ink);font-weight:700;box-shadow:var(--shadow-sm);
+}
+.nav-item .ico{font-size:1rem;width:20px;text-align:center}
+.nav-item .badge{
+  margin-left:auto;font-family:var(--mono);font-size:.65rem;
+  background:var(--ink);color:var(--paper);border-radius:4px;padding:2px 6px;
+}
+.sidebar-foot{
+  margin-top:auto;padding-top:14px;border-top:2px dashed var(--line);
+  font-size:.72rem;color:var(--ink-3);line-height:1.7;font-family:var(--mono);
+}
+/* ===== 主区 ===== */
+.main{padding:26px 30px 60px;max-width:1180px;width:100%;margin:0 auto}
+.page-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;margin-bottom:22px}
+h1{font-size:1.7rem;letter-spacing:1px}
+h1 .pix{color:var(--blue)}
+.page-desc{color:var(--ink-2);font-size:.86rem;margin-top:6px}
+.head-actions{margin-left:auto;display:flex;gap:10px}
+/* ===== 按钮 ===== */
+.btn{
+  font-family:var(--sans);font-weight:700;font-size:.88rem;
+  border:2px solid var(--line);border-radius:var(--radius);
+  background:var(--card);color:var(--ink);
+  padding:9px 16px;cursor:pointer;box-shadow:var(--shadow-sm);
+  transition:transform .05s, box-shadow .05s;
+}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--line)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
+.btn:focus-visible,.nav-item:focus-visible,.acct:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-ghost{box-shadow:none;background:transparent}
+/* ===== 统计条 ===== */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat{
+  background:var(--card);border:2px solid var(--line);border-radius:var(--radius);
+  padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.stat::after{
+  content:"";position:absolute;right:-6px;top:-6px;width:22px;height:22px;
+  background:
+    linear-gradient(45deg,transparent 50%,var(--line) 50%);
+}
+.stat-label{font-size:.72rem;color:var(--ink-3);font-family:var(--mono);letter-spacing:1px}
+.stat-value{font-size:1.6rem;font-weight:800;margin-top:4px}
+.stat-value small{font-size:.8rem;font-weight:400;color:var(--ink-3)}
+.stat.blue .stat-value{color:var(--blue)}
+.stat.orange .stat-value{color:#c25a00}
+/* ===== 工具行 ===== */
+.toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px}
+.search{
+  flex:1;min-width:220px;display:flex;align-items:center;gap:8px;
+  background:var(--card);border:2px solid var(--line);border-radius:var(--radius);
+  padding:9px 14px;box-shadow:var(--shadow-sm);
+}
+.search input{
+  border:none;background:none;font:inherit;width:100%;color:var(--ink);
+}
+.search input:focus{outline:none}
+.filter{
+  font-family:var(--mono);font-size:.78rem;border:2px solid var(--line);
+  background:var(--card);border-radius:var(--radius);padding:8px 12px;cursor:pointer;
+  box-shadow:var(--shadow-sm);
+}
+/* ===== 供应商卡片 ===== */
+.section-title{
+  display:flex;align-items:center;gap:10px;margin:26px 0 14px;
+  font-family:var(--mono);font-size:.8rem;letter-spacing:2px;color:var(--ink-2);
+}
+.section-title::after{content:"";flex:1;border-top:2px dashed var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+.provider{
+  background:var(--card);border:2px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);display:flex;flex-direction:column;
+}
+.provider-head{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;
+  border-bottom:2px solid var(--line);
+  background:linear-gradient(0deg,transparent,transparent);
+}
+.logo{
+  width:44px;height:44px;flex:none;display:grid;place-items:center;
+  border:2px solid var(--line);border-radius:var(--radius);
+  font-weight:800;font-size:1.1rem;image-rendering:pixelated;
+}
+.p-name{font-weight:800;font-size:1rem}
+.p-meta{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);margin-top:2px}
+.status{
+  margin-left:auto;display:flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:.7rem;font-weight:700;
+  border:2px solid var(--line);border-radius:999px;padding:3px 10px;
+}
+.dot{width:8px;height:8px;flex:none;image-rendering:pixelated}
+.dot.ok{background:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+.dot.warn{background:var(--orange);box-shadow:0 0 0 2px var(--orange-soft)}
+.dot.err{background:var(--red);box-shadow:0 0 0 2px var(--red-soft)}
+.st-ok{background:var(--blue-soft)}
+.st-warn{background:var(--orange-soft)}
+.st-err{background:var(--red-soft)}
+.accts{padding:8px 10px;flex:1}
+.acct{
+  width:100%;display:flex;align-items:center;gap:10px;
+  background:none;border:none;border-radius:var(--radius);
+  padding:9px 10px;cursor:pointer;font:inherit;text-align:left;color:var(--ink);
+}
+.acct:hover{background:var(--paper)}
+.acct + .acct{border-top:2px dotted var(--paper-2)}
+.acct-name{font-size:.86rem;font-weight:700}
+.acct-sub{font-family:var(--mono);font-size:.68rem;color:var(--ink-3);margin-top:2px}
+.acct-right{margin-left:auto;text-align:right}
+.tok{font-family:var(--mono);font-size:.72rem;font-weight:700}
+.tok-bar{
+  width:72px;height:8px;margin-top:4px;border:2px solid var(--line);
+  background:var(--paper);border-radius:2px;overflow:hidden;
+}
+.tok-bar i{display:block;height:100%;background:var(--blue)}
+.tok-bar.hot i{background:var(--orange)}
+.p-foot{
+  display:flex;gap:8px;padding:10px 12px;border-top:2px solid var(--line);
+  background:var(--paper);
+}
+.p-foot .btn{font-size:.76rem;padding:6px 10px;box-shadow:2px 2px 0 var(--line)}
+.add-tile{
+  border:2px dashed var(--line);border-radius:var(--radius);
+  background:transparent;display:flex;flex-direction:column;gap:8px;
+  align-items:center;justify-content:center;min-height:180px;cursor:pointer;
+  font:inherit;color:var(--ink-2);
+}
+.add-tile:hover{background:var(--card);color:var(--ink);border-style:solid}
+.add-tile .plus{font-size:1.8rem;font-weight:800;color:var(--blue)}
+/* ===== 弹窗 ===== */
+dialog{
+  border:3px solid var(--line);border-radius:var(--radius);
+  box-shadow:6px 6px 0 var(--line);
+  background:var(--card);color:var(--ink);
+  padding:0;width:min(440px,92vw);
+}
+dialog::backdrop{background:rgba(31,28,23,.45);image-rendering:pixelated}
+.dlg-head{
+  display:flex;align-items:center;padding:14px 18px;
+  border-bottom:2px solid var(--line);background:var(--blue-soft);
+}
+.dlg-head h2{font-size:1.05rem}
+.dlg-close{
+  margin-left:auto;border:2px solid var(--line);background:var(--card);
+  border-radius:var(--radius);width:28px;height:28px;font-weight:800;cursor:pointer;
+}
+.dlg-body{padding:18px;display:flex;flex-direction:column;gap:14px}
+.field label{display:block;font-size:.78rem;font-weight:700;margin-bottom:6px}
+.field input,.field select{
+  width:100%;font:inherit;border:2px solid var(--line);border-radius:var(--radius);
+  padding:9px 12px;background:var(--paper);color:var(--ink);
+}
+.dlg-hint{font-family:var(--mono);font-size:.7rem;color:var(--ink-3)}
+.dlg-foot{display:flex;gap:10px;justify-content:flex-end;padding:14px 18px;border-top:2px solid var(--line);background:var(--paper)}
+/* ===== toast ===== */
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:.8rem;
+  border:2px solid var(--line);border-radius:var(--radius);
+  padding:10px 18px;opacity:0;pointer-events:none;transition:.2s;z-index:99;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ===== 窄屏 ===== */
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{
+    flex-direction:row;align-items:center;overflow-x:auto;
+    border-right:none;border-bottom:3px solid var(--line);padding:10px 14px;gap:8px;
+  }
+  .nav-title,.sidebar-foot{display:none}
+  .nav-item{width:auto;white-space:nowrap;padding:7px 12px}
+  .nav-item[aria-current="page"]{box-shadow:none}
+  .main{padding:18px 16px 50px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .head-actions{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- 像素 S 品牌（源自 build/pixel-icons/custom.py 风格重绘） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="px-s" viewBox="0 0 12 12" shape-rendering="crispEdges">
+    <rect x="2" y="1" width="8" height="2" fill="currentColor"/>
+    <rect x="1" y="3" width="4" height="2" fill="currentColor"/>
+    <rect x="4" y="5" width="4" height="2" fill="currentColor"/>
+    <rect x="7" y="7" width="4" height="2" fill="currentColor"/>
+    <rect x="2" y="9" width="8" height="2" fill="currentColor"/>
+  </symbol>
+  <symbol id="px-bird" viewBox="0 0 12 12" shape-rendering="crispEdges">
+    <rect x="7" y="2" width="2" height="2" fill="currentColor"/>
+    <rect x="5" y="3" width="3" height="2" fill="currentColor"/>
+    <rect x="3" y="4" width="4" height="3" fill="currentColor"/>
+    <rect x="2" y="6" width="5" height="2" fill="currentColor"/>
+    <rect x="3" y="8" width="2" height="2" fill="currentColor"/>
+    <rect x="5" y="8" width="1" height="1" fill="currentColor"/>
+    <rect x="9" y="5" width="2" height="1" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="26" height="26" style="color:var(--ink)" aria-hidden="true"><use href="#px-bird"/></svg>
+    <div>
+      <div class="brand-name">Sub2Agent <span class="s">Magpie</span></div>
+      <div class="brand-sub">LOCAL GATEWAY · v0.4.2-DEMO</div>
+    </div>
+  </div>
+  <span class="demo-chip">视觉原型 · 数据均为虚构演示</span>
+</header>
+
+<div class="shell">
+  <nav class="sidebar" aria-label="主导航">
+    <div class="nav-title">工作台</div>
+    <button class="nav-item"><span class="ico">▦</span>仪表盘</button>
+    <button class="nav-item" aria-current="page"><span class="ico">⚡</span>供应商<span class="badge">4</span></button>
+    <button class="nav-item"><span class="ico">▶</span>Agent</button>
+    <button class="nav-item"><span class="ico">◈</span>会话 Sessions<span class="badge">12</span></button>
+    <div class="nav-title">系统</div>
+    <button class="nav-item"><span class="ico">▤</span>使用情况</button>
+    <button class="nav-item"><span class="ico">⊞</span>插件</button>
+    <button class="nav-item"><span class="ico">⚙</span>设置</button>
+    <div class="sidebar-foot">
+      所有账户、密钥与用量数据<br>均为虚构示例，仅用于视觉演示。
+    </div>
+  </nav>
+
+  <main class="main" id="main">
+    <div class="page-head">
+      <div>
+        <h1>供应商<span class="pix">管理</span></h1>
+        <p class="page-desc">管理接入网关的模型供应商与账户，查看连接状态与用量配额。</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn" id="testAll">⟳ 全部测活</button>
+        <button class="btn btn-primary" id="openAdd">＋ 添加供应商</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-label">供应商总数</div><div class="stat-value">4</div></div>
+      <div class="stat blue"><div class="stat-label">在线连接</div><div class="stat-value">3<small> / 4</small></div></div>
+      <div class="stat orange"><div class="stat-label">账户数</div><div class="stat-value">7</div></div>
+      <div class="stat orange"><div class="stat-label">本月演示用量</div><div class="stat-value">48.6<small>万 tok</small></div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <span aria-hidden="true">⌕</span>
+        <input id="q" type="search" placeholder="搜索供应商或账户名…" aria-label="搜索供应商或账户">
+      </div>
+      <select class="filter" aria-label="状态筛选" id="filter">
+        <option value="all">全部状态</option>
+        <option value="ok">在线</option>
+        <option value="warn">限流</option>
+        <option value="err">离线</option>
+      </select>
+    </div>
+
+    <div class="section-title">已接入供应商</div>
+    <div class="grid" id="grid">
+
+      <article class="provider" data-status="ok">
+        <div class="provider-head">
+          <div class="logo" style="background:var(--blue-soft);color:var(--blue)">◆</div>
+          <div>
+            <div class="p-name">北极星云 · NorthStar</div>
+            <div class="p-meta">api.northstar.example/v1</div>
+          </div>
+          <span class="status st-ok"><span class="dot ok"></span>在线</span>
+        </div>
+        <div class="accts">
+          <button class="acct">
+            <div><div class="acct-name">主力工作账户</div><div class="acct-sub">acct-ns-001 · 示例</div></div>
+            <div class="acct-right"><div class="tok">62%</div><div class="tok-bar"><i style="width:62%"></i></div></div>
+          </button>
+          <button class="acct">
+            <div><div class="acct-name">备用小号</div><div class="acct-sub">acct-ns-002 · 示例</div></div>
+            <div class="acct-right"><div class="tok">18%</div><div class="tok-bar"><i style="width:18%"></i></div></div>
+          </button>
+        </div>
+        <div class="p-foot">
+          <button class="btn">账户</button>
+          <button class="btn">测活</button>
+          <button class="btn btn-ghost">编辑</button>
+        </div>
+      </article>
+
+      <article class="provider" data-status="ok">
+        <div class="provider-head">
+          <div class="logo" style="background:var(--orange-soft);color:#c25a00">▲</div>
+          <div>
+            <div class="p-name">灯塔模型 · Beacon</div>
+            <div class="p-meta">relay.beacon.example</div>
+          </div>
+          <span class="status st-ok"><span class="dot ok"></span>在线</span>
+        </div>
+        <div class="accts">
+          <button class="acct">
+            <div><div class="acct-name">团队共享账户</div><div class="acct-sub">acct-bc-010 · 示例</div></div>
+            <div class="acct-right"><div class="tok">41%</div><div class="tok-bar"><i style="width:41%"></i></div></div>
+          </button>
+        </div>
+        <div class="p-foot">
+          <button class="btn">账户</button>
+          <button class="btn">测活</button>
+          <button class="btn btn-ghost">编辑</button>
+        </div>
+      </article>
+
+      <article class="provider" data-status="warn">
+        <div class="provider-head">
+          <div class="logo" style="background:var(--paper-2);color:var(--ink)">✦</div>
+          <div>
+            <div class="p-name">远山智能 · Farhill</div>
+            <div class="p-meta">gateway.farhill.example</div>
+          </div>
+          <span class="status st-warn"><span class="dot warn"></span>限流</span>
+        </div>
+        <div class="accts">
+          <button class="acct">
+            <div><div class="acct-name">开发调试账户</div><div class="acct-sub">acct-fh-003 · 示例</div></div>
+            <div class="acct-right"><div class="tok">91%</div><div class="tok-bar hot"><i style="width:91%"></i></div></div>
+          </button>
+        </div>
+        <div class="p-foot">
+          <button class="btn">账户</button>
+          <button class="btn">测活</button>
+          <button class="btn btn-ghost">编辑</button>
+        </div>
+      </article>
+
+      <article class="provider" data-status="err">
+        <div class="provider-head">
+          <div class="logo" style="background:var(--red-soft);color:var(--red)">☾</div>
+          <div>
+            <div class="p-name">夜航 · NightOwl</div>
+            <div class="p-meta">owl.nightowl.example</div>
+          </div>
+          <span class="status st-err"><span class="dot err"></span>离线</span>
+        </div>
+        <div class="accts">
+          <button class="acct">
+            <div><div class="acct-name">历史归档账户</div><div class="acct-sub">acct-no-007 · 示例</div></div>
+            <div class="acct-right"><div class="tok">—</div><div class="tok-bar"><i style="width:0%"></i></div></div>
+          </button>
+        </div>
+        <div class="p-foot">
+          <button class="btn">账户</button>
+          <button class="btn">测活</button>
+          <button class="btn btn-ghost">编辑</button>
+        </div>
+      </article>
+
+      <button class="add-tile" id="openAdd2">
+        <span class="plus">＋</span>
+        <span>添加新的供应商</span>
+        <span style="font-size:.72rem;font-family:var(--mono)">演示入口 · 不会保存任何数据</span>
+      </button>
+    </div>
+  </main>
+</div>
+
+<dialog id="addDlg" aria-labelledby="dlgTitle">
+  <div class="dlg-head">
+    <h2 id="dlgTitle">添加供应商（演示）</h2>
+    <button class="dlg-close" id="closeDlg" aria-label="关闭">✕</button>
+  </div>
+  <form class="dlg-body" id="addForm">
+    <div class="field">
+      <label for="f-name">供应商名称</label>
+      <input id="f-name" required placeholder="例如：示例云 ExampleCloud">
+    </div>
+    <div class="field">
+      <label for="f-url">API 地址</label>
+      <input id="f-url" required placeholder="https://api.example.com/v1">
+    </div>
+    <div class="field">
+      <label for="f-type">接入方式</label>
+      <select id="f-type"><option>OpenAI 兼容</option><option>自定义适配器</option></select>
+    </div>
+    <p class="dlg-hint">※ 这是视觉原型，提交不会写入任何真实配置或凭证。</p>
+    <div class="dlg-foot" style="margin:-14px -18px -18px">
+      <button type="button" class="btn" id="cancelDlg">取消</button>
+      <button type="submit" class="btn btn-primary">创建（演示）</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast">演示操作 · 未保存任何数据</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const toast = msg => {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+};
+
+/* 搜索 + 状态筛选 */
+function applyFilter(){
+  const q = $('#q').value.trim().toLowerCase();
+  const f = $('#filter').value;
+  document.querySelectorAll('.provider').forEach(p => {
+    const okQ = !q || p.textContent.toLowerCase().includes(q);
+    const okF = f === 'all' || p.dataset.status === f;
+    p.style.display = okQ && okF ? '' : 'none';
+  });
+}
+$('#q').addEventListener('input', applyFilter);
+$('#filter').addEventListener('change', applyFilter);
+
+/* 弹窗 */
+const dlg = $('#addDlg');
+const openDlg = () => { dlg.showModal(); $('#f-name').focus(); };
+$('#openAdd').addEventListener('click', openDlg);
+$('#openAdd2').addEventListener('click', openDlg);
+$('#closeDlg').addEventListener('click', () => dlg.close());
+$('#cancelDlg').addEventListener('click', () => dlg.close());
+$('#addForm').addEventListener('submit', e => {
+  e.preventDefault(); dlg.close(); toast('演示：供应商已“创建”（未保存）');
+  e.target.reset();
+});
+
+/* 其他按钮统一提示为演示 */
+document.addEventListener('click', e => {
+  const b = e.target.closest('.btn, .acct, .nav-item');
+  if (!b || b.id.startsWith('openAdd') || b.closest('form')) return;
+  if (b.classList.contains('nav-item') && !b.hasAttribute('aria-current')) {
+    toast('演示：页面切换未实现'); return;
+  }
+  if (b.id === 'testAll') { toast('演示：全部测活完成（虚构）'); return; }
+  if (b.tagName !== 'BUTTON' || b.closest('.p-foot')) toast('演示操作 · 未保存任何数据');
+});
+
+/* Esc 关闭 toast 由 dialog 原生支持；键盘可达性由原生元素保证 */
+</script>
+</body>
+</html>

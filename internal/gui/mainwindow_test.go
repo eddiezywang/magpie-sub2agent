@@ -13,6 +13,25 @@ import (
 	"github.com/yetone/magpie/internal/settings"
 )
 
+func TestRetroMainFrameIsWindowsIntranetOptIn(t *testing.T) {
+	for _, tc := range []struct {
+		goos     string
+		internal bool
+		choice   string
+		want     bool
+	}{
+		{"windows", true, "1", true},
+		{"windows", true, "", false},
+		{"windows", false, "1", false},
+		{"linux", true, "1", false},
+		{"darwin", true, "1", false},
+	} {
+		if got := retroMainFrame(tc.goos, tc.internal, tc.choice); got != tc.want {
+			t.Errorf("retroMainFrame(%q, %v, %q) = %v, want %v", tc.goos, tc.internal, tc.choice, got, tc.want)
+		}
+	}
+}
+
 // StringKe on Discord: magpie restarted for an update while another app was
 // full screen, and from then on its window opened only on that app's Space.
 // The window moves to the Space the user is on when shown, and can still go

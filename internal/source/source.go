@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"net/http"
 	"net/url"
 	"os"
@@ -243,6 +244,14 @@ func DoFaithful(c *http.Client, req *http.Request) (*http.Response, error) {
 }
 
 func do(c *http.Client, req *http.Request, urls []string) (*http.Response, error) {
+	if distribution.Internal {
+		if err := distribution.AssetURL(req.URL.String()); err != nil {
+			return nil, err
+		}
+		c = distribution.AssetClient(c)
+		urls = []string{req.URL.String()}
+	}
+
 	var last error
 	// a mirror in China is asked before the official address: whatever
 	// it can't answer (a version it hasn't copied yet, say) is asked of

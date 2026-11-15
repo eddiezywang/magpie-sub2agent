@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"html"
 	"io"
 	"io/fs"
@@ -46,6 +47,9 @@ const Site = "https://usemagpie.ai"
 // Feed is where the newest release is described. MAGPIE_UPDATE_FEED points
 // it elsewhere, for testing an update against a local server.
 func Feed() string {
+	if distribution.Internal {
+		return distribution.AppFeed
+	}
 	if f := os.Getenv("MAGPIE_UPDATE_FEED"); f != "" {
 		return f
 	}
@@ -131,12 +135,20 @@ func Latest(ctx context.Context) (*Release, error) { return LatestIn(ctx, "") }
 // InLang): the app's language, which What's new follows. On Settings'
 // Stable channel it is Stable's release (see Stable).
 func LatestIn(ctx context.Context, lang string) (*Release, error) {
+	if distribution.Internal {
+		return latestInternal(ctx, lang)
+	}
+
 	return latestAt(ctx, withChannel(withLang(Feed(), lang)), lang)
 }
 
 // LatestEvery is LatestIn on every version, whatever Settings' channel:
 // what Stable's "up to date" leaves out, the newest release out.
 func LatestEvery(ctx context.Context, lang string) (*Release, error) {
+	if distribution.Internal {
+		return latestInternal(ctx, lang)
+	}
+
 	return latestAt(ctx, withLang(Feed(), lang), lang)
 }
 
@@ -190,7 +202,9 @@ func latestFrom(ctx context.Context, feed, lang string) (*Release, error) {
 		return nil, fmt.Errorf("update feed: %w", err)
 	}
 	r.Notes = InLang(r.Notes, lang)
-	r.githubAddresses()
+	if !distribution.Internal {
+		r.githubAddresses()
+	}
 	return &r, nil
 }
 
@@ -1205,6 +1219,25 @@ var retryWaits = []time.Duration{2 * time.Second, 4 * time.Second, 8 * time.Seco
 // asking with Range for what is still missing; the hash is checked over the whole file, the bytes kept
 // from the tries before included.
 func download(ctx context.Context, a Asset, path string) error {
+	if !distribution.Internal {
+		return downloadSingle(ctx, a, path)
+	}
+	err := downloadSingle(ctx, a, path)
+	if err == nil || ctx.Err() != nil {
+		return err
+	}
+	other := internalAlternateAsset(a.URL)
+	if other == "" {
+		return err
+	}
+	a.URL = other
+	if next := downloadSingle(ctx, a, path); next != nil {
+		return fmt.Errorf("%v; alternate source: %w", err, next)
+	}
+	return nil
+}
+
+func downloadSingle(ctx context.Context, a Asset, path string) error {
 	if a.SHA256 == "" {
 		return errors.New("the release lists no checksum for " + filepath.Base(path))
 	}
@@ -1222,7 +1255,7 @@ func download(ctx context.Context, a Asset, path string) error {
 	// route (apiroute.go), never through a mirror.
 	on, viaAPI := a, false
 	toGitHub := a.GitHub != "" && a.GitHub != a.URL
-	toAPI := mirrorOf(ctx) == ""
+	toAPI := !distribution.Internal && mirrorOf(ctx) == ""
 	// Settings' update source (source.go): GitHub only starts at github.com
 	// and goes on to its API route; the site only goes to no other
 	switch Source() {
@@ -1249,6 +1282,11 @@ func download(ctx context.Context, a Asset, path string) error {
 			tctx = withAPIRoute(ctx)
 		}
 		if err = fetch(tctx, on, path); err == nil || ctx.Err() != nil || !Network(err) {
+			break
+		}
+		// Internal releases have a second independent source; try it before
+		// spending the public release retry schedule on the failed source.
+		if distribution.Internal {
 			break
 		}
 		left := 0
@@ -1376,7 +1414,7 @@ func fetch(ctx context.Context, a Asset, path string) error {
 	// through a mirror when one is given (mirror.go): the hash checked
 	// below is still the feed's
 	u := a.URL
-	if !onAPIRoute(ctx) {
+	if !distribution.Internal && !onAPIRoute(ctx) {
 		u = mirrored(mirrorOf(ctx), a.URL)
 	}
 	mirror := strings.TrimSuffix(u, a.URL)

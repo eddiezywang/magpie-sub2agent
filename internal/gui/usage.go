@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yetone/magpie/internal/accounting"
 	"github.com/yetone/magpie/internal/agent"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
@@ -101,6 +103,20 @@ func requestContent(agent, session string, from, to, at time.Time) contentJSON {
 }
 
 func usageRoutes(mux *http.ServeMux, w Windows) {
+	if distribution.Internal {
+		mux.HandleFunc("GET /api/accounting/report", func(rw http.ResponseWriter, r *http.Request) {
+			q := r.URL.Query()
+			body, ct, err := accounting.BillingReport(r.Context(), q.Get("period"), q.Get("format"), q.Get("date"))
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusBadGateway)
+				return
+			}
+			rw.Header().Set("Content-Type", ct)
+			rw.Header().Set("Cache-Control", "no-store")
+			rw.Header().Set("X-Content-Type-Options", "nosniff")
+			_, _ = rw.Write(body)
+		})
+	}
 	mux.HandleFunc("GET /api/usage", coldTurn(func(rw http.ResponseWriter, r *http.Request) {
 		// the days and hours of the reader's zone, which the page names
 		writeJSON(rw, usageState(periodOf(r.URL.Query().Get("period")), usageapi.ZoneOf(r)))

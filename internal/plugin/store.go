@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"maps"
 	"os"
 	"os/exec"
@@ -50,8 +51,13 @@ type Entry struct {
 	// repository (github:owner/repo, git+https://…) or a path to a file
 	// or folder.
 	Spec string `json:"spec"`
+	// Bundled identifies an offline provider shipped with this distribution.
+	// Its path follows the current executable when the portable folder moves.
+	Bundled string `json:"bundled,omitempty"`
 	// Off is set on a plugin the user turned off.
 	Off bool `json:"off,omitempty"`
+	// ExplicitOn records a deliberate enablement of a formerly unavailable bundled provider.
+	ExplicitOn bool `json:"explicitOn,omitempty"`
 	// Options are handed to the plugin as its second argument, as
 	// OpenCode's ["name", {options}] does.
 	Options map[string]any `json:"options,omitempty"`
@@ -194,7 +200,7 @@ func list() List {
 // level: the mutators (Add, Remove, SetOff, SetConfig) each get their own
 // copy, so nothing they change reaches what list keeps.
 func Load() List {
-	l := list()
+	l := effectiveList()
 	return List{Plugins: clonePlugins(l.Plugins), Config: cloneMap(l.Config), Prefer: maps.Clone(l.Prefer)}
 }
 
@@ -389,7 +395,14 @@ func Target(spec string) string {
 		}
 		return p
 	}
-	return filepath.Join(Dir(), "node_modules", filepath.FromSlash(Name(spec)))
+	if target := shippedTarget(Name(spec)); target != "" {
+		return target
+	}
+	return packageTarget(Name(spec))
+}
+
+func packageTarget(pkg string) string {
+	return filepath.Join(Dir(), "node_modules", filepath.FromSlash(pkg))
 }
 
 // Add installs a plugin and adds it to the list, in place of one of the
@@ -411,6 +424,12 @@ func AddExact(ctx context.Context, spec string) (Entry, error) { return add(ctx,
 // add is Add, an npm package installed at the version given when there is
 // one (installAt), its spec kept as given.
 func add(ctx context.Context, spec, version string) (Entry, error) {
+	if distribution.Internal {
+		if IsGit(spec) || (!IsPath(spec) && !pkgName.MatchString(Name(spec))) {
+			return Entry{}, fmt.Errorf("only local plugins and internal registry packages are supported")
+		}
+	}
+
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
 		return Entry{}, errors.New("no plugin given")
@@ -474,6 +493,8 @@ func add(ctx context.Context, spec, version string) (Entry, error) {
 		return x.Spec == spec || n == name
 	}); i >= 0 {
 		e.Options = l.Plugins[i].Options
+		e.Bundled = l.Plugins[i].Bundled
+		e.ExplicitOn = l.Plugins[i].ExplicitOn
 		// whether they turned it off, which an add never changes
 		e.Off = l.Plugins[i].Off
 		// a provider id the user picked it for stays its (another version,
@@ -640,6 +661,9 @@ func SetOff(name string, off bool) error {
 		return fmt.Errorf("no plugin %q", name)
 	}
 	l.Plugins[i].Off = off
+	if l.Plugins[i].Bundled == "codebuddy" || l.Plugins[i].Bundled == "trae" {
+		l.Plugins[i].ExplicitOn = !off
+	}
 	if err := save(l); err != nil {
 		return err
 	}
@@ -735,6 +759,11 @@ func Called(pkg, name string) bool {
 // install puts an npm package into plugins/ with bun add, its scripts
 // left unrun as OpenCode leaves them.
 func install(ctx context.Context, spec string) error {
+	if distribution.Internal {
+		version := strings.TrimPrefix(spec, Name(spec))
+		return installInternalBundle(ctx, Name(spec), strings.TrimPrefix(version, "@"))
+	}
+
 	bun, err := Bun(ctx)
 	if err != nil {
 		return err
@@ -812,6 +841,10 @@ func bunAdd(ctx context.Context, bun, spec string) error {
 // through restarts and the hourly updates). Asked for the version, bun
 // says why it can't install it.
 func installAt(ctx context.Context, pkg, version string) error {
+	if distribution.Internal {
+		return installInternalBundle(ctx, pkg, version)
+	}
+
 	if err := install(ctx, pkg+"@"+version); err != nil {
 		// what bun said comes first: the page's status line shows the
 		// start of a long message

@@ -93,9 +93,11 @@ function routingPage(part) {
   const logo = document.createElementNS(NS, "svg");
   logo.setAttribute("viewBox", "0 0 44 44");
   logo.setAttribute("class", "rt-bird");
-  logo.innerHTML = '<use href="#bird"/>';
+  logo.innerHTML = appMark();
   const hubSub = el("small"), chip = el("i");
-  hub.append(logo, el("b", "", "magpie"), hubSub, chip);
+  const hubName = el("b");
+  hubName.textContent = intranet ? "Sub2Agent" : "magpie";
+  hub.append(logo, hubName, hubSub, chip);
   const list = el("ol", "rt-accts");
   // the magpies fly over the nodes, the wires run under them
   const sky = document.createElementNS(NS, "svg");
@@ -685,7 +687,12 @@ function routingPage(part) {
   // reads by the name the account has now, one from before a rename too
   // (plugins#310: a renamed Kiro account kept its old name on requests
   // made after). Requests are still told apart by that vendor's name.
-  const userShown = (provider, user) => user && accountShownOf(providers?.providers?.find((p) => p.id === provider), user) || user;
+  const userShown = (provider, user) => {
+    const p = providers?.providers?.find((p) => p.id === provider);
+    const shown = user && accountShownOf(p, user) || user;
+    return provider === "sub2agent-workbuddy" && shown === user && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(user || "")
+      ? p?.name || "WorkBuddy 企业" : shown;
+  };
   // whoShown is the account or key a weighed one is: an account by its
   // name of the user's own; a key's name is already the user's
   const whoShown = (w) => w.kind === "account" ? userShown(w.provider, w.who) : w.who;
@@ -2552,7 +2559,7 @@ function routingPage(part) {
     f.w = w;
     f.pk = openKey(w) + (w.kind === "account" ? "@" : "");
     const name = w.fallback ? w.name : w.name || w.provider;
-    const head = [icon(w.icon || (w.preset ? w.preset : "generic")), el("span", "who", name), " ", f.n,
+    const head = [icon(logoOf(w)), el("span", "who", name), " ", f.n,
       el("code", "mdl", w.fixed ? `${w.model}:${w.fixed}` : w.model)];
     if (w.fallback) head.push(el("small", "fb", t("fallback")));
     if (f.b.dataset.head !== openKey(w) + (w.fallback ? "|fb" : "")) { f.b.replaceChildren(...head); f.b.dataset.head = openKey(w) + (w.fallback ? "|fb" : ""); }
@@ -2569,7 +2576,7 @@ function routingPage(part) {
 
   function makeRow(w) {
     const li = el("li"), b = el("b");
-    b.append(icon(w.icon || (w.preset ? w.preset : "generic")));
+    b.append(icon(logoOf(w)));
     const name = el("span", "who", who(w));
     // the provider's name heads the card; a row names what differs
     const sub = el("span", "", rowSub(w, false));
@@ -3446,7 +3453,7 @@ function routingPage(part) {
   // logoed puts the provider's logo before the first account, key or
   // provider a line of the story names, so who it is about reads at a
   // glance (the owner: 这里在前面显示对应的 provider 图标会不会更直观一点)
-  const logoOf = (w) => w.icon || w.preset || "generic";
+  const logoOf = (w) => w.icon || (w.provider === "sub2agent-workbuddy" ? "workbuddy-color" : "") || w.preset || "generic";
   // A line names an order member, one skipped before it was tried (r.left,
   // #3953: a skipped OpenCode Zen Free's line had no logo, or another
   // member's), or both. Where two share the name at the same place (a key
@@ -5179,7 +5186,7 @@ function routingPage(part) {
     + "</g></g>";
 
   function bird(kind) {
-    if (still() || !shown()) return null;
+    if (window.bootPrefs?.intranet || still() || !shown()) return null;
     const g = document.createElementNS(NS, "g");
     g.setAttribute("class", "rt-flier " + kind);
     g.innerHTML = FLIER;
@@ -5936,7 +5943,7 @@ function routingPage(part) {
   // a group may also be routed by hand: every request to the member the
   // user picks on its card (provider.Manual, #317) — a provider's keys can't
   // and by its members' weights, as a provider's keys are (#1910)
-  const GROUP_ROUTE_OPTS = [...ROUTE_OPTS, ["cheap", "Cheapest first"], ["expiring", "Free quota by expiry"], ["weight", "By weight"], ["manual", "Manual"]];
+  const GROUP_ROUTE_OPTS = [...ROUTE_OPTS, ["cheap", "Cheapest first"], ["expiring", "Free quota by expiry"], ["weight", "By weight"], ["manual", "Manual"]].filter(([id]) => !window.bootPrefs?.intranet || !["free", "expiring"].includes(id));
   const AFF_OPTS = [["", "Auto"], ["session", "Session"], ["turn", "Within a turn"], ["off", "Off"], ["strict", "Strict"]];
   // what one rate limited with quota left does then (provider.Sink), as in
   // a provider's editor (app.js SINKS)
@@ -6660,7 +6667,7 @@ function routingPage(part) {
     fast: ["Fastest first", "Whichever provider has answered fastest lately goes first"],
     even: ["Spread evenly", "The strongest model, taken in turn over every provider and account that serves it"],
   };
-  const tplName = (tp) => t(TPL[tp.kind]?.[0] || tp.group.name);
+  const tplName = (tp) => t((window.bootPrefs?.intranet && { smart: "Balanced first", steady: "Stability first" }[tp.kind]) || TPL[tp.kind]?.[0] || tp.group.name);
   // what a template that can't be made is missing (provider.Need*)
   const tplNeed = (tp) => tp.need === "providers" ? t("Needs models from two providers: {name} is the only one", { name: tp.of })
     : tp.need === "cheap" ? t("Needs a model cheap beside {name}", { name: tp.of })
@@ -7747,6 +7754,7 @@ function routingPage(part) {
     // ("Send requests unmasked") and Settings, or is masked as Settings say
     // whichever provider it has, or is sent as written (Group.Redact)
     const redactLabel = el("label", "rt-gredact", t("Masking")), redactBox = el("div", "rt-gredact");
+    redactLabel.hidden = redactBox.hidden = !!window.bootPrefs?.intranet;
     ed.append(redactLabel, redactBox);
     const REDACT = { "": "Follow providers", on: "Always masked", off: "Sent as written" };
     const drawRedact = () => {
@@ -8994,7 +9002,7 @@ function routingPage(part) {
   pWires.setAttribute("class", "ps-wires");
   pSky.setAttribute("class", "ps-sky");
   const pFrom = el("div", "ps-col ps-from"), pTo = el("div", "ps-col ps-to"), pHub = el("div", "ps-hub");
-  pHub.innerHTML = '<svg viewBox="0 0 44 44" aria-hidden="true"><use href="#bird"/></svg>';
+  pHub.innerHTML = `<svg viewBox="0 0 44 44" aria-hidden="true">${appMark()}</svg>`;
   pStage.append(pWires, pFrom, pHub, pTo, pSky);
   pStage.setAttribute("aria-hidden", "true");
   let pAg = [], pDst = [];          // the keys on the stage, in their places

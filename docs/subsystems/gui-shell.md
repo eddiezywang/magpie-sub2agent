@@ -1,5 +1,55 @@
 # GUI app shell
 
+WorkBuddy routing rows retain account semantics. Missing trace icons fall back
+to the WorkBuddy brand, including historical traces. A raw UUID with no user
+nickname is displayed as the WorkBuddy provider name, while explicit account
+names and meaningful usernames remain intact. UUIDs remain internal identity
+keys and are not changed in authentication or trace matching.
+
+Internal builds select `icons_intranet.go`: the header, EXE, window icon and
+tray share the pixel S from `build/pixel-icons/custom.py`. Regenerate native
+frames with `native.py`; `winres-intranet.json` embeds those same PNG frames.
+Upstream icons remain under `icons_default.go`. Internal tray clicks do not
+play bird frames. `TestInternalNativeBrand` checks frame identity and palette.
+
+The `intranet` distribution changes boot feature visibility and embedded assets;
+its exclusions and validation are in [internal build contracts](../intranet-build.md).
+The shell observes only plugin pages that are mounted. Settings also skips
+renderers belonging to omitted plugins, so removing Library, Sessions, Search
+or Observability does not abort Agents or Settings initialization. The packed
+asset browser regression is `tests/intranet-shell.test.cjs`.
+The intranet build is branded sub2agent. Its gateway defaults to 8989 and
+browser administration to 8990; installed data uses `sub2agent` (with migration
+from the old internal directory) and the single-instance identity is `local.sub2agent`. Portable
+bundles keep their own adjacent `data` directory. Its Windows URL handler
+and startup entry are independent of Magpie, allowing both apps to run.
+Diagram hubs use `appMark()` rather than the upstream header's bird symbol.
+Intranet routing animates unbranded packets without flying bird carriers;
+loading keeps the skeleton shimmer and ordinary progress spinners. The bird
+loader also guards its entry point, including direct calls.
+
+Internal Settings is one flat page rendered by lazily loaded internalsettings.js:
+gateway port/pause, login startup, lightweight mode, data folder, logs, command
+line, another sub2agent, and uninstall. The upstream nine-tab settings renderer,
+search, font discovery and hint loader do not run in this profile. Packed assets
+hide the original panels before first paint; old tab/query links cannot expose
+them. Sidebar settings sub-navigation is suppressed. Writes reuse existing APIs
+and preserve unrelated saved values. Omitted settings are not reset or deleted;
+this limits the product surface, not every programmatic settings API. Browser
+pages disable desktop-only open/uninstall actions and explain where to use them.
+Existing consent for Sessions remains on the Sessions page. Licenses remain
+embedded and available through /api/notices. Internal services stay managed by
+the distribution. Review: build/review-internal-settings.cjs, five locales and
+two browser engines at desktop and narrow widths with intercepted mutations.
+The internal Settings surface does not expose the upstream Browser access
+controls (`webPageHead` and `webPageList`). This is presentation only: it does
+not change a previously saved browser-access choice or stop its service. The
+packed-asset regression `tests/intranet-shell.test.cjs` checks visibility.
+The internal command resolver, console companion and fallback shim use
+sub2agent / sub2agent.com / sub2agent.cmd. Adding the command never installs
+or resolves a magpie-named command. The upstream distribution keeps its names;
+console trailer format remains compatible with the shared launcher.
+
 The desktop app has a tray (menu bar) icon whose click drops a compact
 panel, and a regular window. Both show one small web UI served from
 embedded assets. The page talks to Go over a JSON API on the same handler,

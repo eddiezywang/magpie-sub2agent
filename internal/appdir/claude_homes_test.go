@@ -1,6 +1,7 @@
 package appdir
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"os"
 	"path/filepath"
 	"slices"
@@ -27,7 +28,7 @@ func TestClaudeHomesIn(t *testing.T) {
 	nested := mk(".claude-profiles/b/projects")
 	mk(".claude-notes/todo")
 	mk("projects")
-	saved := mk("cfg/magpie/claude-accounts/abc/projects")
+	saved := mk("cfg/" + distribution.DataDir + "/claude-accounts/abc/projects")
 	if err := os.Symlink(filepath.Dir(main), filepath.Join(home, ".claude-link")); err != nil {
 		t.Skip(err)
 	}

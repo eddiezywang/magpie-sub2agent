@@ -2,6 +2,8 @@ package provider
 
 import (
 	"cmp"
+	"github.com/yetone/magpie/internal/distribution"
+	"github.com/yetone/magpie/internal/plugin"
 	"slices"
 	"strings"
 )
@@ -825,8 +827,21 @@ func mantleRegions(ids ...string) []Region {
 	return out
 }
 
+var nativeAPIEnabled = plugin.NativeAPIEnabled
+
 // Presets lists every preset, sponsored ones first within their kind.
 func Presets() []PresetDef {
+	if distribution.Internal {
+		out := []PresetDef{codingPlanDefinition(), zhtPreset, remoteSub2AgentPreset()}
+		if nativeAPIEnabled() {
+			for _, pr := range presets {
+				if pr.ID != RemoteMagpiePreset {
+					out = append(out, pr)
+				}
+			}
+		}
+		return out
+	}
 	out := make([]PresetDef, 0, len(presets))
 	for _, p := range presets {
 		if p.Sponsored {
@@ -929,6 +944,21 @@ func Preset(id string) *PresetDef {
 // builtinPreset is the preset of that id built into magpie, partners'
 // aside.
 func builtinPreset(id string) *PresetDef {
+	if distribution.Internal && id == RemoteMagpiePreset {
+		pr := remoteSub2AgentPreset()
+		return &pr
+	}
+	if distribution.Internal && id == zhtPreset.ID {
+		pr := zhtPreset
+		return &pr
+	}
+	if distribution.Internal && id == codingPlanPreset.ID {
+		pr := codingPlanDefinition()
+		return &pr
+	}
+	if distribution.Internal && !nativeAPIEnabled() {
+		return nil
+	}
 	if a, ok := presetAliases[id]; ok {
 		id = a.preset
 	}
@@ -951,6 +981,9 @@ func FromPreset(id string) (Provider, error) {
 		ID: pr.ID, Name: pr.Name, Icon: pr.Icon, Preset: pr.ID,
 		Chat: pr.Chat, Responses: pr.Responses, Anthropic: pr.Anthropic, Decide: pr.Decide,
 		Catalog: pr.Catalog, Website: pr.Website, KeysURL: pr.KeysURL,
+	}
+	if p.isCodingPlan() {
+		p.AuthHeader = AuthBearer
 	}
 	if a, ok := presetAliases[id]; ok && a.region != "" {
 		for _, r := range pr.Regions {

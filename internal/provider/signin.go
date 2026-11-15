@@ -111,7 +111,9 @@ type signInFlow struct {
 	claude   *claudeCLISignIn // Claude Code's own sign-in, run by magpie
 	// pluginPorts are where a plugin's browser sign-in comes back to on
 	// this machine, for its address pasted (pluginsignin_paste.go)
-	pluginPorts []string
+	pluginPorts        []string
+	pluginManual       string // plugin session accepting a vendor callback alongside auto completion
+	pluginCallbackPath string // explicit callback's nonce-scoped path, when supplied
 	// pluginKey is a plugin's browser sign-in also finished by a key made
 	// on KeysURL and pasted: its provider and "api" method, as the plugin
 	// lists it (pluginsignin_paste.go)
@@ -241,6 +243,9 @@ func StartSignInAt(agent, site string) (SignInState, error) {
 // StartSignInWith is StartSignIn with the sign-in's choices: its site and
 // the proxy it goes through.
 func StartSignInWith(agent string, o SignInOptions) (SignInState, error) {
+	if !intranetSourceAllowed(Provider{ID: agent}) {
+		return SignInState{}, errors.New("此供应商在当前版本中已禁用")
+	}
 	site := o.Site
 	if settings.AccountDiscoveryOff() {
 		return SignInState{}, errAccountDiscoveryOff
@@ -487,6 +492,9 @@ func SubmitSignInCallback(id, raw string) error {
 	}
 	if s.plugin != "" {
 		return s.pluginCode(raw)
+	}
+	if s.pluginManual != "" {
+		return s.pluginManualCallback(raw)
 	}
 	if s.pluginPorts != nil {
 		return s.pluginCallback(raw)

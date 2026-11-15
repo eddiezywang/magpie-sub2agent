@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"maps"
 	"os"
@@ -21,6 +22,10 @@ import (
 )
 
 func init() {
+	if distribution.Internal {
+		return
+	}
+
 	gateway.SharedLibrary = func() ([]byte, error) {
 		b, err := Shared()
 		if err != nil {

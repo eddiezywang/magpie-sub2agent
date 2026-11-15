@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/ghtoken"
 	"github.com/yetone/magpie/internal/lastgood"
 	"github.com/yetone/magpie/internal/settings"
@@ -74,7 +75,9 @@ const (
 
 // Official is whether the package is the community's, magpie's own,
 // which magpie keeps up to date by itself.
-func Official(pkg string) bool { return strings.HasPrefix(pkg, "@magpie-community/") }
+func Official(pkg string) bool {
+	return strings.HasPrefix(pkg, "@magpie-community/") || distribution.Internal && shippedKind(pkg) != ""
+}
 
 // Pinned is whether spec names a version (or a range or a tag other than
 // latest): the user chose it, and it stays. A git one's version is its

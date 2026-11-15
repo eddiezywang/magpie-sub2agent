@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"net/http"
 	"os"
@@ -221,6 +222,10 @@ func get(ctx context.Context, url string, limit int64) ([]byte, error) {
 // has none of its own; the versions downloaded before are removed. progress,
 // when set, is told the bytes so far. It returns the binary's path.
 func Install(ctx context.Context, r Release, progress func(done int64)) (string, error) {
+	if distribution.Internal {
+		return "", fmt.Errorf("agent downloads are not included in this distribution")
+	}
+
 	exe, err := install(ctx, r, progress)
 	if err == nil {
 		prune(r.Version)

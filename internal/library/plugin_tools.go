@@ -30,6 +30,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"net/url"
 	"slices"
@@ -51,6 +52,10 @@ var (
 )
 
 func init() {
+	if distribution.Internal {
+		return
+	}
+
 	plugin.ToolsNoted = func() {
 		if changed, err := adoptPluginTools(); err != nil {
 			log.Printf("library: giving plugin tools a server: %v", err)

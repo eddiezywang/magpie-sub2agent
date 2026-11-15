@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/access"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/gwmw"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/masking"
@@ -30,6 +31,10 @@ import (
 // goes to a vendor asks here. Fail closed: a forced pass needs a masker
 // that reads ctx, and one that doesn't is an error.
 func maskingFor(ctx context.Context) (context.Context, gwmw.Masker, error) {
+	// Masking is absent in this distribution, including inherited key policies.
+	if distribution.Internal {
+		return ctx, nil, nil
+	}
 	switch access.Caller(ctx).Redact {
 	case access.RedactOff:
 		return ctx, nil, nil
@@ -359,6 +364,9 @@ func ownMaskedAs(ctx context.Context) string {
 // the core's own reading, so a request isn't sent unmasked when the plugin
 // isn't there to mask it.
 func redactionWantedFor(ctx context.Context) bool {
+	if distribution.Internal {
+		return false
+	}
 	switch access.Caller(ctx).Redact {
 	case access.RedactOff:
 		return false

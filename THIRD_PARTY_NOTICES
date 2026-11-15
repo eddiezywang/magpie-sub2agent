@@ -1,6 +1,11 @@
 magpie third-party notices
 ==========================
 
+Internal pixel brand icons: OmaPixIcon by Raiden-MeixElysia (MIT).
+Source: https://github.com/Raiden-MeixElysia/OmaPixIcon
+Full license: build/pixel-icons/vendor/LICENSE; also embedded in internal builds.
+Brand marks remain the trademarks of their respective owners.
+
 magpie is built with moejs (https://github.com/MoeForge/moejs,
 Apache License 2.0), a JavaScript engine that runs gateway plugins. moejs
 compiles the material below into every magpie binary, and its notices,
@@ -425,3 +430,8 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+Model map: magpie-community/plugins, packages/model-map
+Commit: e90d6f011a7320372c5570600e9b267f75b34714
+License: MIT; full notice in `Sub2Agent licenses` and Settings > About.

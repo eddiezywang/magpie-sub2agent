@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/yetone/magpie/internal/distribution"
 	"strings"
 	"testing"
 )
@@ -23,7 +24,7 @@ func TestCodexMagpieProviderCarriesActorAuthorization(t *testing.T) {
 	if !strings.Contains(cfg, "[model_providers.magpie]") {
 		t.Fatalf("no magpie provider table:\n%s", cfg)
 	}
-	if !strings.Contains(cfg, `"x-openai-actor-authorization" = "magpie"`) {
+	if strings.Contains(cfg, `"x-openai-actor-authorization" = "magpie"`) == distribution.Internal {
 		t.Fatalf("magpie provider table carries no actor-authorization header:\n%s", cfg)
 	}
 	// uses_openai_actor_authorization() also requires !requires_openai_auth:

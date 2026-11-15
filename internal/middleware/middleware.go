@@ -183,6 +183,10 @@ func compile(e plugin.Entry, file string) (*mw, error) {
 	if err != nil {
 		return nil, err
 	}
+	return compileModule(e, mod)
+}
+
+func compileModule(e plugin.Entry, mod *moejs.Module) (*mw, error) {
 	m := &mw{spec: e.Spec, name: plugin.Name(e.Spec), mod: mod, options: []byte("{}")}
 	if len(e.Options) > 0 {
 		if b, err := jsonMarshal(e.Options); err == nil {

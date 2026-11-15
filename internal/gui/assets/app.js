@@ -33,6 +33,7 @@ if (mode === "panel" && !document.body.classList.contains("linux")) $("header.to
 // `magpie web`: the page in a browser tab, with no window of the app's
 // around it — it opens links itself, and what is the desktop's is left out
 const web = !!window.bootPrefs?.web;
+const intranet = !!window.bootPrefs?.intranet;
 // the version that served this page, for servedAnew
 const pageVersion = window.bootPrefs?.version || "";
 // magpie web seen from another computer: localhost is the viewer's (curtinp118)
@@ -257,9 +258,12 @@ function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (text instanceof Node) e.append(text);
-  else if (text !== undefined) e.textContent = text;
+  else if (text !== undefined) e.textContent = brandText(text);
   return e;
 }
+// The intranet header has no upstream bird symbol. Shared diagram hubs use
+// the distribution's mark directly instead of depending on header markup.
+function appMark() { return intranet ? '<image class="app-mark" href="icons/magpie.svg" width="44" height="44"/>' : '<use href="#bird"/>'; }
 // replaceKeeping is parent.replaceChildren(...nodes) that leaves a node
 // already in parent where it is, rather than taking it out and putting it
 // back. A filter redrawn from its own input event is one: taken out of the
@@ -362,7 +366,7 @@ function toneCheck(img) {
     swap();
   }, { once: true });
 }
-const pngIcons = new Set(["crush", "zcode", "alma", "hanako", "cindy", "lody", "typesafe", "atomcode", "snow", "mlx-serve", "gpustack", "mothx", "zoo-code", "kimi-code-desktop", "openbot", "avibe", "kun"]);
+const pngIcons = new Set(["cib-zht", "crush", "zcode", "alma", "hanako", "cindy", "lody", "typesafe", "atomcode", "snow", "mlx-serve", "gpustack", "mothx", "zoo-code", "kimi-code-desktop", "openbot", "avibe", "kun"]);
 
 // lazy: a picture in a long list (Plugins' rows) is asked for near the
 // screen: each SVG an <img> draws is a ~0.6 MB webview document, kept (#909)
@@ -391,14 +395,14 @@ function icon(name, lazy) {
   // a URL: the server keeps pictures (file:…), never the page
   if (/[:/]/.test(name)) return icon("generic");
   if (name) {
-    if (name.endsWith("-color") || pngIcons.has(name)) {
+    if (intranet || name.endsWith("-color") || pngIcons.has(name)) {
       const img = el("img");
       if (lazy) img.loading = "lazy";
       img.src = `icons/${name}.${pngIcons.has(name) ? "png" : "svg"}`;
       img.alt = "";
       img.draggable = false;
       e.append(img);
-      toneCheck(img);
+      if (!intranet) toneCheck(img);
     } else {
       // a mask that fails to load draws nothing, and says nothing
       e.append(maskSpan(`icons/${name}.svg`, () => {
@@ -480,6 +484,7 @@ function renderAgentsLoading() {
 
 let agentArranging = false, agentRenderPending = false;
 function renderAgents() {
+  if (intranet) import("./agentconnections.js").then((m) => m.enter(), statusErr);
   renderCodexMemories(); // the Codex sheet's row is the same field
   renderCodexSubagentModel(); // and this one
   if (agentArranging) { agentRenderPending = true; return; }
@@ -1702,7 +1707,7 @@ function agentsLead(list) {
   lead.classList.toggle("welcome", first);
   if (!first) {
     const [pre, post] = t("Switch an agent on and the models you set up in magpie show up as the {magpie} provider in its own model list; or pick its model right here.").split("{magpie}");
-    lead.append(pre, el("b", "", "magpie"), post || "");
+    lead.append(pre, el("b", "", intranet ? "Sub2Agent" : "magpie"), post || "");
     return;
   }
   lead.append(el("b", "ag-lead-h", t("Let your agents use the models you set up in magpie")));
@@ -2894,7 +2899,7 @@ function arrangeAgents() {
   const guiding = !anyUsed && !!guideShown();
   // what is set on it alone decides where one not hidden goes: pinned in view
   // by hand, one cleared stayed up among the set ones with nothing to say why
-  const inView = (a) => !guiding && !hidden.has(a.id) && (!anyUsed || agentUsed(a));
+  const inView = (a) => !hidden.has(a.id) && (intranet || (!guiding && (!anyUsed || agentUsed(a))));
   return { all, shown: all.filter(inView), folded: all.filter((a) => !inView(a)) };
 }
 
@@ -3608,7 +3613,7 @@ async function openAgentModels(a, anchor, ev) {
       if (pick && !words && g.name !== pick) continue;
       const rows = g.models.filter((m) => (!onlyShown || !m.hidden || kept.has(m.id)) &&
         (!words || [m.name, m.id, g.name].some((s) => s.toLowerCase().includes(words))));
-      if (!rows.length) continue;
+      if (!rows.length && !(intranet && kind === "relay")) continue;
       const on = g.models.filter((m) => !m.hidden).length;
       const folded = !words && !pick && shut.has(g.name);
       const sec = el("section", "am-g" + (folded ? " shut" : "") + (g.name === ROUTING_GROUPS ? " routes" : ""));
@@ -7138,11 +7143,12 @@ function renderAdd() {
     }).catch(() => {});
   };
   const c = el("button", "text custom" + (editing?.custom ? " on" : ""));
-  c.append(svg(PLUS, 11, 1.8), t("Custom provider"));
+  c.append(svg(PLUS, 11, 1.8), t(intranet ? "Custom API key" : "Custom provider"));
   c.dataset.pick = "custom";
   c.title = t("any OpenAI or Anthropic compatible URL");
   c.onclick = () => { editing = { custom: true }; draft = null; renderProviders(); };
-  head.append(q, c);
+  head.append(q);
+  if (!intranet) head.append(c);
   const imp = el("button", "text", t("Import…"));
   imp.title = t("Bring over providers set up in other apps");
   imp.onclick = openImportApps;
@@ -7174,7 +7180,8 @@ function renderAdd() {
     // a deprecated one whose plugin is installed is that plugin's row alone
     // (ARNO on Discord: Qoder CN twice), and one with no account isn't
     const named = (x) => !f || x.name.toLowerCase().includes(f) || x.agent.includes(f) || "subscription".includes(f);
-    const subs = SUBS.filter((x) => !(replacedSub(x.agent) || unusedSub(x.agent)) || signing?.agent === x.agent).map((x) => subOf(x.agent)).filter(named);
+    const privateSubs = intranet ? pluginSubs().filter((x) => x.pid.startsWith("sub2agent-")) : [];
+    const subs = [...privateSubs, ...SUBS.filter((x) => !(replacedSub(x.agent) || unusedSub(x.agent)) || signing?.agent === x.agent).map((x) => subOf(x.agent))].filter(named);
     const inPlugins = f && SUBS.some((x) => unusedSub(x.agent) && signing?.agent !== x.agent && named(subOf(x.agent)));
     // partners pay to be listed first, under a heading that says so; who
     // they are comes from usemagpie.ai (internal/provider/partners.go), and
@@ -7200,11 +7207,11 @@ function renderAdd() {
       any = true;
       const grid = section("Subscriptions", "sign in, no key");
       for (const x of subs) grid.append(subTile(x));
-      if (!f || inPlugins) grid.append(morePluginsTile(f));
+      if (!intranet && (!f || inPlugins)) grid.append(morePluginsTile(f));
       const w = subs.find((x) => signing?.agent === x.agent);
       if (w) tiles.append(renderSigning(w));
     }
-    const plugged = pluginSubs().filter((x) => !(movedSub(x.agent) && SUBS.some((y) => y.agent === x.agent))).filter((x) => !f || x.name.toLowerCase().includes(f) || x.agent.includes(f) || "plugin".includes(f));
+    const plugged = pluginSubs().filter((x) => !privateSubs.some((p) => p.agent === x.agent) && !(movedSub(x.agent) && SUBS.some((y) => y.agent === x.agent))).filter((x) => !f || x.name.toLowerCase().includes(f) || x.agent.includes(f) || "plugin".includes(f));
     if (plugged.length) {
       any = true;
       const grid = section("From plugins", "signed in by an OpenCode plugin or a pi package");
@@ -7246,8 +7253,9 @@ function renderAdd() {
         .map((p) => [p, chinaOf(p)]).filter(([p, cn]) => hit(p) || (cn && hit(cn)));
       if (!rows.length) continue;
       any = true;
-      const grid = section(title, hint);
+      const grid = section(intranet && kind === "relay" ? "API access" : title, intranet && kind === "relay" ? "Configure a gateway and API key" : hint);
       for (const [pr, cn] of rows) grid.append(cn ? pairTile(pr, cn) : tile(pr));
+      if (intranet && kind === "relay") { c.className = "tile"; grid.append(c); }
     }
     if (!any) {
       const none = el("div", "none");
@@ -8545,7 +8553,7 @@ const IOS_EASE = "cubic-bezier(.32, .72, 0, 1)";
 // the system's Reduce Motion, or Settings' (#3813)
 function calm() { return document.documentElement.dataset.motion === "reduce" || matchMedia("(prefers-reduced-motion: reduce)").matches; }
 // Settings' Loading bird turned off: no bird on a skeleton or a README
-function birdOff() { return document.documentElement.dataset.bird === "off"; }
+function birdOff() { return intranet || document.documentElement.dataset.bird === "off"; }
 // magpie's bird in parts, its wing and tail free to move (the header's logo
 // holds the shapes)
 const BIRD = `<svg viewBox="0 0 44 44"><use href="#bird" clip-path="url(#bird-body)"/><g class="tail"><use href="#bird" clip-path="url(#bird-tail)"/></g><g class="wing"><use href="#bird" clip-path="url(#bird-wing)"/></g></svg>`;
@@ -8600,6 +8608,7 @@ function skelWatch() {
 }
 skelWatch();
 async function skelBird() {
+  if (birdOff()) return;
   skelFlying = true;
   let release;
   const gate = skelGate = new Promise((ok) => { release = () => { if (skelGate === gate) skelGate = null; ok(); }; });
@@ -9307,7 +9316,7 @@ function drawEditor(p, presetID) {
   {
     const h = el("div", "ehead");
     const copyOf = draft.copyOf && providers.providers.find((x) => x.id === draft.copyOf);
-    h.append(icon(p?.icon || (copyOf && draft.icon) || pr?.icon || "generic"), el("b", "", p ? p.name : copyOf ? t("Copy of {name}", { name: copyOf.name }) : pr ? pr.name : t("Custom provider")));
+    h.append(icon(p?.icon || (copyOf && draft.icon) || pr?.icon || "generic"), el("b", "", p ? p.name : copyOf ? t("Copy of {name}", { name: copyOf.name }) : pr ? pr.name : t(intranet ? "Custom API key" : "Custom provider")));
     if (pr?.kind === "partner") { if (partnerNote(pr)) h.append(el("span", "note", partnerNote(pr))); } else if (pr?.note) h.append(el("span", "note", t(pr.note)));
     h.append(el("span", "grow"));
     // a region's own page (Tencent Cloud's), following the region picked
@@ -9331,6 +9340,8 @@ function drawEditor(p, presetID) {
       ed.append(note);
     }
   }
+
+  if (pr?.id === "aiep-coding-plan") import("./codingplan.js").then((m) => m.notice(ed, pr), statusErr);
 
   // a vendor's global and China endpoints: one row in the add sheet, picked here
   const pair = isNew && pr ? (globalOf(pr) ? [globalOf(pr), pr] : chinaOf(pr) ? [pr, chinaOf(pr)] : null) : null;
@@ -9476,7 +9487,7 @@ function drawEditor(p, presetID) {
       showSearch(); showLocal(); showTLS(); showAuth(); showCompaction(); showSocket();
     };
     const urlWrap = el("div", "stack");
-    urlWrap.append(seg, url);
+    urlWrap.append(...(intranet ? [url] : [seg, url]));
     // the APIs a detection found: URLs set, a 404/405 one cleared
     const useDetected = (rs) => {
       carried = null;
@@ -9499,8 +9510,9 @@ function drawEditor(p, presetID) {
       draft.onModelPrefs?.();
     };
     // Detect asks OpenAI's, Anthropic's and Gemini's APIs (#1346)
-    urlWrap.append(detectAPIs(p, () => url.value, useDetected));
-    ed.append(...field("Base URL", urlWrap));
+    if (intranet) ed.autoDetect = import("./autogateway.js").then((m) => m.setup(ed, urlWrap, url, draft, p, useDetected, asTyped));
+    else urlWrap.append(detectAPIs(p, () => url.value, useDetected));
+    ed.append(...field(intranet ? t("Gateway URL") : "Base URL", urlWrap));
   }
 
   // Cline's DeepSeek and GLM models pinned to their makers' APIs (sdytman, ARNO on Discord);
@@ -9521,6 +9533,7 @@ function drawEditor(p, presetID) {
   adv.append(advIn);
 
   const unmaskRow = (hint, urls) => {
+    if (intranet) return [];
     const [ltk, lcb] = tick(t("Send requests unmasked"), !!draft.unredacted);
     const row = field(t("Redaction"), ltk, hint), note = el("div", "hint unmasked-away");
     row[1].append(note);
@@ -9626,10 +9639,12 @@ function drawEditor(p, presetID) {
   // a vendor at the user's own resource (Azure OpenAI): its URL typed here
   let endpoint = null;
   if (pr?.endpoint) {
-    if (draft.chat === undefined) { draft.chat = p?.chat || ""; draft.responses = p?.responses || ""; }
-    endpoint = input(draft.chat || draft.responses || "", pr.endpoint, "url");
+    const anthropic = !!pr.anthropic && !pr.chat && !pr.responses;
+    if (anthropic) draft.anthropic ??= p?.anthropic || pr.anthropic;
+    else if (draft.chat === undefined) { draft.chat = p?.chat || ""; draft.responses = p?.responses || ""; }
+    endpoint = input(anthropic ? draft.anthropic : draft.chat || draft.responses || "", pr.endpoint, "url");
     endpoint.classList.add("endpoint");
-    endpoint.oninput = () => { draft.chat = draft.responses = endpoint.value.trim(); refreshEndpoints(); showCompaction(); showSocket(); };
+    endpoint.oninput = () => { if (anthropic) draft.anthropic = endpoint.value.trim(); else draft.chat = draft.responses = endpoint.value.trim(); refreshEndpoints(); showCompaction(); showSocket(); };
     ed.append(...field(t("Endpoint"), endpoint, pr.endpointHint ? t(pr.endpointHint) : ""));
   }
 
@@ -9736,6 +9751,7 @@ function drawEditor(p, presetID) {
   }
   const keyWrap = el("div", "pair");
   keyWrap.append(key, side);
+  if (pr?.id === "cib-zht-apikey") import("./zht.js").then((m) => key.isConnected && m.setup(keyWrap, key, draft, p || pr), statusErr);
   // Vertex AI: no key, the user's Google Cloud project's token
   const vertex = p ? !!p.vertex : !!pr?.vertex;
   let vertexProject = null;
@@ -9841,7 +9857,7 @@ function drawEditor(p, presetID) {
 
   // a third-party Anthropic API's key header: both, or one for a service refusing two (Aloha)
   const twoKeyHeaders = () => {
-    if (p?.account || vertex) return false;
+    if (p?.account || vertex || pr?.id === "aiep-coding-plan") return false;
     if (p && !custom) return !!p.bothAuth;
     const a = ((draft.anthropic ?? (isNew && pr ? pr.anthropic : "")) || "").trim();
     if (!a) return false;
@@ -10122,7 +10138,7 @@ function drawEditor(p, presetID) {
     ed.append(...field(t(jev ? "Jev endpoint" : "System One endpoint"), du, tmpl().includes(WORKSPACE) ? t("The address the decision model is asked at, POST …/systemone under it; the workspace ID above fills it in") : jev ? t("The address Jev is asked at; paste the one from your gateway's docs, e.g. Cloudflare's …/accounts/<account id>/ai/run") : t("The address its decision models are asked at, POST …/systemone under it")));
   }
 
-  if (!custom && !(decides && !p)) {
+  if (!custom && !(decides && !p) && pr?.id !== "cib-zht-apikey") {
     const ebox = el("div");
     const row = field(t("Endpoints"), ebox, "");
     refreshEndpoints = () => {
@@ -10141,7 +10157,7 @@ function drawEditor(p, presetID) {
   }
   ed.append(adv);
 
-  if (custom) {
+  if (custom && !intranet) {
     const more = edAligned(el("details", "more"));
     more.append(el("summary", "", t("More endpoints")));
     const inner = el("div", "inner");
@@ -10243,7 +10259,8 @@ function drawEditor(p, presetID) {
   const cancel = el("button", "text", t("Cancel"));
   cancel.onclick = cancelEdit;
   const saveBtn = el("button", "text primary", t(isNew ? "Add" : "Save"));
-  const save = () => {
+  const save = async () => {
+    if (ed.autoDetect && !await (await ed.autoDetect)()) return;
     if (p && pickingNone()) return editorError(t("Pick a model first."), "warn");
     // a typed icon address first; one that fails stays (hoobnn)
     const waiting = custom && ed.iconFlush?.();
@@ -10346,7 +10363,7 @@ function drawEditor(p, presetID) {
     if (vertex) body.vertex = vertexOfDraft();
     if (isNew && custom && !body.name) { name.focus(); return editorError(t("Give it a name"), "warn"); }
     if (isNew && custom && !body.chat && !body.anthropic && !body.responses && !body.gemini && !body.decide) { url.focus(); return editorError(t("A base URL is needed"), "warn"); }
-    if (endpoint && !body.chat && !body.responses) { endpoint.focus(); return editorError(t(pr.endpointNeeded || "Your resource's endpoint is needed"), "warn"); }
+    if (endpoint && !body.chat && !body.responses && !body.anthropic) { endpoint.focus(); return editorError(t(pr.endpointNeeded || "Your resource's endpoint is needed"), "warn"); }
     if (vertex && !body.vertex.project && !(draft.key || "").trim() && !p?.key?.set) { vertexProject?.focus(NO_SCROLL); return editorError(t("Google Vertex AI needs the id of your Google Cloud project"), "warn"); }
     if (address) {
       const a = (draft.address || "").trim();
@@ -11569,6 +11586,9 @@ function renderModels(p) {
     };
     head.append(el("b", "", t("Model settings")), fold);
     names.append(head);
+    if (intranet && p.id.startsWith("sub2agent-workbuddy") && p.models.some((m) => /-maas(?:-|$)/i.test(m.id))) {
+      names.append(el("p", "hint", "MaaS 标称容量来自供应商或模型资料；实际可用长度还受单次请求约 1 MiB 的大小限制。请保留自动压缩，图片、工具定义和工具结果也会占用请求空间。"));
+    }
     const ids = servedIds(p);
     if (!ids.length) { names.append(el("span", "hint", t("Pick a model first."))); return; }
     const prefs = draft.modelPrefs = draft.modelPrefs || {};
@@ -12209,7 +12229,7 @@ function routingSegs(items, current, onPick) {
   });
   return box;
 }
-const routingsOf = (p) => [...ROUTINGS, ...jsRoutings(p.routing || "")];
+const routingsOf = (p) => [...ROUTINGS, ...jsRoutings(p.routing || "")].filter(([id]) => !intranet || id !== "free" || p.routing === id);
 // as on the Routing page's list of these (routing/client.js AFF_OPTS)
 const STAYS = [
   ["", "Auto", "A conversation stays with the account or key that answered it while what the vendor cached of it is worth keeping — within a turn always, across turns while it's fresh."],
@@ -12403,7 +12423,7 @@ const SUBS = [
   // Anthropic has banned accounts it saw used from other tools: said before one is added
   { agent: "claude", name: "Claude", icon: "claude-color", plans: "Pro · Max · Team", importable: true, risk: true,
     riskNote: "Anthropic may suspend or ban a Claude account it sees used outside its own apps. magpie sends requests through Claude Code, but Anthropic may still act on them; you use it at your own risk. Use an account you can afford to lose." },
-  { agent: "codex", name: "ChatGPT", icon: "openai", plans: "Plus · Pro · Business", importable: true },
+  { agent: "codex", name: intranet ? "Codex" : "ChatGPT", icon: "openai", plans: "Plus · Pro · Business", importable: true },
   // OpenAI's Sign in with ChatGPT: the plan asked on api.openai.com, with the agent's own instructions (#933)
   { agent: "chatgpt-api", name: "ChatGPT API", icon: "openai", plans: "Plus · Pro · Business", own: true,
     hint: "Sign in with ChatGPT: your plan on OpenAI's own API, with your agent's own instructions rather than Codex's." },
@@ -12438,6 +12458,9 @@ const SUBS = [
   // accounts can also come from another tool's export (Antigravity Cockpit, Antigravity Manager, CLIProxyAPI)
   { agent: "antigravity", name: "Antigravity", icon: "antigravity-color", plans: "Google AI Pro · Ultra · free", own: true, risk: true, importable: true },
 ];
+if (intranet) {
+  SUBS.length = 0;
+}
 const subOf = (agent) => {
   const own = SUBS.find((x) => x.agent === agent);
   const pl = pluginSubs().find((x) => x.agent === agent);
@@ -12470,7 +12493,7 @@ function pluginMethod(sub, site) {
 function pluginSubs() {
   return ((providers || panelAccts)?.plugins || []).map((x) => ({
     agent: x.id, pid: x.pid, name: x.name, icon: x.icon, plugin: x, own: true, single: !!x.single,
-    get plans() { return t("from the plugin {spec}", { spec: x.spec }); },
+    get plans() { return intranet && x.pid.startsWith("sub2agent-") ? (x.pid.endsWith("workbuddy") ? "企业 SSO · 多账户" : "企业授权 · 多账户") : t("from the plugin {spec}", { spec: x.spec }); },
   }));
 }
 
@@ -19589,7 +19612,7 @@ async function setGatewayPaused(on) {
 }
 async function loadSettings() {
   const since = prefsWrites;
-  if (fontList === null && !fontListError) loadFonts();
+  if (!intranet && fontList === null && !fontListError) loadFonts();
   if (window.bootPrefs?.omarchy && !barIcon) api("omarchy/widget").then((b) => { barIcon = b; renderBarIcon(); }).catch(() => {});
   const s = await api("settings");
   if (!prefsSettled(since) && prefs) return; // the save draws the page when it's in
@@ -19737,6 +19760,7 @@ const partShows = (page) => {
   });
 };
 function setSetTab(tab, remember) {
+  if (intranet) { setShown = ""; return; }
   if (remember) {
     setTab = tab;
     try { localStorage.setItem("magpie.settingsTab", tab); } catch {}
@@ -19770,7 +19794,7 @@ function setSetTab(tab, remember) {
   // held tabs (#2396): a hairline once scrolled under
   const sv = $("#view-settings"), head = sv.querySelector(":scope > .set-head");
   sv.addEventListener("scroll", () => head.classList.toggle("stuck", sv.scrollTop > 0), { passive: true });
-  import("./settingshints.js").catch(() => {});
+  if (!intranet) import("./settingshints.js").catch(() => {});
   // opened on a part (a reload, a link): that part, and remembered
   if (mode === "window" && params.get("view") === "settings" && SET_TABS.includes(params.get("tab"))) {
     setTab = params.get("tab");
@@ -19833,6 +19857,7 @@ function findSettings() {
   none.textContent = t("No setting matches “{q}”", { q: $("#setQ").value.trim() });
 }
 function searchSettings(q) {
+  if (intranet) return;
   setQuery = q.trim().toLowerCase();
   if (setQuery) return findSettings();
   const v = $("#view-settings");
@@ -19974,6 +19999,7 @@ function renderUpdateMirror(r, s) {
 }
 
 function renderSettings() {
+  if (intranet) return import("./internalsettings.js").then(m => m.render(prefs), statusErr);
   const s = prefs;
   const keep = prefsKeep(s);
   prefsBase = keep;
@@ -20026,7 +20052,7 @@ function renderSettings() {
   $("#wslAgentsRow").hidden = !s.wsl;
   $("#wslAgentsSegs").replaceChildren(segs([["off", t("Off")], ["on", t("On")]], s.noWSLAgents ? "off" : "on",
     (v) => savePrefs({ ...keep, noWSLAgents: v === "off" })));
-  renderSessionTerminal(s, keep);
+  if (typeof renderSessionTerminal === "function") renderSessionTerminal(s, keep);
   renderBarIcon();
   // what it does in its tooltip (#2120), and where the Mac lists it
   $("#loginRow .who").title = t(document.body.classList.contains("mac")
@@ -20079,14 +20105,15 @@ function renderSettings() {
   window.renderSavedProxies ? renderSavedProxies(s) : import("./proxies.js").then(() => renderSavedProxies(s), () => {});
   renderGitHubToken(s);
   renderImages(s, keep);
-  renderSearch(s, keep);
+  if (typeof renderSearch === "function") renderSearch(s, keep);
   window.pipeCheckFill ? pipeCheckFill() : import("./pipecheck.js").then(() => pipeCheckFill(), () => {});
   renderReplies(s, keep);
   renderDisabledModels(s);
-  renderRedact(s, keep);
+  renderSharing(s, keep);
+  if (typeof renderRedact === "function") renderRedact(s, keep);
   renderDiscovery(s, keep);
-  renderSessionReads(s);
-  renderOTel(s, keep);
+  if (typeof renderSessionReads === "function") renderSessionReads(s);
+  if (typeof renderOTel === "function") renderOTel(s, keep);
   renderPort(s);
   renderBareIds(s);
   renderLAN(s);
@@ -21887,17 +21914,10 @@ async function discoveryOffWarning() {
     : t("Every subscription stops working in magpie until this is on again: magpie reads none of the sign-ins they come from. API-key providers work as before.");
 }
 
-// renderRedact: what the gateway masks before a request goes to a vendor —
-// secrets, personal data, the user's own words — and puts back in what the
-// vendor answers. The page says it in three parts under what masking did
-// (Insights › Masking): how it is found (the local model first, then the
-// rules), what to mask, what is shared.
-function renderRedact(s, keep) {
-  const box = $("#redactList"), find = $("#findList"), share = $("#shareList");
-  box.replaceChildren();
-  find.replaceChildren();
+// Sharing and account visibility stay available without the masking plugin.
+function renderSharing(s, keep) {
+  const share = $("#shareList");
   share.replaceChildren();
-  featOff(box, s, "redact", t("Nothing is masked until it is on. Choosing anything to mask below turns it on"));
   const rowIn = (into, name, sub, ...tools) => {
     const r = el("div", "row pref");
     const who = el("div", "who");
@@ -21908,40 +21928,7 @@ function renderRedact(s, keep) {
     into.append(r);
     return r;
   };
-  const row = (...a) => rowIn(box, ...a);
   const onOff = (on, fn) => segs([["off", t("Off")], ["on", t("On")]], on ? "on" : "off", (v) => fn(v === "on"));
-  row(t("Mask secrets"), t("API keys, private keys, tokens and passwords go to vendors as placeholders, and come back as they were"),
-    onOff(s.redact, (redact) => savePrefs({ ...keep, redact })));
-  if (s.redact) row(t("Keep a key's form"), t("A key goes as a made-up one of the same form (sk_… stays sk_…), not a placeholder, and comes back as it was"),
-    onOff(s.redactShape, (redactShape) => savePrefs({ ...keep, redactShape }))).id = "redactShapeRow";
-  row(t("Mask personal data"), t("Emails, phone numbers, ID and bank card numbers too"),
-    onOff(s.redactPersonal, (redactPersonal) => {
-      if (redactPersonal) window.hideAccounts?.set(true, true);
-      savePrefs({ ...keep, redactPersonal });
-    }));
-  if (s.redactPersonal) for (const [id, name, sub, on] of REDACT_KINDS) {
-    const kinds = s.redactKinds || {};
-    const r = el("div", "row pref redact-kind");
-    r.dataset.redact = id;
-    const who = el("div", "who");
-    who.append(el("div", "name", t(name)), el("div", "sub", t(sub)));
-    const val = el("div", "val");
-    val.append(onOff(kinds[id] ?? on, (v) => savePrefs({ ...keep, redactKinds: { ...kinds, [id]: v } })));
-    r.append(who, val);
-    box.append(r);
-  }
-  row(t("Masked words in any case"), t("A word also matches in other capitals: Nightjar masks NIGHTJAR and nightjar too"),
-    onOff(s.redactWordsAnyCase, (redactWordsAnyCase) => savePrefs({ ...keep, redactWordsAnyCase }))).id = "redactWordsAnyCaseRow";
-  row(t("Whole words only"), t("A word is not masked inside a longer one: ABC masks ABC and 'ABC' but not XABCD, and 123456 not 0.123456"),
-    onOff(s.redactWordsWhole, (redactWordsWhole) => savePrefs({ ...keep, redactWordsWhole }))).id = "redactWordsWholeRow";
-  renderRedactRules(s, row);
-  renderMaskActions(s);
-  renderMaskTry(s);
-  const masking = s.redact || s.redactPersonal;
-  const why = t("Turn on Mask secrets or Mask personal data first");
-  privacyModelRow(find, masking ? "" : why);
-  const always = el("span", "static-pill" + (masking ? " on" : ""), masking ? t("Always on") : t("Off"));
-  rowIn(find, t("Rules"), masking ? t("Keys, tokens, emails and numbers whose checksum adds up: patterns that are certain, checked on every request") : why, always).id = "maskRulesRow";
   if (window.hideAccounts) rowIn(share, t("Hide accounts"), t("Email addresses and account names on every page are blurred, for a screenshot to share"),
     onOff(window.hideAccounts.on(), (on) => { window.hideAccounts.set(on); renderSettings(); }));
   rowIn(share, t("Turn off telemetry for all agents"), t("Over each agent's own Telemetry switch, an agent found later too"),
@@ -21955,12 +21942,6 @@ function renderRedact(s, keep) {
     onOff(!s.noStats, (on) => savePrefs({ ...keep, noStats: !on })));
   if (!s.noStats) rowIn(share, t("Share the agents, providers, models and plugins I use"), t("Sent with that event, by magpie's own ids, with how many of each, and how often each partner was shown, opened and added; a provider you added yourself is only “custom”. Which of Discover's plugins are installed goes to usemagpie.ai for its counts. No names, addresses, accounts, keys or usage"),
     onOff(!s.noUsageStats, (on) => savePrefs({ ...keep, noUsageStats: !on })));
-  if (!featureHides($('#nav button[data-view="masking"]'))) {
-    const open = el("button", "", t("Open"));
-    open.type = "button";
-    open.onclick = () => openMaskRecord(0);
-    box.prepend(rowIn(box, t("What was masked"), t("Each request masking changed, what the vendor saw, and how, on Insights › Masking"), open));
-  }
 }
 
 // privacyModelRow: the local masking model (internal/pii); its state read
@@ -23224,6 +23205,11 @@ async function show(v) {
     magpie.call(view, "leave");
   }
   if (v !== view && !jump) backTo = null;
+  if (intranet) {
+    const m = await import("./agentconnections.js");
+    if (v !== view) m.leave();
+    if (v === "agents") queueMicrotask(() => m.enter());
+  }
   view = v;
   renderBack();
   window.hideAccounts?.page();
@@ -23266,7 +23252,7 @@ function syncURL() {
   const q = new URLSearchParams(location.search);
   if (view === "agents") q.delete("view"); else q.set("view", view);
   if (view === "providers" && typeof editing === "string") q.set("edit", editing); else q.delete("edit");
-  if (view === "settings") q.set("tab", setShown); else q.delete("tab");
+  if (view === "settings" && setShown) q.set("tab", setShown); else q.delete("tab");
   q.delete("q"); // Plugins' q is looked for once (start.js)
   const s = q.size ? "?" + q : location.pathname;
   if (s !== location.search) history.replaceState(null, "", s);
@@ -23306,6 +23292,7 @@ function applyFeatures(list) {
   if (!Array.isArray(list)) return;
   for (const f of list) if (f.schema) magpie.configure(f.id, f.config);
   const off = new Set(list.filter((f) => !f.on).map((f) => f.id));
+  if (intranet) for (const id of ["library", "middleware", "otel", "redact", "search", "tools", "warmups"]) off.add(id);
   if (off.size === featuresOff.size && [...off].every((id) => featuresOff.has(id))) return;
   featuresOff = off;
   featureStyle();
@@ -23492,6 +23479,7 @@ function syncTitle() {
 async function refreshPage(kind) {
   switch (kind) {
     case "agents":
+      if (intranet) return (await import("./agentconnections.js")).refresh();
       state = await api("agents/rescan", {});
       renderAgents();
       await Promise.all([loadInstalls(), loadCLIs()]);
@@ -23554,7 +23542,7 @@ if (mode !== "window" || !document.body.classList.contains("linux")) $("#winclos
 // when the pointer comes over it.
 function wag() {
   const logo = document.querySelector(".brand .logo");
-  if (!logo || logo.classList.contains("wag") || calm()) return;
+  if (!logo?.querySelector(".tail") || logo.classList.contains("wag") || calm()) return;
   logo.classList.add("wag");
   logo.querySelector(".tail").addEventListener("animationend", () => logo.classList.remove("wag"), { once: true });
 }
@@ -23835,7 +23823,7 @@ var NAV_SUBS = {
 };
 // each tab's mark, from navicons.js (loaded with the first list)
 var NAV_SUB_IC;
-function navSubItems(v) { return [...(NAV_SUBS[v]?.()?.querySelectorAll(":scope > button") || [])].filter((b) => !b.hidden); }
+function navSubItems(v) { return v === "settings" && intranet ? [] : [...(NAV_SUBS[v]?.()?.querySelectorAll(":scope > button") || [])].filter((b) => !b.hidden); }
 var navSubsAt = "";
 function navSubs() {
   if (mode !== "window") return;
@@ -24116,7 +24104,10 @@ if (mode === "window") {
   let queued = false;
   const again = () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; navSubs(); }); };
   const mo = new MutationObserver(() => { again(); if (document.body.classList.contains("side-nav")) tools(); });
-  for (const v of Object.keys(NAV_SUBS)) mo.observe($("#view-" + v), { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
+  for (const v of Object.keys(NAV_SUBS)) {
+    const page = $("#view-" + v);
+    if (page) mo.observe(page, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
+  }
   // a page whose head is only its tools (Library, Plugins, Settings) has them
   // in the title bar beside the sidebar (app.css): between where the reader
   // is and the window's own buttons, so no row of its own stands empty

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"log"
 	"os"
 	"os/exec"
@@ -301,6 +302,10 @@ func pruneBuns(s bunState) {
 // KeepBunUpdated looks for a newer Bun a little after magpie starts, then
 // every bunEvery, while there are plugins to run on it.
 func KeepBunUpdated(ctx context.Context) {
+	if distribution.Internal {
+		return
+	}
+
 	t := time.NewTimer(2 * time.Minute)
 	defer t.Stop()
 	for {

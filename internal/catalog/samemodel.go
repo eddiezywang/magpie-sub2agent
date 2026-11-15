@@ -27,7 +27,7 @@ import (
 // The provider package groups models by it, and the catalog finds a model
 // models.dev lists under another spelling by it (normalFor).
 func SameModel(id string) string {
-	k := strings.ToLower(strings.TrimSpace(id))
+	k := strings.ToLower(DeploymentModel(strings.TrimSpace(id)))
 	if i := strings.LastIndex(k, "/"); i >= 0 {
 		k = k[i+1:]
 	}

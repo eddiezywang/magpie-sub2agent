@@ -1,6 +1,6 @@
 /* Plugins: the market of provider plugins, and the ones installed. */
 #view-plugins { gap: 0; }
-.pm-head { gap: 10px; }
+.pm-head { display: flex; align-items: center; gap: 10px; flex: none; }
 .pm-mirror { display: inline-flex; align-items: center; gap: 7px; padding: 2px 0; background: none; border: 0; font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
 .pm-mirror:hover, .pm-mirror.on { color: var(--fg); }
 .pm-mirror:disabled { opacity: .6; cursor: default; }
@@ -17,7 +17,14 @@
 .pm-find input { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: var(--fg); font: inherit; font-size: 12.5px; }
 .pm-find input::placeholder { color: var(--faint); }
 .pm-find input::-webkit-search-cancel-button { cursor: default; }
-.pm-body { gap: 18px; padding: 10px 0 18px; }
+.pm-body { display: flex; flex-direction: column; flex: none; gap: 18px; padding: 10px 0 18px; }
+.pm-connection { display: flex; flex-direction: column; gap: 10px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.pm-connection-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pm-connection h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+.pm-connection p { margin: 0; line-height: 1.65; max-width: 78ch; overflow-wrap: anywhere; }
+.pm-server { color: var(--muted); font-size: 12px; }
+.pm-body:has(.pm-connection) .pm-manual { position: relative; bottom: auto; margin-top: 4px; }
+.pm-body:has(.pm-connection) .pm-manual::before { display: none; }
 
 /* the week's picks: the day's plugin, the most downloaded, the most starred */
 .pm-recs { gap: 10px; }
