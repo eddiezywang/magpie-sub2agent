@@ -48,16 +48,25 @@
       button.title = label;
     }
     controls.children[1].classList.toggle('restoring', maximized);
+    controls.children[1].querySelector('path').setAttribute('d', maximized
+      ? 'M6 2h8v8h-2V4H6zM2 6h9v8H2zm2 2v4h5V8z'
+      : specs[1][2]);
   }
   async function updateMaximized() {
     const runtime = await winRuntime;
     if (runtime?.Window?.IsMaximised) {
-      maximized = !!(await runtime.Window.IsMaximised());
-      updateLabels();
+      try {
+        maximized = !!(await runtime.Window.IsMaximised());
+        updateLabels();
+      } catch { /* The window can disappear while a state read is pending. */ }
     }
   }
   new MutationObserver(updateLabels).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-  window.addEventListener('resize', updateMaximized);
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateMaximized, 100);
+  });
   updateMaximized();
   document.querySelector('.top').addEventListener('dblclick', (event) => {
     if (!event.target.closest('button, nav')) winRuntime.then((runtime) => runtime?.Window.ToggleMaximise());
