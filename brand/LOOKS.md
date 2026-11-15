@@ -25,7 +25,7 @@
 ## 已落地到 GUI（字体路线）
 
 - `internal/gui/assets/brand.js`：Bitrimus 子集（只保留 Sub2Agent + 大小写/数字，4,304 B）gzipped 后 1,254 B、base64 1,672 字符分 6 段内嵌，用 `DecompressionStream('gzip')` + `FontFace` 注册为 `BitrimusBrand`。这样不用往源码里放二进制文件。
-- `internal/gui/assets/brand.css`：`.brand > span:not(.logo)` 用 `BitrimusBrand`、16px、400、无字距。喜鹊图标仍是内联 SVG。
+- `internal/gui/assets/brand.css`：`.brand > span:not(.logo)` 用 `BitrimusBrand`、24px、400、无字距。喜鹊图标仍是内联 SVG。
 - `internal/gui/assets/index.html`：`<title>` / apple-mobile-web-app-title / `<span>` 从 `magpie` 改为 `Sub2Agent`，并引入 `brand.js` 和 `brand.css`。
 - CDP 实测：`document.fonts` 有 `BitrimusBrand:loaded`，computed font-family 命中，canvas 测宽 53 vs Segoe UI 78.17 —— 不是回退字体。
 
