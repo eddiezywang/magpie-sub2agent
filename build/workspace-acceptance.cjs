@@ -115,6 +115,28 @@ async function test(browser,engine){
   await history.evaluate(()=>{state.agents.forEach(a=>a.wired=false);renderAgents()});await history.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
   assert.deepEqual(history.errors,[]);console.log(`${engine}: default/history/deep links, keyboard disclosure, predefined unavailable/empty groups and reactive targets`);
  }finally{await history.close();}
+ for(const [lang,title,bulk,calibration] of [
+  ['en','Workspace','Connect every Agent','Awaiting calibration'],
+  ['zh','工作台','一键全部接入','待校准'],
+  ['zh-TW','工作台','一鍵全部接入','待校準'],
+  ['ja','ワークスペース','すべての Agent を接続','較正待ち'],
+  ['de','Arbeitsbereich','Alle Agents verbinden','Kalibrierung ausstehend'],
+ ]){
+  const localized=await open(browser,1024,'/?view=workspace&locale='+lang);
+  try{
+   assert.equal(await localized.locator('#nav button[data-view=workspace] span').innerText(),title);
+   assert.equal(await localized.locator('#pageTitle').innerText(),title);
+   await localized.locator('#ws-agents summary').click();
+   assert.equal(await localized.locator('.agent-bulk button').first().innerText(),bulk+'（8）');
+   await localized.locator('#ws-throughput summary').click();
+   await localized.evaluate(()=>qa.unknown=true);
+   await localized.locator('#ws-current').getByText(calibration,{exact:true}).waitFor();
+   assert.equal(await localized.locator('#ws-throughput-rows svg path').count(),1);
+   assert.equal(await localized.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   assert.deepEqual(localized.errors,[]);
+  }finally{await localized.close();}
+ }
+ console.log(`${engine}: workspace labels, Agent toolbar and telemetry in all five languages`);
  const telemetry=await open(browser);
  try{
   await telemetry.evaluate(()=>qa.unknown=true);await telemetry.locator('#ws-current').getByText('待校准',{exact:true}).waitFor();

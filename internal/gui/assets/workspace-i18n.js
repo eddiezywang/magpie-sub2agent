@@ -1,0 +1,36 @@
+// Internal workspace words use the same dictionary and placeholders as native pages.
+(() => {
+  const words = [
+    ['Agent connections', 'Agent 接入', 'Agent 接入', 'Agent の接続', 'Agent-Verbindungen'],
+    ['Routing policy', '路由策略', '路由策略', 'ルーティング方針', 'Routingstrategie'],
+    ['Show all agents', '查看全部', '查看全部', 'すべて表示', 'Alle anzeigen'],
+    ['Collapse agents', '收起', '收起', '折りたたむ', 'Einklappen'],
+    ['Connected {on} · Not connected {off}', '已接入 {on} · 未接入 {off}', '已接入 {on} · 未接入 {off}', '接続済み {on} · 未接続 {off}', 'Verbunden {on} · Nicht verbunden {off}'],
+    [' · Unknown {n}', ' · 未知 {n}', ' · 未知 {n}', ' · 不明 {n}', ' · Unbekannt {n}'],
+    ['Connect an Agent to choose a routing group', '接入 Agent 后可选择路由组', '接入 Agent 後可選擇路由組', 'Agent を接続するとルーティンググループを選べます', 'Agent verbinden, um eine Routinggruppe zu wählen'],
+    ['No predefined routing groups configured', '暂无已配置的预定义路由组', '尚無已設定的預定義路由組', '設定済みの定義済みルーティンググループはありません', 'Keine vordefinierten Routinggruppen eingerichtet'],
+    ['Edit routing groups', '编辑路由组', '編輯路由組', 'ルーティンググループを編集', 'Routinggruppen bearbeiten'],
+    ['Connect every Agent', '一键全部接入', '一鍵全部接入', 'すべての Agent を接続', 'Alle Agents verbinden'],
+    ['Retry failed connections', '重试失败项', '重試失敗項', '失敗した接続を再試行', 'Fehlgeschlagene Verbindungen wiederholen'],
+    ['Connecting {i}/{n} · {agent}', '接入中 {i}/{n} · {agent}', '接入中 {i}/{n} · {agent}', '接続中 {i}/{n} · {agent}', 'Verbinde {i}/{n} · {agent}'],
+    ['Connected {ok} · Failed {failed} · Skipped {skipped}', '已接入 {ok} · 失败 {failed} · 跳过 {skipped}', '已接入 {ok} · 失敗 {failed} · 跳過 {skipped}', '接続済み {ok} · 失敗 {failed} · スキップ {skipped}', 'Verbunden {ok} · Fehlgeschlagen {failed} · Übersprungen {skipped}'],
+    ['Awaiting calibration', '待校准', '待校準', '較正待ち', 'Kalibrierung ausstehend'],
+    ['Current throughput', '实时吞吐量', '即時吞吐量', '現在のスループット', 'Aktueller Durchsatz'],
+    ['Peak throughput', '峰值吞吐量', '峰值吞吐量', '最大スループット', 'Spitzendurchsatz'],
+    ['View throughput dimensions', '按维度查看', '依維度檢視', '内訳を表示', 'Dimensionen anzeigen'],
+    ['Collapse throughput details', '收起明细', '收起明細', '内訳を閉じる', 'Details einklappen'],
+    ['Throughput dimensions', '吞吐量维度', '吞吐量維度', 'スループットの内訳', 'Durchsatzdimensionen'],
+    ['Estimated output token/s · Updated every second · Last 5 seconds average · Last 180 seconds · Peak since gateway start or series reset', '估算输出 token/s · 每秒更新 · 最近 5 秒平均 · 近 180 秒曲线 · 峰值自网关启动或序列重建以来', '估算輸出 token/s · 每秒更新 · 最近 5 秒平均 · 近 180 秒曲線 · 峰值自閘道啟動或序列重建以來', '推定出力 token/s · 毎秒更新 · 直近 5 秒平均 · 直近 180 秒 · 最大値はゲートウェイ起動または系列再構築以降', 'Geschätzte Ausgabe token/s · Jede Sekunde aktualisiert · Mittelwert der letzten 5 Sekunden · Letzte 180 Sekunden · Spitze seit Gateway-Start oder Serien-Neustart'],
+    ['Total throughput over the last 180 seconds', '近 180 秒总吞吐量', '近 180 秒總吞吐量', '直近 180 秒の合計スループット', 'Gesamtdurchsatz der letzten 180 Sekunden'],
+    ['No output records yet', '暂无输出记录', '尚無輸出紀錄', '出力記録はまだありません', 'Noch keine Ausgabedaten'],
+    ['Current {current} · Peak {peak} token/s', '实时 {current} · 峰值 {peak} token/s', '即時 {current} · 峰值 {peak} token/s', '現在 {current} · 最大 {peak} token/s', 'Aktuell {current} · Spitze {peak} token/s'],
+    ['{name} throughput over the last 180 seconds', '近 180 秒 {name} 吞吐量', '近 180 秒 {name} 吞吐量', '直近 180 秒の {name} スループット', 'Durchsatz von {name} der letzten 180 Sekunden'],
+    ['Some models await calibration · ', '部分模型待校准 · ', '部分模型待校準 · ', '一部のモデルは較正待ち · ', 'Einige Modelle warten auf Kalibrierung · '],
+    ['Some dimensions were evicted · ', '部分维度已淘汰 · ', '部分維度已淘汰 · ', '一部の系列は削除済み · ', 'Einige Dimensionen wurden entfernt · '],
+    ['Updated at {time}', '更新于 {time}', '更新於 {time}', '更新時刻 {time}', 'Aktualisiert um {time}'],
+    ['Connection interrupted · Keeping last data ({time})', '连接中断 · 保留最后数据（{time}）', '連線中斷 · 保留最後資料（{time}）', '接続中断 · 最終データを保持（{time}）', 'Verbindung unterbrochen · Letzte Daten bleiben erhalten ({time})'],
+    ['Connection interrupted · Waiting for gateway data', '连接中断 · 等待网关数据', '連線中斷 · 等待閘道資料', '接続中断 · ゲートウェイのデータ待ち', 'Verbindung unterbrochen · Warte auf Gateway-Daten'],
+  ];
+  magpie.strings(Object.fromEntries(['zh', 'zh-TW', 'ja', 'de'].map((lang, i) => [lang,
+    Object.fromEntries(words.map(row => [row[0], row[i + 1]]))])));
+})();

@@ -19,10 +19,10 @@ function draw(){
  let bar=page.querySelector('.agent-bulk');
  if(!bar){bar=document.createElement('div');bar.className='agent-bulk';page.prepend(bar);}
  bar.replaceChildren();
- const button=el('button','text','一键全部接入');const count=candidates().length;
+ const button=el('button','text',t('Connect every Agent'));const count=candidates().length;
  button.disabled=busy||pending.size>0||!count;button.textContent+=`（${count}）`;button.onclick=()=>run(candidates());bar.append(button);
  const result=el('span','agent-bulk-result');result.setAttribute('role','status');result.textContent=resultText;bar.append(result);
- if(failures.length){const retry=el('button','text','重试失败项');retry.disabled=busy;retry.onclick=()=>run(failures.map(x=>state.agents.find(a=>a.id===x.id)).filter(a=>a&&!a.wired));bar.append(retry);result.textContent=failures.map(x=>x.name+'：'+x.error).join('；');}
+ if(failures.length){const retry=el('button','text',t('Retry failed connections'));retry.disabled=busy||pending.size>0;retry.onclick=()=>run(failures.map(x=>state.agents.find(a=>a.id===x.id)).filter(a=>a&&!a.wired));bar.append(retry);result.textContent=failures.map(x=>x.name+': '+t(x.error)).join('; ');}
  for(const row of document.querySelectorAll('#agents .agent[data-id]')){
   row.querySelector('.connection-check')?.remove();row.querySelector('.connection-adapt')?.remove();
   const check=snapshot?.[row.dataset.id];if(!check)continue;
@@ -42,13 +42,13 @@ async function run(list){
   const a=state.agents.find(x=>x.id===list[i].id);
   if(!a||a.wired||!connectable(a)||snapshot?.[a.id]?.status==='unknown'||pending.has(a.id)){skipped++;continue;}
   pending.add(a.id);
-  const statusLine=document.querySelector('.agent-bulk-result');resultText=`接入中 ${i+1}/${list.length} · ${a.name}`;if(statusLine)statusLine.textContent=resultText;
+  const statusLine=document.querySelector('.agent-bulk-result');resultText=t('Connecting {i}/{n} · {agent}',{i:i+1,n:list.length,agent:a.name});if(statusLine)statusLine.textContent=resultText;
   try{const next=await api('agents/connect/'+encodeURIComponent(a.id),{});if(visit===generation){state=next;renderAgents();}success++;}
   catch(err){failures.push({id:a.id,name:a.name,error:err.message});}
   finally{pending.delete(a.id);}
  }
  busy=false;
- resultText=`已接入 ${success} · 失败 ${failures.length} · 跳过 ${skipped}`+(failures.length?'；'+failures.map(x=>x.name+'：'+x.error).join('；'):'');
+ resultText=t('Connected {ok} · Failed {failed} · Skipped {skipped}',{ok:success,failed:failures.length,skipped})+(failures.length?'; '+failures.map(x=>x.name+': '+t(x.error)).join('; '):'');
  if(visible()){
   const finishVisit=generation;
   try{const next=await api('state');if(finishVisit!==generation||!visible())return;state=next;renderAgents();}catch(err){if(finishVisit===generation)statusErr(err)}

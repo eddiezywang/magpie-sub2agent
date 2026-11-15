@@ -37,3 +37,11 @@
 - 合并后的 packed-assets Chromium/WebKit 工作台回归再次全部通过。实际新程序在隔离 HOME 和 portable data 启动，10 个保留页面无脚本错误；Claude/Codex 原生接入、真实预定义组持久化及 8 次本机合成流式响应验证通过，180 点接口含正数及供应商/模型/会话归属。首次运行验证期间统计读取返回暂时不可用，等待后完整重跑通过；该次未记为通过。
 - 审查页已更新为此构建截图；Playwright 验证 14 张图片均 HTTP 200，页面含合并版本。只上传截图和脱敏 JSON，归档 SHA-256 `0461c86de9c34f7f201b47568fcd74898d034c8f2ca7b09875345a3fbfbf356e`。
 - 便携包已按用户要求经本机 → laptop → 个人 iDisk → KF 传输，三端 ZIP SHA-256 一致。laptop 路径 `C:\Users\eddiewang\Downloads\sub2agent-windows-x64-20261116-022615.zip`；KF 压缩包和解压目录位于 `C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-022615`。KF 已独立计算 ZIP 摘要，并逐一验证 manifest 中 55 个文件的 SHA-256，均一致；应用未在 KF 自动运行，原有安装未覆盖。
+
+## 工作台原生多语言验收
+
+- 新增内网 workspace-i18n.js，通过原生 magpie.strings 注册四种翻译；工作台、Agent 批量接入进度、吞吐量状态与曲线可访问名称均使用原生 t()/data-t，时间显示使用当前语言。共享 Workspace 和未识别会话词条放在 core i18n.js，不重复注册。
+- 翻译守卫纳入独立内网字典，排除不属于产品源码的 .github 工具配置；四项 i18n-keys 测试全部通过（重复词条、各语言键集、词条归属、词条存在性）。
+- packed-assets Chromium/WebKit 原有工作台验收及新增五语言检查均通过：导航/页标题、Agent 内容顶部批量按钮、待校准状态、维度曲线和 1024 宽无横向溢出。资产打包测试、核心脚本体积测试及语法/空白检查通过。
+- 将新增浏览器检查指向修改前 c0712c51f 的生产资产，实际失败于 English Workspace 标题仍为“工作台”，证明本次检查能检出原缺陷；不是仅检验字典内容。
+- 这项修补晚于已送达 KF 的 c0712c51f 便携包；KF 包仍对应该合并提交，不能将此源码修补描述为已交付。

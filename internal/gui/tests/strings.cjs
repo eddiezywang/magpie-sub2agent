@@ -13,8 +13,9 @@ function strings() {
   const files = [{ file: "i18n.js", src, dict: structuredClone(I18N) }];
   const twice = [];
   const dir = path.join(assets, "plugins");
-  for (const id of fs.readdirSync(dir).sort()) {
-    const file = path.join(dir, id, "i18n.js");
+  const dictionaries = [path.join(assets, "workspace-i18n.js"),
+    ...fs.readdirSync(dir).sort().map(id => path.join(dir, id, "i18n.js"))];
+  for (const file of dictionaries) {
     if (!fs.existsSync(file)) continue;
     const src = fs.readFileSync(file, "utf8");
     let dict;

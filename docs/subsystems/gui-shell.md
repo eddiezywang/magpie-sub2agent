@@ -1325,8 +1325,14 @@ saves, narrow layouts and all five languages in Chromium and WebKit.
 
 ## Intranet workspace composition
 
-The internal asset pack loads workspace.js and workspace-throughput.js before
-app.js; the upstream index and tray default remain unchanged. The workspace
+The internal asset pack loads workspace-i18n.js, workspace.js and
+workspace-throughput.js before app.js; the upstream index and tray default
+remain unchanged. Workspace words use native t()/data-t and magpie.strings,
+including interpolation in bulk progress and telemetry statuses. The internal
+dictionary has all four translations alongside the English source; shared
+Workspace and unidentified-session labels belong to core i18n.js. Dictionary
+guards include the internal words, and packed-page browser tests check all
+five languages in Chromium and WebKit. The workspace
 page moves the existing Agent, Routing and Providers main elements into one
 active host and returns them on leave. There is one original DOM tree per
 surface, with shared state, provider drafts, picker and modal. The native Agent
