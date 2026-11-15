@@ -150,3 +150,10 @@ Both 1440 and 390 check the authentication input fits its panel. Local auth
 screenshots are diagnostic only and must not be published. Add-sheet screenshot
 inspection found its narrow-column header wrapping the title to single glyphs;
 this visual defect remains to fix before checking task 2.3.
+
+Provider narrow-header fix verified in both engines at 1440/1024/390. Title
+stays on one line; search/actions stay within the sidebar. Old packed assets
+fail the new title assertion at 1440, establishing the regression. Current
+screenshots inspected visually. Native operation coverage above and verified
+native logo/name source complete task 2.3, with live-vendor auth explicitly
+unverified. Only this scope is checked; other acceptance tasks remain open.

@@ -554,3 +554,17 @@ can only borrow metadata when the full base model is known by the catalog.
 The intranet distribution offers the existing Remote magpie protocol as **Remote sub2agent**, retaining the `remote-magpie` preset ID for compatibility. Its Settings page exposes local network sharing so another installation can use its gateway address and key.
 
 The intranet `@sub2agent/native-api` bundled plugin gates Magpie native API preset discovery and saved providers. It starts disabled. Enabling it makes the original presets available with their existing protocols and fields; disabling it hides those providers from routing without deleting their records. The internal presets and Remote sub2agent remain available independently.
+
+### Workspace narrow provider column
+
+The internal workspace moves the native Providers host rather than maintaining
+a second editor. Its Add sheet wraps the heading into its own line above the
+search/import/close controls; the original standalone layout is untouched.
+TIG-Coding-Plan and CIB-智汇通-APIKEY retain their native image assets. The
+packed regression build/workspace-providers-acceptance.cjs covers native add,
+protocol detection, switches, refused-save retry, standalone synchronization and
+synthetic plugin authentication callback/account display in Chrome and WebKit.
+It checks Add-sheet bounds at 1440/1024/390 and authentication input bounds at
+1440/390. Vendor authentication is mocked; it does not certify vendor service
+availability. Authentication screenshots are private local diagnostics, excluded
+from the review site's explicitly selected public images.

@@ -46,7 +46,14 @@ async function check(browser,engine){
    assert.equal(await tile.count(),1);
    assert(await tile.locator(`img[src*="${icon}"]`).count(),`${name} native logo`);
   }
-  if(process.env.ARTIFACT_DIR)await page.screenshot({path:path.join(process.env.ARTIFACT_DIR,`${engine}-workspace-provider-add.png`),animations:'disabled'});
+  for(const width of [1440,1024,390]){
+   await page.setViewportSize({width,height:1000});
+   const header=await sheet.locator(':scope > .row-head').evaluate(e=>{const r=e.getBoundingClientRect(),label=e.querySelector('.label'),l=label.getBoundingClientRect();return {oneLine:l.height<parseFloat(getComputedStyle(label).fontSize)*1.8,contained:[...e.children].filter(x=>getComputedStyle(x).display!=='none').every(x=>{const b=x.getBoundingClientRect();return b.left>=r.left-1&&b.right<=r.right+1})}});
+   assert(header.oneLine,`${engine} ${width}: add title stays on one line`);
+   assert(header.contained,`${engine} ${width}: search and actions fit sidebar`);
+   if(process.env.ARTIFACT_DIR)await page.screenshot({path:path.join(process.env.ARTIFACT_DIR,`${engine}-workspace-provider-add-${width}.png`),animations:'disabled'});
+  }
+  await page.setViewportSize({width:1440,height:1000});
   await sheet.locator('[data-pick=custom]').click();
   const editor=page.locator('#modal .editor.new');
   await editor.locator('input[placeholder="例如 My Relay"]').fill('工作台隔离供应商');
@@ -88,7 +95,7 @@ async function check(browser,engine){
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    assert(await signing.getByRole('textbox',{name:'验证码',exact:true}).isVisible());
    assert(await signing.getByRole('textbox',{name:'验证码',exact:true}).evaluate(e=>{const r=e.getBoundingClientRect(),p=e.closest('.signing').getBoundingClientRect();return r.width>30&&r.left>=p.left&&r.right<=p.right+1}),'authentication input fits native right column');
-   if(process.env.ARTIFACT_DIR)await page.screenshot({path:path.join(process.env.ARTIFACT_DIR,`${engine}-workspace-provider-auth-${width}.png`),animations:'disabled'});
+   if(process.env.ARTIFACT_DIR)await page.screenshot({path:path.join(process.env.ARTIFACT_DIR,'private-auth',`${engine}-workspace-provider-auth-${width}.png`),animations:'disabled'});
   }
   await signing.getByRole('textbox',{name:'验证码',exact:true}).fill('synthetic-code');
   await signing.getByRole('button',{name:'完成登录',exact:true}).click();
@@ -99,4 +106,4 @@ async function check(browser,engine){
   assert.deepEqual(page.errors,[]);
  }finally{await page.close();}
 }
-(async()=>{if(process.env.ARTIFACT_DIR)await fs.mkdir(process.env.ARTIFACT_DIR,{recursive:true});for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(engine==='chromium'?{channel:'chrome'}:{});try{await check(browser,engine)}finally{await browser.close()}}})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{if(process.env.ARTIFACT_DIR)await fs.mkdir(path.join(process.env.ARTIFACT_DIR,'private-auth'),{recursive:true});for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(engine==='chromium'?{channel:'chrome'}:{});try{await check(browser,engine)}finally{await browser.close()}}})().catch(e=>{console.error(e);process.exitCode=1});
