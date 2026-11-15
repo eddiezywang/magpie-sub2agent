@@ -22,11 +22,11 @@ const lang=process.env.LANG_CASE||'zh';
     page.on('pageerror',e=>{if(!e.message.startsWith('ResizeObserver loop'))errors.push(e.message);});
     await page.route('**/*',async route=>{
      const u=new URL(route.request().url()),json=data=>route.fulfill({json:data}),method=route.request().method();
-     if(u.pathname==='/boot.js')return route.fulfill({contentType:'text/javascript',body:`window.bootPrefs=${JSON.stringify({lang,theme,web:false,intranet:true,version:'0.1.3913-sub2agent.17',port:8989,gateway:'http://127.0.0.1:8989',featuresOff:['library','middleware','otel','redact','search','tools','warmups']})};`});
+     if(u.pathname==='/boot.js')return route.fulfill({contentType:'text/javascript',body:`window.bootPrefs=${JSON.stringify({lang,theme,web:false,intranet:true,version:'0.6.0',port:8989,gateway:'http://127.0.0.1:8989',featuresOff:['library','middleware','otel','redact','search','tools','warmups']})};`});
      if(u.pathname==='/wails/runtime.js')return route.fulfill({contentType:'text/javascript',body:'export const Window={};'});
      if(u.pathname.startsWith('/api/')){
       if(method==='POST')return json({});
-      if(u.pathname==='/api/settings')return json({lang,theme,version:'0.1.3913-sub2agent.17',port:8989,gateway:'http://127.0.0.1:8989',dir:'D:/sub2agent/data',log:'D:/sub2agent/data/logs/app.log',login:false,lightweight:false,proxy:'',builtins:[]});
+      if(u.pathname==='/api/settings')return json({lang,theme,version:'0.6.0',port:8989,gateway:'http://127.0.0.1:8989',dir:'D:/sub2agent/data',log:'D:/sub2agent/data/logs/app.log',login:false,lightweight:false,proxy:'',builtins:[]});
       if(u.pathname==='/api/state')return json({agents:[{id:'demo-agent',name:'Demo Agent',cliMissing:true,import:false,fields:[],path:'D:/demo/agent',icon:'generic'}],profiles:[],settings:{theme,lang}});
       if(u.pathname==='/api/providers')return json({providers:[
         {id:'demo-glm',name:'Demo GLM',on:true,kind:'subscription',agents:[],models:[{id:'glm-4-demo',name:'GLM 4 Demo',on:true}],key:{set:false},account:{user:'demo@example.test',agentName:'Demo GLM',plan:'Pro',logins:[{user:'demo@example.test',plan:'Pro',on:true,active:true}],usage:{requests:12,tokens:4500}}},
