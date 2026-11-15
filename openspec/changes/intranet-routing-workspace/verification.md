@@ -129,3 +129,10 @@ ambiguous asynchronous waitForFunction return serialization and a second read.
 Updated sanitized review screenshots at workspace-review-20261116; inspected
 actual runtime-throughput.png visually after trusted wheel scrolling. Confirmed
 HTTP 200 and review source 135d0c36e. No real supplier accounts were used.
+
+04:05 package delivered local -> laptop -> personal iDisk -> KF. Both remote
+ZIPs matched 9e7fee46a3088e75932969a16d3720d8950c44a1385371b44f1f950d9358e6c9;
+KF verified all 54 extracted files against the source 135d0c36e manifest.
+KF executable (not auto-started):
+C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-040524\sub2agent-windows-x64-20261116-040524\sub2agent.exe
+The earlier 034732 bundle remains separate; use 040524 to review these fixes.
