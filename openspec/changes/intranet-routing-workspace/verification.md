@@ -51,3 +51,10 @@
 - `TestWorkspaceDeletedGroupDoesNotRewriteAgent` 在修复前实际返回 HTTP 200，复现删除组仍能提交的缺陷；内网 `/api/set` 现于 Agent.Pick 之前用 provider.FindGroup 拒绝已删除/禁用组，错误通过原生字典翻译。有效组仍经原生写入；拒绝后 Codex 配置字节不变。普通 Go 与 Windows race 均通过，原生 AgentConnectAPI/核心体积回归通过。
 - Chromium/WebKit packed-assets 新增验收通过：原生供应商草稿取消离页保持、确认丢弃无保存请求、独立页/工作台唯一 DOM 宿主恢复、路由组管理跳转及返回；错误组保存回滚、延迟保存后目标保持 Pi、旧组读取不能覆盖更新后的组。时间相关检查通过显式挂起/释放请求同步，不以定时等待猜测完成。
 - 新错误词条四种翻译及既有 i18n-keys 四项守卫通过。全工作台浏览器回归（含五种语言、浅深色及窄屏、轮询生命周期）再次通过。
+
+## 03:15 修补构建与交付
+
+- 当前应用源码 `7b7f5c598e8bd352ce737d479286a9cec37fd811` 完整便携构建通过，含 Bun。`sub2agent-windows-x64-20261116-031506.zip` 为 73,273,641 字节，SHA-256 `ca1bbf2d9768ec7da9d4fc429c6d6d1714266c874db7099f578ec700cc5b42ae`。Windows 内网、Linux 内网和 Windows 上游 `go vet -tags nogui ./...` 均 exit 0。
+- 本地隔离程序 PID 40256，页面 19894/网关 19893；10 页无脚本错误，真实合成上游 8 次响应、180 秒正数归属曲线、路由组持久化/实际请求和 Agent 配置隔离再次通过。生产资产没有 design-preview/workspace-fixtures 文件，工作台脚本不引用 iframe 或演示接口。运行验证脚本现兼容网关所有者启动/重载期间合法的 unavailable 响应，只在实际正数快照出现后成功，15 秒内无数据仍失败。
+- 最新截图与脱敏结果已更新审查页，Playwright 核对 14 张图 HTTP 200、页面构建版本 7b7f5c598。上传归档 SHA-256 `8cf1346efeb2d210674127f76a9a73de218af120a1b8ddb32025e27624b7d3e9`。
+- 新包已再次经 laptop → 个人 iDisk → KF。三端 ZIP 摘要一致，KF 解压后 55 个清单文件摘要逐一通过。KF 可执行文件：`C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-031506\sub2agent-windows-x64-20261116-031506\sub2agent.exe`。此包包含五语言修补和路由组删除保护；未覆盖旧包，未在 KF 自动启动。

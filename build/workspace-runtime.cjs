@@ -37,7 +37,10 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
    assert.equal(result.status(),200,(await result.text()).slice(0,160));
   }
   assert.equal(replies,7);
-  const observed=await page.waitForFunction(async()=>{const d=await (await fetch('/api/gateway/throughput')).json();return d.total.points.some(v=>typeof v==='number'&&v>0)?d:false},null,{timeout:15000});
+  // The web process reads the gateway owner; while it starts or reloads it
+  // can correctly return unavailable without a total. Wait for the actual
+  // calibrated snapshot instead of throwing on that supported state.
+  const observed=await page.waitForFunction(async()=>{const r=await fetch('/api/gateway/throughput');if(!r.ok)return false;const d=await r.json();return d.total?.points?.some(v=>typeof v==='number'&&v>0)?d:false},null,{timeout:15000});
   const measured=await observed.jsonValue();await observed.dispose();
   assert(measured.total.points.some(v=>typeof v==='number'&&v>0),'measured snapshot must retain calibrated output');
   assert(measured.providers.some(p=>p.id==='workspace-qa'));assert(measured.models.length>0);assert(measured.sessions.length>0);
