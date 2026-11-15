@@ -15,7 +15,7 @@ function keptView() {
   if (asked === "agents" || OPEN_VIEWS.includes(asked)) return asked;
   let v = "";
   try { v = localStorage.getItem("magpie.lastView") || ""; } catch { /* none kept */ }
-  return OPEN_VIEWS.includes(v) ? v : ""; // one gateway mode leaves out, show() makes Providers
+  return v === "agents" || OPEN_VIEWS.includes(v) ? v : ""; // one gateway mode leaves out, show() makes Providers
 }
 const firstView = mode === "window" ? keptView() || (navMine().includes("agents") ? "providers" : (intranet ? "workspace" : "")) : "";
 // from the tray panel's More in Plugins (q): Discover, once show() picked the tab (#3579)

@@ -32,9 +32,9 @@ async function fixture(page){
   catch{await route.fulfill({status:404,body:''});}
  });
 }
-async function open(browser,width=1440){
+async function open(browser,width=1440,route='/?view=workspace'){
  const page=await browser.newPage({viewport:{width,height:1000}});page.errors=[];page.on('pageerror',e=>page.errors.push(e.message));await fixture(page);
- await page.goto('http://workspace.test/?view=workspace');await page.locator('#ws-current').getByText('42.0 token/s',{exact:true}).waitFor();return page;
+ await page.goto('http://workspace.test'+route);await page.locator('#view-workspace').waitFor({state:'visible'});await page.locator('#ws-current').getByText('42.0 token/s',{exact:true}).waitFor();return page;
 }
 async function test(browser,engine){
  const page=await open(browser);
@@ -97,5 +97,21 @@ async function test(browser,engine){
   assert.equal(await locking.evaluate(()=>qa.calls.length),8);assert.deepEqual(locking.errors,[]);
   console.log(`${engine}: native row, bulk connection and model saves share write locks`);
  }finally{await locking.close();}
+ const history=await open(browser,1440,'/');
+ try{
+  await history.evaluate(()=>show('agents'));await history.reload();await history.locator('#view-agents').waitFor({state:'visible'});
+  await history.waitForFunction(()=>typeof view!=='undefined'&&view==='agents');
+  await history.goto('http://workspace.test/?view=routing');await history.waitForFunction(()=>view==='routing');
+  await history.goto('http://workspace.test/?view=workspace');await history.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).waitFor();
+  const summary=history.locator('#ws-agents summary');await summary.focus();await history.keyboard.press('Enter');assert(await history.locator('#ws-agents').evaluate(e=>e.open));
+  await history.keyboard.press('Enter');assert.equal(await history.locator('#ws-agents').evaluate(e=>e.open),false);
+  await history.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').ready=false;workspaceSamples.groups.push({id:'manual',name:'手工配置组',ref:'group/manual',ready:true});magpie.call('workspace','render')});
+  await history.waitForFunction(()=>document.querySelector('#ws-route-controls button[aria-pressed]')?.disabled===false);
+  assert(await history.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).isDisabled());
+  assert.equal(await history.locator('#ws-route-controls').getByRole('button',{name:'手工配置组',exact:true}).count(),0);
+  await history.evaluate(()=>{workspaceSamples.groups.splice(0);magpie.call('workspace','render')});await history.getByText('暂无已配置的预定义路由组',{exact:true}).waitFor();
+  await history.evaluate(()=>{state.agents.forEach(a=>a.wired=false);renderAgents()});await history.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
+  assert.deepEqual(history.errors,[]);console.log(`${engine}: default/history/deep links, keyboard disclosure, predefined unavailable/empty groups and reactive targets`);
+ }finally{await history.close();}
 }
 (async()=>{await fs.mkdir(output,{recursive:true});for(const [name,type]of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(name==='chromium'?{channel:'chrome'}:{});try{await test(browser,name)}finally{await browser.close();}}})().catch(err=>{console.error(err);process.exitCode=1;});
