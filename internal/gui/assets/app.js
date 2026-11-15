@@ -2711,7 +2711,7 @@ function closeAgentModels() {
   document.removeEventListener("keydown", m.keys, true);
   document.removeEventListener("scroll", m.scrolled, true);
   removeEventListener("resize", closeAgentModels);
-  if (!m.changed) return;
+  if (!m.changed) { m.closed?.(); return; }
   // its pickers drop what was taken out at once, so the one opened next
   // (the mousedown on it is what closed the list) has it gone (#927); what
   // was put back comes with the state
@@ -2726,7 +2726,7 @@ function closeAgentModels() {
     }
   }
   // the agents' pickers list what's left once the writes are in
-  m.saving.then(async () => { state = await api("state"); renderAgents(); }).catch(() => {});
+  m.saving.then(async () => { state = await api("state"); renderAgents(); }).catch(() => {}).finally(() => m.closed?.());
 }
 
 // holdAgentModels: a button that opens an agent's list, drawn again while
@@ -2769,7 +2769,7 @@ async function openAgentModels(a, anchor, ev) {
   try { ({ models, ordered, only = false, own = false, ownHidden = false } = await api("agent-models/" + encodeURIComponent(a.id))); }
   catch (e) {
     if (agentModelsLoading === loading) { loading.drop(); statusErr(e); }
-    return;
+    return false;
   }
   if (agentModelsLoading !== loading) return;
   loading.drop();

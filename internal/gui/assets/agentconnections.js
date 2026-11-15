@@ -1,5 +1,5 @@
 // A shared Agent surface: connection diagnostics and native bulk wiring.
-let active=false,generation=0,snapshot=null,busy=false,failures=[],resultText='';
+let active=false,generation=0,snapshot=null,busy=false,failures=[],resultText='',choosing=null;
 const pending=new Set();
 window.agentConnectionBusy=id=>busy||pending.has(id);
 window.agentConnectionStatus=id=>snapshot?.[id]?.status;
@@ -20,6 +20,7 @@ function draw(){
  if(!bar){bar=document.createElement('div');bar.className='agent-bulk';page.prepend(bar);}
  bar.replaceChildren();
  const button=el('button','text',t('Connect every Agent'));const count=candidates().length;
+  if(choosing)holdAgentModels(choosing,button);
  button.disabled=busy||pending.size>0||!count;button.textContent+=`（${count}）`;button.onclick=()=>run(candidates());bar.append(button);
  const result=el('span','agent-bulk-result');result.setAttribute('role','status');result.textContent=resultText;bar.append(result);
  if((state.agents||[]).some(a=>snapshot?.[a.id]?.status==='unknown')){
@@ -48,7 +49,26 @@ async function run(list){
   if(!a||a.cliMissing||a.wired||!connectable(a)||!snapshot?.[a.id]||snapshot[a.id].status==='unknown'||pending.has(a.id)){skipped++;continue;}
   pending.add(a.id);
   const statusLine=document.querySelector('.agent-bulk-result');resultText=t('Connecting {i}/{n} · {agent}',{i:i+1,n:list.length,agent:a.name});if(statusLine)statusLine.textContent=resultText;
-  try{const next=await api('agents/connect/'+encodeURIComponent(a.id),{});if(visit===generation){state=next;renderAgents();}success++;}
+  try{
+   let next;
+   try{next=await api('agents/connect/'+encodeURIComponent(a.id),{});}
+   catch(err){
+    if(err.code!=='all_hidden')throw err;
+    if(visit!==generation||!visible()){skipped++;continue;}
+    choosing=a;
+    try{
+     noneLeft(a);
+     const opened=await openAgentModels(a,document.querySelector('.agent-bulk button'),{stopPropagation(){}});
+     if(opened===false)throw err;
+     const menu=agentModels;
+     if(!menu||menu.a.id!==a.id){skipped++;continue;}
+     await new Promise(resolve=>menu.closed=resolve);
+     if(!menu.changed||visit!==generation||!visible()){skipped++;continue;}
+    }finally{choosing=null;}
+    next=await api('agents/connect/'+encodeURIComponent(a.id),{});
+   }
+   if(visit===generation){state=next;renderAgents();}success++;
+  }
   catch(err){failures.push({id:a.id,name:a.name,error:err.message});}
   finally{pending.delete(a.id);}
  }

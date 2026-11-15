@@ -224,3 +224,29 @@ The 050727 bundle remains the last verified KF delivery; 052224 is local only.
 Its ZIP SHA256 is ae0df61eeabe58e43b96f41a46ac1a7bd5a45703fba642d73cd71102198a6fb6.
 Open tasks 1.3/1.4/2.6/2.7/2.8/5.5/5.6 still require their complete stated scope;
 the targeted checks above do not close those broader gates.
+
+### Bulk model-list recovery
+
+The bulk queue now recovers all_hidden using the original Agent model list,
+waiting for its native save/close lifecycle. Unchanged close skips just that
+Agent and continues; changed close retries once; navigation stops the rest;
+model-list read failure stays failed. Menu anchors follow toolbar redraws.
+workspace-bulk-models-acceptance.cjs passed cancel/pick/leave/read-error in
+Chromium and WebKit. The existing packed workspace suite passed both engines
+before the final read-error distinction; the final dedicated suite and
+TestCoreScriptBudget/TestAgentConnectAPI/TestWorkspaceDeletedGroupDoesNotRewriteAgent
+passed afterward. TestAgentConnectAPI verifies the backend retains an existing
+model on first connect and does not change it on reconnect. Broader native
+model-menu regression and remaining OpenSpec scopes are tracked separately.
+
+The final dedicated bulk suite additionally passed a hidden candidate row and
+delayed model-list save before retry, proving queue membership is independent
+of rendered rows and connect waits for the native save. The four upstream
+native model-menu suites (all-hidden, no-models, loading, redraw) passed all
+34 cases. workspace-agent-status-acceptance.cjs passed both engines on both
+workspace and standalone Agents: one native bad status, diagnostic tooltip,
+working How to fix details, and no duplicate connection-check/adapt element.
+Combined with the preceding unknown/adaptation, bulk failure/retry/locks,
+candidate, lifecycle, native backend model-retention checks and inspected
+Agent content screenshots, tasks 2.6/2.7/2.8 are now verified. Other open gates
+remain open; no full-suite green claim is made.

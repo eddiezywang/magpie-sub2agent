@@ -488,3 +488,9 @@ covered in build/workspace-acceptance.cjs in Chromium and WebKit.
 An existing unmanaged connection uses the native status line and switch for
 adaptation. It adds no second connection button or diagnostic row. Unknown
 snapshots retain the native unknown status and explicit toolbar recheck.
+When a bulk connect encounters all_hidden, it opens the existing native model
+list and pauses the queue. Closing without a change skips that Agent; changed
+lists finish their native saves before a single connect retry. Leaving stops
+subsequent writes. A failed list read remains a failed connection, not a user
+cancellation. The native menu follows toolbar redraws while it is open.
+build/workspace-bulk-models-acceptance.cjs checks these paths in both engines.
