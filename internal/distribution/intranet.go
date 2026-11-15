@@ -4,6 +4,8 @@ package distribution
 
 const Internal = true
 
+const DefaultVersion = "0.6.0"
+
 const Name = "sub2agent"
 const DataDir = "sub2agent"
 const AppID = "local.sub2agent"

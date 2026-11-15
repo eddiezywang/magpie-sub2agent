@@ -23,6 +23,9 @@ browser administration to 8990; installed data uses `sub2agent` (with migration
 from the old internal directory) and the single-instance identity is `local.sub2agent`. Portable
 bundles keep their own adjacent `data` directory. Its Windows URL handler
 and startup entry are independent of Magpie, allowing both apps to run.
+The expanded retro title bar uses the Bitrimus subset from `brand.js` and
+`brand.css`; its compact sidebar hides the wordmark and keeps the logo. The
+font falls back to the system font if decompression or loading is unavailable.
 Diagram hubs use `appMark()` rather than the upstream header's bird symbol.
 Intranet routing animates unbranded packets without flying bird carriers;
 loading keeps the skeleton shimmer and ordinary progress spinners. The bird

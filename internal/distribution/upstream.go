@@ -4,6 +4,8 @@ package distribution
 
 const Internal = false
 
+const DefaultVersion = "dev"
+
 const Name = "magpie"
 const DataDir = "magpie"
 const AppID = "ai.usemagpie.app"

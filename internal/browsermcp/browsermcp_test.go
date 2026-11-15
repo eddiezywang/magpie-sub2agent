@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -295,6 +296,22 @@ func TestClientName(t *testing.T) {
 	} {
 		if got := clientName([]byte(in)); got != want {
 			t.Errorf("clientName(%s) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// A root-relative Windows path must not be joined to the agent's directory.
+func TestImageFromWindowsRootedPaths(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows path semantics")
+	}
+	for _, image := range []string{`\work\shot.png`, `/work/shot.png`, `C:\work\shot.png`, `\\server\share\shot.png`} {
+		b, err := json.Marshal(map[string]any{"method": "tools/call", "params": map[string]any{"name": "analyze_image", "arguments": map[string]any{"image": image}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := imageFrom(b, `C:\agent\project`); !bytes.Equal(got, b) {
+			t.Errorf("rooted image %q was rewritten: %s", image, got)
 		}
 	}
 }

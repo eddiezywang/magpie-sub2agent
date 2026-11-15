@@ -1,0 +1,10 @@
+/* Sub2Agent wordmark. The bird stays inline SVG; brand.js registers the
+   Bitrimus pixel face, this rule applies it to the text only.
+   24px keeps the bitmap grid crisp; no synthetic bold or letter-spacing. */
+.brand > span:not(.logo) {
+  font-family: "BitrimusBrand", var(--font, system-ui), sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
+}
