@@ -74,6 +74,16 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
   await page.reload();await page.waitForFunction(ref=>state?.agents?.find(a=>a.id==='claude')?.fields.find(f=>f.key==='model')?.value===ref,routing.ref);
   const grouped=await page.request.post('http://127.0.0.1:19893/v1/chat/completions',{headers:{Authorization:'Bearer magpie-claude','X-Magpie-Session':'workspace-group-session'},data:{model:routing.ref,stream:true,messages:[{role:'user',content:'synthetic group verification'}]}});
   assert.equal(grouped.status(),200);assert((await grouped.text()).includes('Synthetic output'));
+  try{
+   await page.evaluate(async id=>{const r=await api('groups/switch',{id,on:false});if(r.error)throw Error(r.error);magpie.call('workspace','render')},routing.id);
+   await page.getByText('路由组已停用',{exact:true}).waitFor();
+   assert(await page.locator('#ws-route-controls').getByRole('button',{name:routing.name,exact:true}).isDisabled());
+   await page.locator('#ws-route-controls').scrollIntoViewIfNeeded();
+   await page.screenshot({path:path.join(output,'runtime-group-disabled.png'),animations:'disabled'});
+  }finally{
+   await page.evaluate(async id=>{const r=await api('groups/switch',{id,on:true});if(r.error)throw Error(r.error);magpie.call('workspace','render')},routing.id);
+   await page.waitForFunction(ref=>!document.querySelector(`[data-ws-focus="${ref}"]`)?.disabled,routing.ref);
+  }
   const retained=['workspace','agents','providers','routing','groups','gateway','sessions','usage','plugins','settings'];
   for(const target of retained){
    await page.evaluate(target=>show(target),target);await page.locator('#view-'+target).waitFor({state:'visible'});

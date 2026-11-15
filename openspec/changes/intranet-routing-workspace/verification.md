@@ -454,3 +454,37 @@ predicate. Related packed GUI workspace/omission/core budget tests passed
 (2.311s), Node syntax and diff whitespace checks passed. Updated owning routing
 reference. Product change requires a refreshed review build; KF still has the
 previous f15ef0851 binary until a new delivery is recorded.
+
+### Verified refreshed package 070219
+
+Built clean source bfc068858 after the availability correction. Version 0.6.0
+Windows x64 archive is 73,276,622 bytes; SHA256:
+98c532448e43a5dc4477d3fd5a1abd2976bc21310462aa059083ac82fcf7341e.
+Actual packaged runtime passed the ten-page/streamed-output verification.
+Extended runtime verification disables the real native group through its API,
+checks the visible disabled reason and disabled shortcut, captures it, then
+reenables the group and waits for an enabled choice. Both writes succeeded.
+Restarted the same isolated bundle as PID 27908 with synthetic Magpie sentinels
+present before startup; actual directory/write/reload/restore isolation passed.
+
+Final packed page matrix passed 120 cases (two engines x two themes x three
+widths x ten pages). Combined native operation suite passed all 68 tests:
+Sessions search/export, group navigation/editor refresh, Settings shortcuts,
+Gateway key lifecycle/Usage export, and disconnect preview. Log:
+D:/git/sub2agent-new/.build-tools/workspace-final-native-bfc068.log.
+The real native TestAgentDisconnectAPI also passed (2.016s). These checks plus
+the separately recorded model/picker/provider/bulk/lifecycle cases close 1.4.
+
+Published and visually inspected actual disabled-group screenshot, plus ten
+pages and three throughput dimensions. Review HTML returned HTTP 200:
+http://124.220.199.224:8805/workspace-review-20261116/delivery-070219/delivery-070219.html
+No credentials/logs/QA home included. New ZIP delivered laptop -> personal
+iDisk -> KF. Both remote hashes match; KF independently verified all 54
+manifest files and clean bfc068858 source. KF executable:
+C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-070219\sub2agent-windows-x64-20261116-070219\sub2agent.exe
+Older packages retained; KF app not automatically started. Product binary is
+current; the subsequent commit records verification-only script/doc updates.
+
+5.5 remains open for the final scope/known-red audit. The related packed Go,
+race, vet, build and actual isolation checks above passed, but the broader
+suite failures recorded earlier must not be silently converted into passes.
