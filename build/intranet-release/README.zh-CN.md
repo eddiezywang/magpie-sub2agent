@@ -10,21 +10,40 @@ node build/intranet-release/prepare.mjs <新构建的sub2agent.exe> <版本号> 
 .\deploy\app-release-mirror\publish-all.ps1 -ReleaseDir <本地发布目录> -JumpSession <KF跳板会话ID>
 ```
 
-macOS 桌面版需在装有 Xcode 命令行工具的 Mac 上构建，使用 Apple
-Developer ID Application 签名身份和 `notarytool` 钥匙串配置；需准备私有
-Sub2Agent 源码、固定版本的社区插件源码以及账单签名密钥文件：
+macOS 桌面版可在装有 Xcode 命令行工具的 Mac 或 GitHub Actions macOS
+runner 上构建。需准备私有 Sub2Agent 源码及其 npm 依赖、固定版本的社区插件
+源码以及账单签名密钥文件。默认使用不需要 Apple 开发者账号的临时签名，适合
+内部测试：
 
 ```sh
-export MACOS_SIGN_IDENTITY='Developer ID Application: <团队>'
-export MACOS_NOTARY_PROFILE='<notarytool 钥匙串配置名>'
 export BILLING_KEY_FILE='<管理员密钥文件绝对路径>'
 export SUB2AGENT_SOURCE='<私有 Sub2Agent 源码目录>'
 export MAGPIE_COMMUNITY_SOURCE='<固定版本的社区插件源码目录>'
-bash build/intranet-macos.sh 0.6.0
+bash build/intranet-macos.sh 0.1.3913-sub2agent.6
 ```
 
-脚本生成 `magpie-darwin-arm64.zip` 和 `magpie-darwin-amd64.zip`，分别适用
-Apple 芯片和 Intel，执行签名、公证及装订。之后把两份 zip 交给发布管理员，
+脚本默认生成 `magpie-darwin-arm64.zip` 和 `magpie-darwin-amd64.zip`，分别适用
+Apple 芯片和 Intel；设置 `MACOS_ARCH=arm64` 或 `amd64` 可只构建一种架构。
+传入完整发布版本号，应用保留该版本号，macOS bundle 元数据使用前三段数字。
+临时签名包未经过 Apple 公证，首次打开可能需要在系统设置的“隐私与安全性”中
+选择“仍要打开”，受企业设备策略限制时可能无法打开。它不能证明开发者身份。
+如有正式证书，可设置 `MACOS_SIGN_MODE=developer-id`、`MACOS_SIGN_IDENTITY`
+和 `MACOS_NOTARY_PROFILE`，执行 Developer ID 签名、公证及装订。
+
+GitHub Actions 手动工作流模板 `build/intranet-release/sub2agent-macos.workflow.yml`
+分别使用 Apple 芯片和 Intel runner。将其复制到私有构建仓库的
+`.github/workflows/sub2agent-macos.yml` 才能启用；推送工作流文件的 GitHub
+凭据需要 `workflow` 权限。**必须在私有构建仓库运行**：公开仓库工作流会拒绝
+构建，因为产物包含私有供应商代码且可提取账单密钥。将本仓库的代码同步到私有
+构建仓库，并在该仓库设置 Variables `SUB2AGENT_SOURCE_REPOSITORY`（GitHub
+私有源码仓库的 owner/name）和 `SUB2AGENT_SOURCE_REF`（建议固定提交哈希），
+设置 Secrets `SUB2AGENT_SOURCE_TOKEN`（只读访问该源码仓库）和
+`BILLING_SIGNING_KEY`（64 位小写十六进制密钥）。私有源码当前位于其他 Git
+服务器，需要先以管理员认可的方式同步到 GitHub 私有仓库。工作流通过手动
+触发，分别上传两个保留 7 天的私有构建产物，不会自动发布到更新源；私有仓库
+读取者可以下载产物，需控制其访问权限。私有仓库的 runner 使用可能产生费用。
+
+之后把两份 zip 交给发布管理员，
 与同版本 Windows 文件一起生成**一份**签名版本清单：
 
 ```powershell
@@ -32,9 +51,10 @@ node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私�
 .\deploy\app-release-mirror\publish-all.ps1 -ReleaseDir <本地发布目录> -JumpSession <KF跳板会话ID>
 ```
 
-以上 macOS 打包和公证流程尚未在 Mac 上验证；发布前必须分别实测安装及
-原生自动更新。脚本需要使用同一个 Apple 团队的签名身份，确保已安装版本与
-更新包签名者一致。不要在提交历史、日志或公开服务器保存密钥和凭据。
+以上 macOS 打包流程尚未在 Mac 上验证；发布前必须分别实测安装及原生自动
+更新。正式签名的版本需要使用同一个 Apple 团队的签名身份。临时签名不能用于
+证明更新者身份；发布清单仍需由管理员使用现有 Ed25519 私钥签名，客户端还会
+校验文件摘要。不要在提交历史、日志或公开服务器保存密钥和凭据。
 
 将发布目录通过授权内网通道传至 0.177。将版本目录完整复制到 `/opt/sub2agent-plugin-market/www/sub2agent/releases/<版本号>`，确认 SHA-256 后，再使用同目录临时文件和 `rename` 原子替换 `latest.json`。版本目录不得覆盖已有内容；新内容使用新版本号。服务仅提供静态下载，无应用端上传接口。发布前备份 `latest.json`，保留旧版本以便回滚。
 
