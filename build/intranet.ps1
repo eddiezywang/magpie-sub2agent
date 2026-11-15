@@ -61,7 +61,6 @@ try {
         [IO.Compression.ZipFileExtensions]::ExtractToFile($bunEntry, (Join-Path $bundle 'runtime\bun.exe'), $false)
     } finally { $zip.Dispose() }
     }
-    New-Item -ItemType File -Path (Join-Path $bundle '.portable') | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $bundle 'licenses') | Out-Null
     Copy-Item -LiteralPath LICENSE,THIRD_PARTY_NOTICES -Destination (Join-Path $bundle 'licenses')
     Copy-Item -LiteralPath plugins/modelmap/LICENSE -Destination (Join-Path $bundle 'licenses/model-map-LICENSE')

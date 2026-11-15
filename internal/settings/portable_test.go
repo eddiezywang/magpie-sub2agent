@@ -41,6 +41,23 @@ func TestPortableSettings(t *testing.T) {
 	}
 
 	appdir.UseExecutable(exe)
+	if distribution.Internal {
+		want := filepath.Join(r, "home", ".config", distribution.DataDir, "settings.json")
+		if Path() != want || Portable() != "" {
+			t.Fatalf("internal configuration is not shared: %s", Path())
+		}
+		Migrate()
+		if err := Save(Settings{Theme: "light"}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(want); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(filepath.Join(data, "settings.json")); !os.IsNotExist(err) {
+			t.Fatal("wrote settings beside executable")
+		}
+		return
+	}
 	if got, want := Path(), filepath.Join(data, "settings.json"); got != want {
 		t.Fatalf("Path() = %q, want %q", got, want)
 	}

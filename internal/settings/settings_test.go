@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/filememo"
 	"github.com/yetone/magpie/internal/redact"
 )
@@ -140,6 +141,12 @@ func TestMigrate(t *testing.T) {
 		t.Fatal(err)
 	}
 	Migrate()
+	if distribution.Internal {
+		if _, err := os.Stat(filepath.Join(cfg, "sub2agent", "providers.json")); !os.IsNotExist(err) {
+			t.Fatal("internal build imported another application's dial configuration")
+		}
+		return
+	}
 	fi, err := os.Stat(filepath.Join(cfg, "magpie", "providers.json"))
 	if err != nil || runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // Windows has no such bits
 		t.Fatalf("providers.json not copied with its mode: %v %v", fi, err)

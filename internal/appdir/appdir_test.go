@@ -139,6 +139,12 @@ func TestFolders(t *testing.T) {
 	data := filepath.Join(r, "port", "data")
 	mkdir(t, data)
 	UseExecutable(exe)
+	if distribution.Internal {
+		if Portable() != "" || Config() != filepath.Join(r, "cfg", distribution.DataDir) {
+			t.Fatal("internal build must keep a shared configuration directory")
+		}
+		return
+	}
 	if Portable() != data || Config() != data || Cache() != filepath.Join(data, "cache") {
 		t.Errorf("portable: portable %q, config %q, cache %q", Portable(), Config(), Cache())
 	}
@@ -161,6 +167,12 @@ func TestWebView(t *testing.T) {
 	exe := touch(t, filepath.Join(r, "port", "magpie.exe"))
 	touch(t, filepath.Join(r, "port", ".portable"))
 	UseExecutable(exe)
+	if distribution.Internal {
+		if got := WebView(); got != "" {
+			t.Fatalf("internal build uses portable WebView: %s", got)
+		}
+		return
+	}
 	if got, want := WebView(), filepath.Join(r, "port", "data", "webview2"); got != want {
 		t.Errorf("portable: WebView() = %q, want %q", got, want)
 	}

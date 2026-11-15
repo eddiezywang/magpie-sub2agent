@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/yetone/magpie/internal/appdir"
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 // Migrate carries the files of an install that predates the name over:
@@ -15,6 +16,11 @@ import (
 // The old folders can be deleted once nothing uses them. A portable
 // magpie has only its own data folder and copies nothing in.
 func Migrate() {
+	if distribution.Internal {
+		// appdir migrates only Sub2Agent's own previous directories.
+		_ = Dir()
+		return
+	}
 	if Portable() != "" {
 		return
 	}

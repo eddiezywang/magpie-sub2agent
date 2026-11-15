@@ -68,6 +68,9 @@ var (
 // Portable is the data folder magpie keeps everything in, or "" when it
 // isn't portable.
 func Portable() string {
+	if distribution.Internal {
+		return ""
+	}
 	once.Do(func() {
 		exe, err := os.Executable()
 		if err != nil {
@@ -261,6 +264,9 @@ func absolute(p string) string {
 // Config is the folder magpie keeps its settings, providers, usage and the
 // rest of its own state in.
 func Config() string {
+	if distribution.Internal {
+		return internalConfig()
+	}
 	if p := Portable(); p != "" {
 		return p
 	}
@@ -277,6 +283,9 @@ func Config() string {
 // is portable. A magpie run in such a shell sees none of what the app's
 // window shows.
 func Redirected() string {
+	if distribution.Internal {
+		return ""
+	}
 	if Portable() != "" || os.Getenv("XDG_CONFIG_HOME") == "" {
 		return ""
 	}

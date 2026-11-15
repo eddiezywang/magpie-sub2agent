@@ -48,6 +48,12 @@ func TestLogsOnEachSystem(t *testing.T) {
 	mkdir(t, data)
 	UseExecutable(exe)
 	for _, goos := range []string{"darwin", "windows", "linux"} {
+		if distribution.Internal {
+			if Portable() != "" {
+				t.Fatal("internal builds must not become portable")
+			}
+			continue
+		}
 		if got, want := logsOn(goos), filepath.Join(data, "logs"); got != want {
 			t.Errorf("portable on %s: logs in %q, want %q", goos, got, want)
 		}

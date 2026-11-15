@@ -10,7 +10,9 @@ then reuses the validated cache offline. Neither package includes WebView2.
 `build/intranet.ps1 -SingleFile` additionally embeds the four private provider
 baselines and license texts, distributes only the EXE, and keeps build metadata
 outside the user archive. This mode does not require a Bun archive on the build
-command line. Existing portable data detection remains unchanged.
+command line. Internal builds share `~/.sub2agent` and no longer ship a
+`.portable` marker. Previous configuration directories are copied on first
+use as described in [GUI app shell](subsystems/gui-shell.md).
 Sessions is retained, including its navigation, assets, history consent,
 read/search/resume/export interactions and gateway conversation projection.
 Library remains removed. Retaining Sessions does not enable reading private
