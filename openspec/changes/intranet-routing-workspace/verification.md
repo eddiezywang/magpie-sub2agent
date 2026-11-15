@@ -175,3 +175,11 @@ Isolated native runtime PID 11448 passed ten-page, group save/reload/request,
 positive delivered throughput and TIG preset checks. Public gallery updated to
 7d11613aa and includes the inspected Add sheet screenshot. Only selected public
 files were uploaded; private-auth stays local and is excluded from publication.
+
+043758 delivery complete: local -> laptop -> personal iDisk -> KF. Remote ZIP
+hashes match 7be4857d6091044ccfac937e78d485b600cdbed8a8fe4e0a848f6f70ecabdce8;
+KF verified all 54 extracted manifest files. Application remains unlaunched there:
+C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-043758\sub2agent-windows-x64-20261116-043758\sub2agent.exe
+Actual package Add sheet also verified native TIG/CIB names and image assets,
+then captured runtime-provider-add.png and inspected it before publication.
+No authentication screen was published. Local runtime 11448 remains available.
