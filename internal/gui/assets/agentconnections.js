@@ -42,10 +42,13 @@ async function run(list){
   finally{pending.delete(a.id);}
  }
  busy=false;
- if(visit===generation&&visible()){
-  try{state=await api('state');renderAgents();}catch(err){statusErr(err)}
+ resultText=`已接入 ${success} · 失败 ${failures.length} · 跳过 ${skipped}`+(failures.length?'；'+failures.map(x=>x.name+'：'+x.error).join('；'):'');
+ if(visible()){
+  const finishVisit=generation;
+  try{const next=await api('state');if(finishVisit!==generation||!visible())return;state=next;renderAgents();}catch(err){if(finishVisit===generation)statusErr(err)}
+  if(finishVisit!==generation||!visible())return;
   snapshot=null;active=false;await enter();draw();
-  resultText=`已接入 ${success} · 失败 ${failures.length} · 跳过 ${skipped}`+(failures.length?'；'+failures.map(x=>x.name+'：'+x.error).join('；'):'');draw();
+  draw();
  }
 }
 export async function enter(){

@@ -15,6 +15,9 @@ func TestCodingPlanDefaultsAndSavedAuthentication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if p.Name != "TIG-Coding-Plan" || p.Icon != "tig-color" {
+		t.Fatalf("plan presentation = %q / %q", p.Name, p.Icon)
+	}
 	if p.Anthropic != "http://172.21.11.82/public" || p.Chat != "" || p.AuthHeader != AuthBearer {
 		t.Fatalf("wrong plan defaults: %+v", p)
 	}
