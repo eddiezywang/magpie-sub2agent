@@ -136,3 +136,17 @@ KF verified all 54 extracted files against the source 135d0c36e manifest.
 KF executable (not auto-started):
 C:\Users\eddiewang\Downloads\sub2agent-workspace-20261116-040524\sub2agent-windows-x64-20261116-040524\sub2agent.exe
 The earlier 034732 bundle remains separate; use 040524 to review these fixes.
+
+### Workspace provider operation audit
+
+Added build/workspace-providers-acceptance.cjs against the actual packed internal
+assets, sharing the isolated fixture entry point without running other suites.
+Chrome and WebKit passed TIG/CIB names/logos, custom provider detection/add,
+turn off/show folded disabled list/turn on, refused edit retaining draft then
+retry, standalone Providers synchronization, native plugin sign-in prompt,
+callback and successful account editor. Authentication used synthetic local API
+responses only; no real credentials, real vendor or callback was accessed.
+Both 1440 and 390 check the authentication input fits its panel. Local auth
+screenshots are diagnostic only and must not be published. Add-sheet screenshot
+inspection found its narrow-column header wrapping the title to single glyphs;
+this visual defect remains to fix before checking task 2.3.

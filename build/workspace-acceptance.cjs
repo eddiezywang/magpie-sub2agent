@@ -269,4 +269,5 @@ async function test(browser,engine){
   assert.deepEqual(telemetry.errors,[]);console.log(`${engine}: unknown gaps, epoch peak reset, single-flight slow reads, background pause/resume and leave cancellation`);
  }finally{await telemetry.close();}
 }
-(async()=>{await fs.mkdir(output,{recursive:true});for(const [name,type]of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(name==='chromium'?{channel:'chrome'}:{});try{await test(browser,name)}finally{await browser.close();}}})().catch(err=>{console.error(err);process.exitCode=1;});
+module.exports={open};
+if(require.main===module)(async()=>{await fs.mkdir(output,{recursive:true});for(const [name,type]of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(name==='chromium'?{channel:'chrome'}:{});try{await test(browser,name)}finally{await browser.close();}}})().catch(err=>{console.error(err);process.exitCode=1;});
