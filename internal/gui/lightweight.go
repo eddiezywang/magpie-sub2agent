@@ -52,6 +52,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 		MinHeight:        minH,
 		Zoom:             z,
 		Hidden:           true,
+		Frameless:        retroMainFrameEnabled(),
 		StartState:       state,
 		Mac:              mainMacWindow(),
 		Windows:          winOpts,
@@ -59,7 +60,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 	})
 	h.zoomWhenLoaded(w)
 	lowWhileHidden(w)
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && !retroMainFrameEnabled() {
 		w.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) { w.ExecJS(frameOnlyResizeJS) })
 	}
 	// A resize is kept once it settles (settle): the size, or that the

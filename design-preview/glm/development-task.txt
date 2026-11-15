@@ -1,0 +1,7 @@
+你是实际执行开发的负责人。请直接使用工具修改本仓库代码，不要只输出建议或代码片段。任务：按已认可的 design-preview/glm/index.html 风格，把内网版 Sub2Agent 的真实应用界面改造为暖白底、蓝色强调、像素复古描边的风格，覆盖保留页面，保留 Sessions 和所有供应商、账户、认证操作与原有功能。只影响 intranet 发行版，上游 Magpie 不改变；保留浅色/深色主题和窄屏可用性。
+
+工作目录是独立 worktree；已有未提交的 internal/gui/assets/intranet-retro.css 和 build/assetpack/intranet_index.go 是先前的粗糙初稿，设置页出现过嵌套边框，请重新审查和修复，不必保留。阅读 AGENTS.md（若有）、LESSONS.md、docs/code-standards.md、docs/subsystems/README.md 和 gui-shell.md，跟踪真实页面及构建过程。当前机器运行着用户真实 Sub2Agent，不要读写用户目录、配置、凭据、实际账户，不要停止或启动现有应用。测试只能使用隔离的合成数据；截图不能含密钥。优先真实实现而不是生成单独 HTML。仓库要求每个独立验证步骤提交并推送 fork feature/intranet-retro-glm，提交描述写明验证与局限。使用 Playwright 核验各保留页面及深浅主题、不同宽度，并将无凭据的里程碑截图发布到 http://124.220.199.224:8805/（SSH root@124.220.199.224，站点目录 /var/www/magpie-sub2agent-review）。不要发送任何消息。工作结束报告具体改动、执行的验证、未完成项及链接。若工具不可用不要假称已完成，直接说明错误。
+
+重要：只在 feature/intranet-retro-glm 分支开发和推送。不要切换、修改或推送 feature/intranet-pixel-style、develop/intranet。
+
+Windows 上 Bash 依赖的 WSL 不可用，请使用 powershell 工具执行 Windows 命令，不要使用 bash。必须实际调用工具执行开发，不要只写方案。

@@ -11,15 +11,16 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/yetone/magpie/internal/lazyre"
 )
 
 // reportSigningKey is injected into the distribution at build time. It is
 // never sent to the browser or printed; it is not a per-user credential.
 var reportSigningKey string
-var reportDate = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+var reportDate = lazyre.New(`^\d{4}-\d{2}-\d{2}$`)
 
 // SignBillingRequest signs the exact request target. Each request uses a fresh
 // nonce so retries must be signed again.

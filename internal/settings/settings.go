@@ -916,6 +916,16 @@ type Settings struct {
 	// (molianyin4227 on Discord: models differ, so one size for every
 	// agent fits none). An agent with none follows those two (ForAgent).
 	AgentCompacts map[string]AgentCompact `json:"agentCompacts,omitempty"`
+	// AgentContexts is the context window an agent is told for a model, when
+	// it is not the one every agent is told (ul3140773077392 on X: dsh
+	// compacts earlier than Codex does at the same window, so its window
+	// wants setting apart). By the agent's list id (Agent.ListsFor), then
+	// the model as the catalog has it ("provider/model", or "group/<id>"),
+	// "provider/*" for every model of a provider, a bare model id for that
+	// model at any provider, and "*" for all of them (which only shortens a
+	// window, as a provider's "*" does). An agent with none is told the
+	// model's own, or a group's.
+	AgentContexts map[string]map[string]int `json:"agentContexts,omitempty"`
 	// CodexAsyncCompact has Codex (0.163 on) compact a long conversation
 	// in the background, while its turn goes on, once it is past
 	// CodexAsyncCompactPercent of the model's window (#2490, lantern2077
@@ -984,6 +994,13 @@ type Settings struct {
 	// stays. Only what that page shows: routing, caps, counting, the tray
 	// panel (PanelUsageHidden is its own) and the menu bar's cells keep them.
 	UsageCardsHidden []string `json:"usageCardsHidden,omitempty"`
+	// UsageWindowsHidden are the quota rows of an allowance card that the
+	// Overview leaves out (wangshaowei39 on X: Antigravity's Claude & GPT
+	// rows unwanted), each as the provider id, "|" and the row's group: a
+	// pool's or a model family's name, else the window's name. Every
+	// account of the provider alike. A card is never left with none: when
+	// every row is named, all show. Only what that page shows.
+	UsageWindowsHidden []string `json:"usageWindowsHidden,omitempty"`
 	// ClientAgents counts a client magpie doesn't know as one of the agents
 	// it does, on the Usage and Sessions pages (#1958, NorethSea): a bridge
 	// that starts Codex's app-server under a name of its own
@@ -2619,6 +2636,7 @@ func saveOwn(s Settings, recording, reads bool) error {
 	s.PanelUsageHidden = ids(s.PanelUsageHidden)
 	s.UsageAgentsHidden = ids(s.UsageAgentsHidden)
 	s.UsageCardsHidden = ids(s.UsageCardsHidden)
+	s.UsageWindowsHidden = ids(s.UsageWindowsHidden)
 	s.ClientAgents = clientAgents(s.ClientAgents)
 	s.UsageCleared = usageCleared(s.UsageCleared)
 	s.TrayUsages = ids(s.TrayUsages)

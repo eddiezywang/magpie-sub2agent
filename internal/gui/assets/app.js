@@ -13149,10 +13149,8 @@ function renderSigning(sub) {
     u.title = t("Open it in another browser or profile: copy it there");
     const cp = copyBtn(signing.url, t("Sign-in link"));
     cp.title = t("Copy link");
-    link.append(u, cp);
-    tt.append(link);
     const acts = el("span", "acts");
-    const open = el("button", "link", signing.linkOnly && !signing.opened ? t("Open") : t("Open again"));
+    const open = el("button", "link", signing.linkOnly && !signing.opened ? t("Open in browser") : t("Open again"));
     // one that fails says why, where "magpie opened the sign-in page" was (#2043)
     // a poll may have put a fresh copy of the same sign-in in its place
     const flow = signing;
@@ -13162,7 +13160,10 @@ function renderSigning(sub) {
     }, (e) => {
       if (same()) { signing = { ...signing, openError: e.message }; renderProviders(); }
     });
-    acts.append(open);
+    // Copy link, then Open to its right: a sign-in kept to its link is
+    // copied into a private window or another profile, or opened here
+    link.append(u, cp, open);
+    tt.append(link);
     const ghe = copilotHostSwitch(sub);
     if (ghe) acts.append(ghe);
     acts.append(signInProxyLink(sub));
@@ -18767,7 +18768,8 @@ function quotaWindows(sub) {
       if (!r) quota.append(r = el("div", "quota-reset"));
       const line = holdsLine(w.holds);
       // a past cycle's whole is reckoned at its own last reading (#2009)
-      if (sub.history) line.title = t("Estimated from the window that began {start}, read {at}", { start: quotaCycleDate(Date.parse(w.holds.since)), at: quotaCycleDate(w.recordedAt) }) + "\n" + line.title;
+      // the last window's, kept until this one has data to tell its own
+      if (sub.history || w.holds.prevAt) line.title = t("Estimated from the window that began {start}, read {at}", { start: quotaCycleDate(w.holds.since), at: quotaCycleDate(w.recordedAt || w.holds.prevAt) }) + "\n" + line.title;
       r.append(line);
     } else if (w.holdsWhy && holdsWhy[w.holdsWhy]) {
       // and where it can't be told, so, and why in its tooltip (#2045)
@@ -21205,7 +21207,7 @@ const AGENT_PREFS = {
   claude: ["fullContextRow"],
   grok: ["fullContextRow"],
 };
-const agentPrefsOf = (a) => gatewayMode ? null : AGENT_PREFS[kindOf(a)] || (a.telemetry ? [] : null);
+const agentPrefsOf = (a) => gatewayMode ? null : AGENT_PREFS[kindOf(a)] || (a.telemetry || a.fields.length ? [] : null);
 
 // telemetryRow: the agent's own telemetry off in its config (OipsAnthony on X)
 function telemetryRow(a) {
@@ -21237,7 +21239,7 @@ function telemetryRow(a) {
 const PREFS_GLYPH = "M2.75 4.75h10.5M2.75 11.25h10.5M5.75 3.25v3M10.25 9.75v3";
 let agentPrefRowEls = null;
 // an agent's own Long conversations, under every agent's (agentcompact.js)
-const agentCompactIn = (list, ids, a) => ids.includes("fullContextRow") && (window.agentCompactFill ? agentCompactFill(list, a) : import("./agentcompact.js").then(() => agentCompactFill(list, a), () => {}));
+const agentCompactIn = (list, ids, a) => window.agentCompactFill ? agentCompactFill(list, a, ids) : import("./agentcompact.js").then(() => agentCompactFill(list, a, ids), () => {});
 // homeAgentPrefRows: the rows a sheet took back in the page
 function homeAgentPrefRows() {
   const box = $("#agentPrefRows");

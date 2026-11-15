@@ -28,3 +28,31 @@ func TestLightStep(t *testing.T) {
 		}
 	}
 }
+
+// The Mac's tray panel is made when it is first opened, not at start: a
+// hidden one kept a WebContent process of ~67 MB for a user who never
+// opened it. Elsewhere it is still made at start.
+func TestPanelOnFirstOpen(t *testing.T) {
+	for goos, want := range map[string]bool{"darwin": true, "linux": false, "windows": false} {
+		if got := panelOnFirstOpen(goos); got != want {
+			t.Errorf("panelOnFirstOpen(%s) = %v, want %v", goos, got, want)
+		}
+	}
+}
+
+func TestMainOnFirstOpen(t *testing.T) {
+	for _, c := range []struct {
+		goos     string
+		showMain bool
+		want     bool
+	}{
+		{"darwin", false, true},
+		{"darwin", true, false},
+		{"linux", false, false},
+		{"windows", false, false},
+	} {
+		if got := mainOnFirstOpen(c.goos, c.showMain); got != c.want {
+			t.Errorf("mainOnFirstOpen(%q, %v) = %v, want %v", c.goos, c.showMain, got, c.want)
+		}
+	}
+}

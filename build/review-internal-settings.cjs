@@ -3,8 +3,8 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {chromium,webkit}=require('playwright');
-const assets=path.resolve('internal/gui/assets');
-const ids=['gateway','login','lightweight','data','log','cli','remote','uninstall'];
+const assets=path.resolve(process.env.INTRANET_ASSETS||'internal/gui/assets');
+const ids=['gateway','version','login','lightweight','data','log','cli','remote','uninstall'];
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});const results=[];
  for(const engine of process.env.BROWSER?[process.env.BROWSER]:['chromium','webkit']) {
@@ -36,13 +36,18 @@ const ids=['gateway','login','lightweight','data','log','cli','remote','uninstal
     if(u.host!=='sub2agent.test')return route.abort();
     try {
      let body=await fs.readFile(path.join(assets,u.pathname==='/'?'index.html':u.pathname));
-     if(u.pathname==='/')body=body.toString().replaceAll('<title>magpie</title>','<title>sub2agent</title>').replaceAll('<span>magpie</span>','<span>sub2agent</span>');
+     if(u.pathname==='/'){
+      body=body.toString();
+      if(!body.includes('href="intranet-retro.css"'))body=body.replace('</head>','<link rel="stylesheet" href="intranet-retro.css"></head>');
+      body=body.replaceAll('<title>magpie</title>','<title>sub2agent</title>').replaceAll('<span>magpie</span>','<span>sub2agent</span>');
+     }
      return route.fulfill({body,contentType:{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(u.pathname)]||'text/html'});
     }catch{return route.fulfill({status:404,body:''});}
    });
    await page.goto('http://sub2agent.test/?view=settings&tab=privacy&q=GitHub');
    const root=page.locator('#internalSettings');await root.locator('[data-setting=uninstall]').waitFor();
    assert.deepEqual(await root.locator(':scope > [data-setting]').evaluateAll(ns=>ns.map(n=>n.dataset.setting)),ids);
+   for(const nested of ['#lanList','#remoteList']) assert.equal(await root.locator(nested).evaluate(e=>getComputedStyle(e).boxShadow),'none',nested+' must not add a second frame');
    assert.equal(await page.locator('#setTabs:visible,#setQ:visible,.nav-sub[data-view=settings]:visible').count(),0);
    assert.ok(!new URL(page.url()).searchParams.has('tab'));
    assert.doesNotMatch(await root.innerText(),/GitHub|Discord|magpie|fixture-hidden-proxy/);

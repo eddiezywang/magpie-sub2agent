@@ -1151,6 +1151,9 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		if distribution.Internal {
 			boot["intranet"] = true
 			boot["noVideo"] = true
+			if !isWeb(w) && retroMainFrameEnabled() {
+				boot["retroFrame"] = true
+			}
 		}
 		// and the clock the system shows, 12 or 24 hours, which no webview
 		// tells the page (iXerol on X); a browser tab keeps its own
@@ -1989,6 +1992,28 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		}
 		writeJSON(rw, settingsState())
 	})
+	// the windows one agent is told, apart from every other's
+	// (settings.AgentContexts): Contexts replaces them, none takes them away
+	mux.HandleFunc("POST /api/settings/agent-contexts", func(rw http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Agent    string
+			Contexts map[string]int
+		}
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			fail(rw, err)
+			return
+		}
+		a, err := agent.Find(in.Agent)
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		if err := provider.SetAgentContexts(a.ListsFor(), in.Contexts); err != nil {
+			fail(rw, err)
+			return
+		}
+		writeJSON(rw, settingsState())
+	})
 	// an agent's own Provider in model names (settings.AgentSuffix): Mode
 	// "" follows the one for every agent again
 	mux.HandleFunc("POST /api/settings/agent-suffix", func(rw http.ResponseWriter, r *http.Request) {
@@ -2562,11 +2587,12 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// not sent stays as it is
 	mux.HandleFunc("POST /api/usage/arrange", func(rw http.ResponseWriter, r *http.Request) {
 		var in struct {
-			Order        *[]string
-			PanelHidden  *[]string
-			AgentsHidden *[]string
-			CardsHidden  *[]string
-			Count        *struct{ Client, As string }
+			Order         *[]string
+			PanelHidden   *[]string
+			AgentsHidden  *[]string
+			CardsHidden   *[]string
+			WindowsHidden *[]string
+			Count         *struct{ Client, As string }
 		}
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			fail(rw, err)
@@ -2592,6 +2618,9 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		}
 		if in.CardsHidden != nil {
 			s.UsageCardsHidden = *in.CardsHidden
+		}
+		if in.WindowsHidden != nil {
+			s.UsageWindowsHidden = *in.WindowsHidden
 		}
 		if err := settings.Save(s); err != nil {
 			fail(rw, err)

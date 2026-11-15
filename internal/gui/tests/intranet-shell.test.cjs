@@ -44,7 +44,7 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   await page.goto('http://intranet.test/?view=agents');
   await page.locator('.row.agent[data-id="codex"]').waitFor();
   await page.waitForTimeout(400); // the header's delayed animation used to assume a bird
-  assert.equal(await page.title(), 'sub2agent');
+  assert.equal(await page.title(), 'Sub2Agent');
   assert.equal(await page.locator('#view-library').count(), 0);
   assert.equal(await page.locator('#view-sessions').count(), 1);
   assert.equal(await page.locator('#side button[data-view="sessions"]').isVisible(), true);
@@ -76,6 +76,8 @@ test('intranet Agents initializes without removed plugin pages', async (t) => {
   });
   await page.evaluate(() => show('settings'));
   await page.getByText('Share on local network', {exact:true}).waitFor();
+  assert.equal(await page.locator('#webPageHead:visible, #webPageList:visible').count(), 0,
+    'browser management settings stay hidden in the intranet distribution');
   const version = page.locator('#internalSettings [data-setting=version]');
   await version.getByText('0.1.3913-sub2agent.3').waitFor();
   assert.ok(await version.getByRole('button', {name:'Check'}).isVisible());

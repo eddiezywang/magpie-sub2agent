@@ -12,11 +12,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/yetone/magpie/internal/distribution"
+	"github.com/yetone/magpie/internal/lazyre"
 )
 
 // InternalBundle contains reviewed offline code, without dependency installation.
@@ -266,7 +266,7 @@ func internalServiceError(reason string, code int) error {
 	}
 }
 
-var bundlePath = regexp.MustCompile(`^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$`)
+var bundlePath = lazyre.New(`^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$`)
 
 func safeBundlePath(name string) bool {
 	if !bundlePath.MatchString(name) {

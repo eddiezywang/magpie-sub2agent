@@ -8108,7 +8108,409 @@ VS Code reads an apiKey only from its secret storage, so magpie puts its token i
 
 Yes, with the Marketplace's Copilot Chat, whose OpenAI Compatible provider shows only while it is signed in to GitHub with a personal Copilot plan.
 
-More agents on the same models: [Claude Science on any model](https://usemagpie.ai/docs/claude-science), [Claude Desktop on any model](https://usemagpie.ai/docs/claude-desktop) and [mu on any model](https://usemagpie.ai/docs/mu). Something fails? See [Fixing common errors](https://usemagpie.ai/docs/troubleshooting), or ask on [Discord](https://discord.gg/vGSnD3ZKQF).
+More agents on the same models: [Claude Science on any model](https://usemagpie.ai/docs/claude-science), [Claude Desktop on any model](https://usemagpie.ai/docs/claude-desktop), [mu on any model](https://usemagpie.ai/docs/mu) and [WorkBuddy on any model](https://usemagpie.ai/docs/workbuddy). Something fails? See [Fixing common errors](https://usemagpie.ai/docs/troubleshooting), or ask on [Discord](https://discord.gg/vGSnD3ZKQF).
+
+---
+
+Source: https://usemagpie.ai/docs/workbuddy
+
+# WorkBuddy on any model
+
+WorkBuddy is Tencent's CodeBuddy desktop app. It reads your own models from `~/.workbuddy/models.json` (or `$WORKBUDDY_CONFIG_DIR` when set), as OpenAI chat-completions models. magpie writes its models into that file, so WorkBuddy's model picker lists DeepSeek, GLM, Kimi, Qwen, Claude, a ChatGPT subscription or any other model in magpie.
+
+## Set up WorkBuddy
+
+1. **Add a provider in magpie.** Add an API key on the Providers page, or sign in to a subscription.
+2. **Set WorkBuddy's provider to magpie on the Agents page.** WorkBuddy's picker then lists the models magpie picked for it.
+3. **Pick the model per task in WorkBuddy.** The model is picked for each task in WorkBuddy's window; magpie's show as custom-local:<id>. If they don't show, restart WorkBuddy; magpie's Agents page offers a restart.
+
+Why a restart: WorkBuddy 5.6 watches models.json only when the file existed at start, and it watches the file itself, so a rewrite can go unseen until it restarts.
+
+## models.json
+
+The file is either a list of models or `{"models":[…],"availableModels":[…]}` as CodeBuddy Code's CLI writes it; magpie reads and writes both. WorkBuddy's own local models are entries in the same list (`local: true`), and magpie leaves them alone. Each of magpie's models points at the gateway's `/v1/chat/completions`, with tool calling on and magpie's key for WorkBuddy:
+
+```
+// ~/.workbuddy/models.json (one of magpie's entries)
+{
+  "id": "deepseek/deepseek-v4-pro",
+  "name": "…",
+  "vendor": "magpie",
+  "apiKey": "",
+  "url": "http://127.0.0.1:3425/v1/chat/completions",
+  "maxInputTokens": …,
+  "maxOutputTokens": …,
+  "contextWindow": { "supportedLengths": [200000, …], "defaultLength": … },
+  "supportsToolCall": true,
+  "supportsImages": …,
+  "supportsReasoning": true,
+  "reasoning": { "supportedEfforts": […], "canDisableThinking": …, "defaultEffort": "…" }
+}
+```
+
+WorkBuddy sends requests to url with reasoning_effort, under the apiKey as a Bearer token. Its requests say CLI/<version> WorkBuddy/<version>, so magpie tells them apart by their key. An entry you edited in WorkBuddy is saved under vendor Custom, and magpie still recognises it by its key.
+
+## Context and reply length
+
+WorkBuddy offers a choice of context in its model menu only when contextWindow lists two sizes or more. magpie adds a smaller 200K beside the whole window, and defaultLength is the whole window. Without maxOutputTokens WorkBuddy caps every reply at its own default, so magpie writes it.
+
+## What stays yours
+
+WorkBuddy rewrites models.json itself a few seconds after every start: it purges local models this computer can't run, and may encrypt the apiKey. magpie doesn't take that rewrite as a change. The other entries and keys stay as WorkBuddy wrote them:
+
+- A model you turned off in WorkBuddy stays off.
+- Models pointed at a magpie on another machine (a NAS) keep that address and key.
+- A reply limit you typed stays.
+- A default effort set in WorkBuddy's model settings, Auto included, stays while the model still offers it.
+
+## WorkBuddy AI
+
+WorkBuddy AI, the international build (www.workbuddy.ai, com.workbuddy.workbuddy-ai), is the same app with its data in `~/.workbuddy-ai`. magpie wires it as an agent of its own, under its own key. On a Mac magpie finds it by its app, not by that folder. WorkBuddy in WSL works too, with the gateway's address as the distro reaches it.
+
+## Switching back
+
+When you switch WorkBuddy off in magpie, magpie takes its models out of models.json and leaves every other entry as it was.
+
+## FAQ
+
+### Can WorkBuddy use DeepSeek or GLM?
+
+Yes. magpie writes its models into ~/.workbuddy/models.json; pick one starting with custom-local in WorkBuddy's model picker.
+
+### Why don't magpie's models show in WorkBuddy?
+
+WorkBuddy may not have seen the rewrite. Restart it; magpie's Agents page offers a restart.
+
+### Does magpie change my WorkBuddy settings?
+
+No. Models you turned off, models pointed at a NAS, reply limits you typed and your default effort all stay.
+
+### Does WorkBuddy AI, the international build, work?
+
+Yes. Its data is in ~/.workbuddy-ai, and magpie wires it as an agent of its own.
+
+More agents on the same models: [VS Code on any model](https://usemagpie.ai/docs/vscode), [CodeBuddy on any model](https://usemagpie.ai/docs/codebuddy), [Claude Science on any model](https://usemagpie.ai/docs/claude-science) and [Pencil on any model](https://usemagpie.ai/docs/pencil). Something fails? See [Fixing common errors](https://usemagpie.ai/docs/troubleshooting), or ask on [Discord](https://discord.gg/vGSnD3ZKQF).
+
+---
+
+Source: https://usemagpie.ai/docs/pencil
+
+# Pencil on any model
+
+Pencil (pen.dev) is a design canvas whose agent runs models. It takes custom providers of your own in `~/.pencil/models.json`, in Pi's format. magpie adds a provider named magpie there, so Pencil's model picker lists DeepSeek, GLM, Kimi, Qwen, Claude, a ChatGPT subscription or any other model in magpie.
+
+## Set up Pencil
+
+1. **Add a provider in magpie.** Add an API key on the Providers page, or sign in to a subscription.
+2. **Set Pencil's provider to magpie on the Agents page.** Pencil's model picker then lists the models magpie picked for it.
+3. **Restart Pencil and pick the model in its agent composer.** Pencil reads its custom models at start-up, so restart it once. The model is picked in Pencil's agent composer, not in a file magpie reads.
+
+How magpie finds Pencil: the `~/.pencil` folder, there once the app or pen.dev's CLI has run; on a Mac, an app installed and never opened is found as Pencil.app or pen.dev.app.
+
+## models.json
+
+Pencil's settings offer a custom provider on OpenAI Completions, OpenAI Responses or Anthropic Messages, set for the provider as a whole. magpie's provider is on OpenAI Completions (Pi's openai-completions) at the gateway's `/v1`, which the gateway takes for every model:
+
+```
+// ~/.pencil/models.json
+{
+  "providers": {
+    "magpie": {
+      "name": "magpie",
+      "baseUrl": "http://127.0.0.1:3425/v1",
+      "api": "openai-completions",
+      "apiKey": "",
+      "models": [
+        {
+          "id": "deepseek/deepseek-v4-pro",
+          "name": "…",
+          "reasoning": …,
+          "input": ["text", …],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "contextWindow": …,
+          "maxTokens": …,
+          "compat": {}
+        }
+      ]
+    }
+  }
+}
+```
+
+Pencil's requests carry magpie's key for Pencil, which is how magpie tells them apart, as Pencil's User-Agent isn't known.
+
+## Model fields
+
+Each model carries every field Pencil writes for one. Where magpie knows no better it uses Pi's defaults: a 128K window and 16K out. Every cost is 0, as magpie counts the spend itself. A model's own api and baseUrl are left out: Pi reads them, but Pencil's own editor never writes them.
+
+## Your providers stay
+
+The other providers you set up in Pencil stay as they are. A key in magpie's provider that magpie doesn't write, such as a setting another tool added, stays too. The model list is magpie's alone, so a model gone from the catalog leaves it.
+
+## Switching back
+
+When you switch Pencil off in magpie, magpie deletes the magpie provider from models.json and leaves your other providers as they were.
+
+## FAQ
+
+### Can Pencil use DeepSeek or GLM?
+
+Yes. magpie adds a magpie provider to ~/.pencil/models.json; restart Pencil and pick the model in its agent composer.
+
+### Why don't magpie's models show in Pencil?
+
+Pencil reads its custom models at start-up. Restart Pencil.
+
+### Which protocol does magpie's provider use?
+
+OpenAI Completions, at the gateway's /v1, for every model.
+
+### Does magpie change my other Pencil providers?
+
+No. magpie writes only its own magpie provider.
+
+More agents on the same models: [OpenPencil on any model](https://usemagpie.ai/docs/openpencil), [WorkBuddy on any model](https://usemagpie.ai/docs/workbuddy), [Pi on any model](https://usemagpie.ai/docs/pi) and [Mistral Vibe on any model](https://usemagpie.ai/docs/mistral-vibe). Something fails? See [Fixing common errors](https://usemagpie.ai/docs/troubleshooting), or ask on [Discord](https://discord.gg/vGSnD3ZKQF).
+
+---
+
+Source: https://usemagpie.ai/docs/mistral-vibe
+
+# Mistral Vibe on any model
+
+Mistral Vibe is Mistral's open-source coding agent, the `vibe` CLI. It keeps its settings in `config.toml` in `$VIBE_HOME`, else `~/.vibe`. magpie adds a magpie provider there with one model per catalog model, so Vibe's /model picker lists DeepSeek, GLM, Kimi, Qwen, Claude, a ChatGPT subscription or any other model in magpie. For Mistral's own models in other agents, see [Mistral in Claude Code, Codex, Gemini CLI and OpenCode](https://usemagpie.ai/docs/mistral).
+
+## Set up Mistral Vibe
+
+1. **Add a provider in magpie.** Add an API key on the Providers page, or sign in to a subscription.
+2. **Pick a model for Mistral Vibe on the Agents page.** Pick one via magpie; magpie points Vibe's active_model at it.
+3. **Restart open vibe sessions.** Vibe reads its settings at start-up. Afterwards you can switch to another magpie model in Vibe's /model too.
+
+## config.toml
+
+magpie writes a `[[providers]]` entry with the gateway's `/v1` as OpenAI chat completions, and one `[[models]]` entry per catalog model. A model's alias is `magpie/<provider>/<model>`, which is what /model shows and active_model holds:
+
+```
+# ~/.vibe/config.toml
+active_model = "magpie/deepseek/deepseek-v4-pro"
+
+[[providers]]
+name = "magpie"
+api_base = "http://127.0.0.1:3425/v1"
+api_style = "openai"
+backend = "generic"
+extra_headers = { Authorization = "Bearer " }
+
+[[models]]
+name = "deepseek/deepseek-v4-pro"
+provider = "magpie"
+alias = "magpie/deepseek/deepseek-v4-pro"
+thinking_levels = ["off", …]
+supports_images = …
+max_context_length = …
+```
+
+## Where the key goes
+
+Vibe reads a provider's key only from the environment variable its api_key_env_var names, or the keyring, never from config.toml. A keyless provider sends its extra_headers as they are, so magpie's key for Vibe goes there as an Authorization header. Nothing of magpie's is put in your environment or in `~/.vibe/.env`. Vibe's requests say Mistral-Vibe/<version> as their User-Agent, which the gateway tells apart.
+
+## Models and thinking
+
+A model with effort levels offers them in thinking_levels beside off; one without offers off alone. A thinking level you chose in Vibe on one of magpie's models stays while the model still has it. A model whose context magpie doesn't know is given 128K, since without one Vibe takes a default window with a warning.
+
+## What stays yours
+
+Every other key and entry of the file is yours and stays as written. magpie rewrites its own entries only when its models changed. Avibe, whose command is also vibe, is not taken for Mistral Vibe. Vibe's skills and AGENTS.md, in `~/.vibe/skills` and `~/.vibe/AGENTS.md`, are kept by magpie's [Library](https://usemagpie.ai/docs/library).
+
+## Switching back
+
+magpie notes what active_model was when it first takes over. When you pick Vibe's own model in magpie, or switch Vibe off, magpie puts active_model back to that value (or the model you picked) and removes its provider and model entries.
+
+## FAQ
+
+### Can Mistral Vibe use DeepSeek or Claude?
+
+Yes. magpie adds a magpie provider and its models to config.toml; pick a model starting with magpie/ in Vibe's /model.
+
+### Where does magpie put its key?
+
+Vibe doesn't read keys from config.toml, so magpie puts its key in extra_headers as an Authorization header, not in your environment.
+
+### Why is Vibe still on its old model?
+
+Vibe reads its settings at start-up. Restart open vibe sessions.
+
+### Is my old model back when I switch back?
+
+Yes. magpie noted what active_model was and puts it back.
+
+More agents on the same models: [Avibe on any model](https://usemagpie.ai/docs/avibe), [Pencil on any model](https://usemagpie.ai/docs/pencil), [WorkBuddy on any model](https://usemagpie.ai/docs/workbuddy) and [OpenMausBot on any model](https://usemagpie.ai/docs/openmausbot). Something fails? See [Fixing common errors](https://usemagpie.ai/docs/troubleshooting), or ask on [Discord](https://discord.gg/vGSnD3ZKQF).
+
+---
+
+Source: https://usemagpie.ai/docs/openmausbot
+
+# OpenMausBot on any model
+
+OpenMausBot is an open-source Electron chat app whose bots run the CLIs installed on the computer. It keeps its settings in `config.json` in its data folder: `$OMB_DATA_DIR`, else `~/.openmausbot` on every system. Each engine a bot can run on is an entry in that file's instances. magpie adds an engine of its own there, magpie, so bots can run on DeepSeek, GLM, Kimi, Qwen, Claude, a ChatGPT subscription or any other model in magpie.
+
+## Set up OpenMausBot
+
+1. **Add a provider in magpie.** Add an API key on the Providers page, or sign in to a subscription.
+2. **Quit OpenMausBot.** magpie refuses the change while OpenMausBot runs (on Windows magpie can't tell, so quit it first).
+3. **Set OpenMausBot's provider to magpie on the Agents page.** magpie puts every magpie model in the magpie engine's model picker.
+4. **Open OpenMausBot and pick magpie as a bot's engine.** Then pick the model in the engine's picker.
+
+## The magpie engine
+
+Why an engine of its own: OpenMausBot's Claude bots run Claude Code isolated, with only the sign-in keys of `~/.claude/settings.json` carried over, so a Claude Code wired to magpie reaches the gateway already but its picker lists Claude's own models alone. Its Codex bots run your `~/.codex` as it is, which magpie's Codex wiring already covers.
+
+magpie writes the engine as OpenMausBot's own Claude endpoint writes one: a claudeAgent with access custom, a Claude home of its own, requireApiKey, the gateway's address and magpie's key as ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY, and every magpie model in endpointModels. An engine with those keys owns its routing: neither your settings nor a provider switch in OpenMausBot reaches it. If you gave OpenMausBot a Claude Code of your own, the magpie engine uses it too.
+
+```
+// ~/.openmausbot/config.json
+"instances": {
+  "magpie": {
+    "driver": "claudeAgent",
+    "displayName": "magpie",
+    "access": "custom",
+    "config": {
+      "configDir": "~/.openmausbot/providers/magpie",
+      "requireApiKey": true,
+      "endpointModels": […]
+    },
+    "environment": {
+      "ANTHROPIC_BASE_URL": "http://127.0.0.1:3425",
+      "ANTHROPIC_AUTH_TOKEN": "",
+      "ANTHROPIC_API_KEY": "",
+      "ANTHROPIC_MODEL": "…"
+    }
+  },
+  …
+}
+```
+
+A 1M model is marked `[1m]`. A model id OpenMausBot wouldn't take is left out, since one such id makes it refuse the whole engine.
+
+## The default fleet stays
+
+With no engines saved in config.json, OpenMausBot runs its default fleet. A saved instances map is the whole fleet, so one holding magpie's alone would take every other engine away. When the file has none, magpie writes the default fleet beside its own.
+
+## Why quit it first
+
+OpenMausBot reads the file when it starts, and writes its whole map of engines, as it holds it, back when you change one in its Settings. So magpie refuses a change while it runs. A sync writes anyway: what OpenMausBot writes over is written again by the next sync, or within half a minute. When OpenMausBot runs on an older list than the file's, magpie's Agents page offers a restart.
+
+## What stays yours
+
+The magpie engine's name, colour, icon, whether it is on or hidden, the keys magpie doesn't write and the environment besides the routing are yours. So is the model picked first, while magpie still lists it. The routing, the Claude home and the model list are magpie's.
+
+## Switching back
+
+When you switch OpenMausBot off in magpie, magpie takes its engine out, and the default fleet it wrote with it while that is still the default fleet, so OpenMausBot runs its defaults again as they are then.
+
+## FAQ
+
+### Can OpenMausBot's bots use DeepSeek or GLM?
+
+Yes. magpie adds a magpie engine to config.json; pick it as a bot's engine, then pick the model.
+
+### Why quit OpenMausBot first?
+
+When you change an engine in it, it writes its whole map back over magpie's change, so magpie refuses while it runs.
+
+### Will my other engines disappear?
+
+No. When the file has no engines saved, magpie writes OpenMausBot's default fleet beside its own.
+
+### How do Codex bots use magpie?
+
+OpenMausBot's Codex bots run your ~/.codex as it is, which magpie's Codex wiring already covers.
+
+More agents on the same models: [Mistral Vibe on any model](https://usemagpie.ai/docs/mistral-vibe), [Pencil on any model](https://usemagpie.ai/docs/pencil), [Claude Desktop on any model](https://usemagpie.ai/docs/claude-desktop) and [JetBrains Copilot on any model](https://usemagpie.ai/docs/copilot-jetbrains). Something fails? See [Fixing common errors](https://usemagpie.ai/docs/troubleshooting), or ask on [Discord](https://discord.gg/vGSnD3ZKQF).
+
+---
+
+Source: https://usemagpie.ai/docs/copilot-jetbrains
+
+# JetBrains Copilot on any model
+
+The GitHub Copilot plugin in JetBrains IDEs (IntelliJ IDEA, PyCharm, GoLand and the rest) and Android Studio takes other vendors' models through Bring Your Own Key: Manage Models… in Copilot Chat's model picker, then Add Custom Endpoint Provider. magpie writes that custom endpoint for you, named magpie, so every model in magpie (DeepSeek, GLM, Kimi, Qwen, Claude, a ChatGPT subscription and the rest) is in Copilot Chat's picker. To use a Copilot subscription in other agents instead, see [GitHub Copilot in Claude Code, Codex, Gemini CLI and OpenCode](https://usemagpie.ai/docs/copilot).
+
+## Set up JetBrains Copilot
+
+1. **Add a provider in magpie.** Add an API key on the Providers page, or sign in to a subscription.
+2. **Set Copilot (JetBrains)'s provider to magpie on the Agents page.** magpie writes its endpoint into Copilot's byok.json.
+3. **Restart the IDE.** The IDE lists the endpoints when Copilot signs in, so magpie's models show after a restart.
+4. **Pick a model in Copilot Chat's model picker.** magpie's models are listed under magpie. The IDE keeps the one you pick in its project files.
+
+magpie lists Copilot (JetBrains) on the Agents page when a JetBrains IDE or Android Studio has the github-copilot-intellij plugin in its plugins folder, or when byok.json already has magpie's endpoint.
+
+## Which Copilot plan
+
+Bring Your Own Key needs Copilot signed in to GitHub. The personal plans, Copilot Free, Pro and Pro+, have it; Business and Enterprise have it when the organisation's policy allows it. Its requests say `GithubCopilot/<server version>`, as every client of the Copilot language server does, so magpie tells them apart by their key.
+
+## byok.json
+
+The JetBrains plugin keeps none of this itself. It asks the Copilot language server it bundles (copilot-language-server), which keeps every custom endpoint in one JSON file and reads it again each time it is used:
+
+- With `$XDG_CONFIG_HOME` set (and absolute): `$XDG_CONFIG_HOME/github-copilot/byok.json`
+- Windows: `%USERPROFILE%\AppData\Local\github-copilot\byok.json`
+- macOS and Linux: `~/.config/github-copilot/byok.json`
+
+A custom endpoint is three keys there. magpie writes them as the language server itself saves them:
+
+```
+// ~/.config/github-copilot/byok.json
+{
+  "magpie-provider-config": { "groupName": "magpie", "apiType": "chatCompletions" },
+  "magpie-api-key": "",
+  "magpie-models-config": {
+    "…": {
+      "deploymentUrl": "http://127.0.0.1:3425/v1/chat/completions",
+      "isRegistered": true,
+      "isCustomModel": true,
+      "modelCapabilities": {
+        "name": "…", "maxInputTokens": …, "maxOutputTokens": …,
+        "toolCalling": true, "vision": …
+      }
+    }
+  },
+  …
+}
+```
+
+Each model points at the gateway's `/v1/chat/completions`, with the key sent as a Bearer token. The key is in this file in plain text, not in the IDE's password safe. Xcode's and Eclipse's Copilot run the same language server and read the same file, so they list magpie's models too.
+
+## Agent mode and context
+
+Tool calling is on for every model, as Copilot's agent mode lists only models that call tools. maxInputTokens is the window the server fills: the context length from magpie's catalog, or the server's own 128K default for a custom endpoint when that isn't known. maxOutputTokens stays within that window.
+
+## What stays yours
+
+Your other endpoints and keys in byok.json stay as they are. A magpie model you hid in the IDE's Manage Models stays hidden after a sync. When nothing changed, magpie doesn't write the file, so it stays as the language server last wrote it.
+
+## Switching back
+
+When you switch Copilot (JetBrains) off in magpie, magpie deletes its three keys from byok.json. Your own endpoints are left alone.
+
+## FAQ
+
+### Can Copilot in JetBrains use DeepSeek or GLM?
+
+Yes. magpie writes a custom endpoint into Copilot's byok.json; restart the IDE and pick a model under magpie in Copilot Chat's picker.
+
+### Does Copilot Business work?
+
+Bring Your Own Key works on Business and Enterprise when the organisation's policy allows it, and on Free, Pro and Pro+.
+
+### Can agent mode use magpie's models?
+
+Yes. magpie turns tool calling on for every model, and Copilot's agent mode lists only models that call tools.
+
+### Do Xcode's and Eclipse's Copilot get them too?
+
+Yes. They run the same Copilot language server and read the same byok.json.
+
+More agents on the same models: [VS Code on any model](https://usemagpie.ai/docs/vscode), [Copilot CLI on any model](https://usemagpie.ai/docs/copilot-cli) and [OpenMausBot on any model](https://usemagpie.ai/docs/openmausbot). Something fails? See [Fixing common errors](https://usemagpie.ai/docs/troubleshooting), or ask on [Discord](https://discord.gg/vGSnD3ZKQF).
 
 ---
 
@@ -8668,6 +9070,7 @@ What the Usage page shows is also served as JSON, to this computer and, while ma
 
 - `/v1/magpie/usage?period=today|7d|30d|all`: totals, by model, agent, provider, account and gateway key.
 - `/v1/magpie/usage/requests`: the request log, with `period`, `day`, `offset`, `limit`, and filters `model`, `agent`, `provider`, `account`, `callerKey`, `failed=1`, `retried=1` and `q`.
+- `/v1/magpie/usage/requests?cursor=start`: the same requests as changes for a ledger of your own: `rows` to upsert by a stable `id` (with `original_ids`), `deleted` ids, `next_cursor` and `has_more`; `cursor=now` reads only what comes after, and a cursor magpie cannot resume from is refused with a `code`, never skipped.
 - `/v1/magpie/quotas`: each subscription’s windows (`?kept=1` without asking the vendors); `/v1/magpie/quotas/history?days=`: what was left over time, 45 days at most.
 - `/v1/magpie/limit`: the key’s own limits, its expiry, and its issuer’s limits; for a held key, what holds it (`heldTo`), its `models`, and whether it is told quotas (`quotas`, `quotaProviders`).
 - `/v1/magpie/concurrency`: requests in flight, per account.

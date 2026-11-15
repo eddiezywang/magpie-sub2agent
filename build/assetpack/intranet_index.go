@@ -26,11 +26,12 @@ func internalIndex(b []byte) []byte {
 			if strings.Contains(line, `<span class="logo"`) {
 				line = `<span class="logo" aria-hidden="true"><img src="icons/sub2agent.svg" width="22" height="22" alt=""></span>`
 			}
-			line = strings.ReplaceAll(line, "<title>magpie</title>", "<title>sub2agent</title>")
-			line = strings.ReplaceAll(line, "<span>magpie</span>", "<span>sub2agent</span>")
-			line = strings.ReplaceAll(line, `name="apple-mobile-web-app-title" content="magpie"`, `name="apple-mobile-web-app-title" content="sub2agent"`)
+			line = strings.ReplaceAll(line, "<title>magpie</title>", "<title>Sub2Agent</title>")
+			line = strings.ReplaceAll(line, "<span>magpie</span>", "<span>Sub2Agent</span>")
+			line = strings.ReplaceAll(line, `name="apple-mobile-web-app-title" content="magpie"`, `name="apple-mobile-web-app-title" content="Sub2Agent"`)
 			out = append(out, line)
 		}
 	}
-	return []byte(strings.Replace(strings.Join(out, "\n"), "</head>", `<style>#view-settings>:not(#internalSettings),#barkRow,#barkDailyRow,#updateProxyRow,#updateSourceRow,#update,#updateHide,.pm-mirror,#maskDemo,#birdRow,#setTab-sync{display:none!important}.logo img{object-fit:contain}.ic>img{image-rendering:pixelated;width:100%!important;height:100%!important}.logo img{image-rendering:pixelated}</style></head>`, 1))
+	index := strings.Replace(strings.Join(out, "\n"), "</head>", `<link rel="stylesheet" href="intranet-retro.css"><style>#view-settings>:not(#internalSettings),#barkRow,#barkDailyRow,#updateProxyRow,#updateSourceRow,#update,#updateHide,.pm-mirror,#maskDemo,#birdRow,#setTab-sync{display:none!important}.logo img{object-fit:contain}.ic>img{image-rendering:pixelated;width:100%!important;height:100%!important}.logo img{image-rendering:pixelated}</style></head>`, 1)
+	return []byte(strings.Replace(index, `<script src="app.js"></script>`, `<script src="app.js"></script><script src="intranet-titlebar.js"></script>`, 1))
 }
