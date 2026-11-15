@@ -21,7 +21,17 @@ asset browser regression is `tests/intranet-shell.test.cjs`.
 The intranet build is branded sub2agent. Its gateway defaults to 8989 and
 browser administration to 8990; installed data uses `sub2agent` (with migration
 from the old internal directory) and the single-instance identity is `local.sub2agent`. Portable
-bundles keep their own adjacent `data` directory. Its Windows URL handler
+builds share `~/.sub2agent` across executable locations. An explicit absolute
+`XDG_CONFIG_HOME` still redirects configuration to its `sub2agent` child.
+Old `.portable` markers no longer isolate internal builds. On first use,
+configuration is copied from adjacent `data`, then `~/.config/sub2agent`,
+then `~/.config/sub2agent-magpie`, taking the first existing Go configuration.
+Existing shared configuration wins, and old sources remain intact. A copy
+failure or a destination collision keeps the old source active and is logged;
+an interrupted copy into an existing legacy root also keeps that source active.
+Node runtime `data`, `logs` and `state` contents are preserved; this directory
+migration does not translate a different configuration schema. An explicit
+XDG override migrates only within its selected root. Its Windows URL handler
 and startup entry are independent of Magpie, allowing both apps to run.
 The expanded retro title bar uses the Bitrimus subset from `brand.js` and
 `brand.css`; its compact sidebar hides the wordmark and keeps the logo. The

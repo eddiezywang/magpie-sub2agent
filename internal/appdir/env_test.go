@@ -35,7 +35,11 @@ func TestConfigNeverRelative(t *testing.T) {
 	t.Setenv(homeVar(), home)
 	t.Setenv("XDG_CONFIG_HOME", "relative/cfg")
 	t.Setenv("XDG_CACHE_HOME", "relative/cache")
-	if got, want := Config(), filepath.Join(home, ".config", distribution.DataDir); got != want {
+	wantConfig := filepath.Join(home, ".config", distribution.DataDir)
+	if distribution.Internal {
+		wantConfig = filepath.Join(home, ".sub2agent")
+	}
+	if got, want := Config(), wantConfig; got != want {
 		t.Errorf("Config() = %q, want %q", got, want)
 	}
 	if got, want := Cache(), filepath.Join(home, ".cache", distribution.DataDir); got != want {

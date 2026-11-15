@@ -40,7 +40,11 @@ func TestFoldersJoinedOnce(t *testing.T) {
 	}
 	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv(homeVar(), filepath.Join(r, "home"))
-	if got, want := Config(), filepath.Join(r, "home", ".config", distribution.DataDir); got != want {
+	wantConfig := filepath.Join(r, "home", ".config", distribution.DataDir)
+	if distribution.Internal {
+		wantConfig = filepath.Join(r, "home", ".sub2agent")
+	}
+	if got, want := Config(), wantConfig; got != want {
 		t.Errorf("under the home folder: %q, want %q", got, want)
 	}
 }

@@ -1,6 +1,10 @@
 # sub2agent 内网版
 
-解压后运行 sub2agent.exe。请保留 providers 和 .portable；若包含 runtime/bun.exe，也请保留。
+解压后运行 sub2agent.exe。请保留 providers；若包含 runtime/bun.exe，也请保留。
+配置默认统一保存在用户目录 ~/.sub2agent，更换程序所在目录不会创建一套新配置。
+首次运行时兼容程序旁的旧 data、~/.config/sub2agent 和 ~/.config/sub2agent-magpie，
+按此前顺序复制第一套已有配置，保留旧目录；新目录已有配置时不会覆盖或合并。
+旧 .portable 标记不再改变内网版的配置位置。显式 XDG_CONFIG_HOME 仍可覆盖默认目录。
 这是源码构建的 Sub2Agent 试验版。
 配置保存在程序旁的 data 目录。本包不含真实账号、密钥或用户配置。
 
