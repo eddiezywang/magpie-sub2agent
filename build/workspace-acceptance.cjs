@@ -235,6 +235,9 @@ async function test(browser,engine){
   const summary=history.locator('#ws-agents summary');await summary.focus();await history.keyboard.press('Enter');assert(await history.locator('#ws-agents').evaluate(e=>e.open));
   await history.keyboard.press('Enter');assert.equal(await history.locator('#ws-agents').evaluate(e=>e.open),false);
   await history.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').ready=false;workspaceSamples.groups.push({id:'manual',name:'手工配置组',ref:'group/manual',ready:true});magpie.call('workspace','render')});
+  await history.getByText('路由组暂无可用成员',{exact:true}).waitFor();
+  await history.evaluate(()=>{Object.assign(workspaceSamples.groups.find(g=>g.id==='steady'),{disabled:true,ready:true});magpie.call('workspace','render')});
+  await history.getByText('路由组已停用',{exact:true}).waitFor();
   await history.waitForFunction(()=>[...document.querySelectorAll('#ws-route-controls button[aria-pressed]')].some(b=>b.textContent==='稳定优先'&&b.disabled));
   assert(await history.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).isDisabled());
   assert.equal(await history.locator('#ws-route-controls').getByRole('button',{name:'手工配置组',exact:true}).count(),0);

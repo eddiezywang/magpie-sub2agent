@@ -6,6 +6,8 @@ templateKind, applied through the native main-model writer to one explicitly
 selected, connected Agent. It creates no global routing policy and creates no
 groups automatically. Manual groups remain actual current values but are not
 offered as predefined shortcuts; group editing opens the original Groups page.
+Unavailable shortcuts remain disabled and show an inline explanation: the group
+is disabled, or it currently has no available members.
 Missing/unreadable Agent connection checks remove that Agent from targets.
 The internal save API rejects group references deleted or disabled after a read
 before modifying Agent configuration. UI/lifecycle and verification contracts

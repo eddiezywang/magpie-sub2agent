@@ -435,3 +435,22 @@ three viewport/zoom cases with omp and Codex: full-width file diff and note,
 visible heading/buttons, expansion, scroll to restored value, cancellation
 and zero configuration writes. The original title/startup-POST failures were
 test-profile assumptions; no application behavior was changed in this step.
+
+### Availability requirement audit correction
+
+The workspace-agent-routing spec requires unavailable groups to be disabled
+and explained. Audit found no explanation and a disabled-group edge: groupsJSON
+can report ready members even when the group's disabled flag is set. The
+workspace now disables shortcuts on either condition and adds visible native
+note text (plus the button title) for disabled/no-available-members, translated
+in all five languages. The backend save guard remains unchanged.
+
+Regenerated production intranet assets. New workspace-group-availability.cjs
+passed both engines across five languages at 390px: both explanations, the
+ready=true/disabled=true case, no Agent writes and no horizontal overflow.
+The main acceptance run passed both engines for routing unavailability and
+all prior workspace flows; the dedicated test proves the final disabled-ready
+predicate. Related packed GUI workspace/omission/core budget tests passed
+(2.311s), Node syntax and diff whitespace checks passed. Updated owning routing
+reference. Product change requires a refreshed review build; KF still has the
+previous f15ef0851 binary until a new delivery is recorded.

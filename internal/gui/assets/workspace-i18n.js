@@ -10,6 +10,8 @@
     ['Connect an Agent to choose a routing group', '接入 Agent 后可选择路由组', '接入 Agent 後可選擇路由組', 'Agent を接続するとルーティンググループを選べます', 'Agent verbinden, um eine Routinggruppe zu wählen'],
     ['No predefined routing groups configured', '暂无已配置的预定义路由组', '尚無已設定的預定義路由組', '設定済みの定義済みルーティンググループはありません', 'Keine vordefinierten Routinggruppen eingerichtet'],
     ['Edit routing groups', '编辑路由组', '編輯路由組', 'ルーティンググループを編集', 'Routinggruppen bearbeiten'],
+    ['Routing group is disabled', '路由组已停用', '路由群組已停用', 'ルーティンググループは無効です', 'Routinggruppe ist deaktiviert'],
+    ['Routing group has no available members', '路由组暂无可用成员', '路由群組暫無可用成員', '利用可能なルーティングメンバーがありません', 'Routinggruppe hat keine verfügbaren Mitglieder'],
     ['Connect every Agent', '一键全部接入', '一鍵全部接入', 'すべての Agent を接続', 'Alle Agents verbinden'],
     ['Retry failed connections', '重试失败项', '重試失敗項', '失敗した接続を再試行', 'Fehlgeschlagene Verbindungen wiederholen'],
     ['Connecting {i}/{n} · {agent}', '接入中 {i}/{n} · {agent}', '接入中 {i}/{n} · {agent}', '接続中 {i}/{n} · {agent}', 'Verbinde {i}/{n} · {agent}'],
