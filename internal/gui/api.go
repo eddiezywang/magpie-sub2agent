@@ -1282,6 +1282,16 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 			http.Error(rw, "unknown field", http.StatusBadRequest)
 			return
 		}
+		// A workspace can still show a group deleted in another window.
+		// Refuse it before any Agent connection or configuration write.
+		if distribution.Internal {
+			if _, group := provider.GroupIDOf(in.Value); group {
+				if _, _, ok := provider.FindGroup(in.Value); !ok {
+					fail(rw, errors.New("Routing group is no longer available"))
+					return
+				}
+			}
+		}
 		wired := a.Wired()
 		if err := a.Pick(f.Key, strings.TrimSpace(in.Value)); err != nil {
 			fail(rw, err)

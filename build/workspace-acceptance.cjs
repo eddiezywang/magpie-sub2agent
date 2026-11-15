@@ -12,7 +12,16 @@ async function fixture(page){
   const original=window.fetch;window.qa={failed:false,delay:0,calls:[],sets:0,unavailable:false,telemetryCalls:0,telemetryPending:0,telemetryMax:0,telemetryDelay:0,unknown:false,epoch:1};
   window.fetch=async(input,init={})=>{
    const url=new URL(String(input),location.href);
-   if(url.pathname==='/api/set')qa.sets++;
+   if(url.pathname==='/api/set'){
+    qa.sets++;
+    if(qa.rejectPick)return new Response(JSON.stringify({error:'Routing group is no longer available'}),{status:400});
+    if(qa.holdPick){qa.holdPick=false;await new Promise(resolve=>qa.releasePick=resolve);}
+   }
+   if(url.pathname==='/api/provider/save')qa.providerSaves=(qa.providerSaves||0)+1;
+   if(url.pathname==='/api/groups'&&qa.holdGroups){
+    qa.holdGroups=false;const response=await original(input,init);
+    await new Promise(resolve=>qa.releaseGroups=resolve);qa.groupsReleased=true;return response;
+   }
    if(url.pathname==='/api/gateway/throughput'){
     qa.telemetryCalls++;qa.telemetryPending++;qa.telemetryMax=Math.max(qa.telemetryMax,qa.telemetryPending);
     try{if(qa.telemetryDelay)await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,qa.telemetryDelay);init.signal?.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'))},{once:true})});}finally{qa.telemetryPending--;}
@@ -99,6 +108,68 @@ async function test(browser,engine){
   assert.equal(await locking.evaluate(()=>qa.calls.length),8);assert.deepEqual(locking.errors,[]);
   console.log(`${engine}: native row, bulk connection and model saves share write locks`);
  }finally{await locking.close();}
+ const drafts=await open(browser);
+ try{
+  await drafts.locator('#providers>.row.provider').click();
+  await drafts.locator('#modal').getByRole('button',{name:'全不选',exact:true}).click();
+  assert.equal(await drafts.evaluate(()=>providerDirty()),true);
+  // The native editor is modal; exercise the shell's attempted navigation
+  // without forcing a pointer through its intentionally inert backdrop.
+  await drafts.evaluate(()=>{qa.navigation=show('agents')});
+  await drafts.locator('dialog.action-confirm[open] button').first().click();
+  await drafts.evaluate(()=>qa.navigation);
+  assert.equal(await drafts.evaluate(()=>view),'workspace');
+  assert.equal(await drafts.evaluate(()=>providerDirty()),true);
+  assert.equal(await drafts.locator('#modal').isVisible(),true);
+  assert.equal(await drafts.evaluate(()=>qa.providerSaves||0),0);
+  await drafts.evaluate(()=>{qa.navigation=show('agents')});
+  await drafts.locator('dialog.action-confirm[open] button').last().click();
+  await drafts.waitForFunction(()=>view==='agents'&&editing===null);
+  for(const id of ['agents','routing','providers']){
+   assert.equal(await drafts.locator('#view-'+id).count(),1);
+   assert.equal(await drafts.locator('#view-workspace #view-'+id).count(),0);
+  }
+  await drafts.locator('#nav button[data-view=workspace]').click();
+  await drafts.waitForFunction(()=>view==='workspace'&&document.querySelectorAll('#view-workspace #view-agents,#view-workspace #view-routing,#view-workspace #view-providers').length===3);
+  for(const id of ['agents','routing','providers'])assert.equal(await drafts.locator('#view-workspace #view-'+id).count(),1);
+  await drafts.locator('#ws-route-controls').getByRole('button',{name:'编辑路由组 ›',exact:true}).click();
+  await drafts.waitForFunction(()=>view==='groups');
+  await drafts.locator('#nav button[data-view=workspace]').click();
+  await drafts.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).waitFor();
+  assert.equal(await drafts.evaluate(()=>qa.providerSaves||0),0);
+  assert.deepEqual(drafts.errors,[]);
+  console.log(`${engine}: provider draft navigation cancellation/discard, unique native hosts and group management return`);
+ }finally{await drafts.close();}
+ const races=await open(browser);
+ try{
+  const controls=races.locator('#ws-route-controls');
+  await controls.getByRole('button',{name:'稳定优先',exact:true}).waitFor();
+  await races.evaluate(()=>qa.rejectPick=true);
+  await controls.getByRole('button',{name:'稳定优先',exact:true}).click();
+  await races.waitForFunction(()=>qa.sets===1&&!window.agentConnectionBusy('opencode'));
+  assert.equal(await races.evaluate(()=>state.agents.find(a=>a.id==='opencode').fields[0].value),'workbuddy/model-a');
+  await controls.getByRole('button',{name:'稳定优先',exact:true}).waitFor();
+  assert.equal(await controls.getByRole('button',{name:'稳定优先',exact:true}).getAttribute('aria-pressed'),'false');
+  await races.evaluate(()=>{qa.rejectPick=false;qa.holdPick=true});
+  await controls.getByRole('button',{name:'稳定优先',exact:true}).click();
+  await races.waitForFunction(()=>typeof qa.releasePick==='function');
+  await races.evaluate(()=>{document.querySelector('#ws-route-controls').dataset.agent='pi';magpie.call('workspace','render')});
+  await controls.locator('button.proto').getByText('Pi',{exact:true}).waitFor();
+  await races.evaluate(()=>qa.releasePick());
+  await races.waitForFunction(()=>!window.agentConnectionBusy('opencode'));
+  assert.equal(await races.evaluate(()=>state.agents.find(a=>a.id==='pi').fields[0].value),'workbuddy/model-a');
+  await controls.locator('button.proto').getByText('Pi',{exact:true}).waitFor();
+  assert.equal(await controls.getByRole('button',{name:'稳定优先',exact:true}).getAttribute('aria-pressed'),'false');
+  await races.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').name='过期路由组';qa.holdGroups=true;magpie.call('workspace','render')});
+  await races.waitForFunction(()=>typeof qa.releaseGroups==='function');
+  await races.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').name='当前路由组';magpie.call('workspace','render')});
+  await controls.getByRole('button',{name:'当前路由组',exact:true}).waitFor();
+  await races.evaluate(()=>qa.releaseGroups());await races.waitForFunction(()=>qa.groupsReleased);
+  assert.equal(await controls.getByRole('button',{name:'过期路由组',exact:true}).count(),0);
+  assert.equal(await controls.getByRole('button',{name:'当前路由组',exact:true}).count(),1);
+  assert.deepEqual(races.errors,[]);
+  console.log(`${engine}: refused group restores old pick, late save preserves new target and stale group reads cannot replace controls`);
+ }finally{await races.close();}
  const history=await open(browser,1440,'/');
  try{
   await history.evaluate(()=>show('agents'));await history.reload();await history.locator('#view-agents').waitFor({state:'visible'});

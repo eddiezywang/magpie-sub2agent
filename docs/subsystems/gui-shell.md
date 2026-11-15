@@ -1354,6 +1354,12 @@ Workspace routing choices bind a declared target Agent's primary model field
 through setPick; choices come from existing templateKind groups and use their
 real ref. There is no global routing-policy preference or automatic template
 creation. Existing independent pages and Sessions remain navigable.
+In the internal profile, POST /api/set rejects a group reference no longer
+resolved by provider.FindGroup before calling Agent.Pick, including a deleted
+or disabled group still visible in an old window. Rejection writes no Agent
+configuration; the native picker restores its prior selection and reports the
+localized error. TestWorkspaceDeletedGroupDoesNotRewriteAgent checks both a
+valid native save and byte-identical Agent configuration after rejection.
 The workspace observes Agent state changes to refresh target eligibility and
 current model; superseded group reads cannot replace newer controls. Throughput
 polling starts with the active workspace, independently of group read latency.

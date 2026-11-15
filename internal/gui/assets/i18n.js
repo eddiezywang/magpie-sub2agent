@@ -4,6 +4,7 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+    "Routing group is no longer available": "路由组已不可用，请重新选择",
     "Workspace": "工作台",
     "Unidentified session": "未识别会话",
     "Model mapping": "模型映射",
@@ -5188,6 +5189,7 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "这份报告已经不在了：magpie 只保留最近 5 份。",
   },
   "zh-TW": {
+    "Routing group is no longer available": "路由組已無法使用，請重新選擇",
     "Workspace": "工作台",
     "Unidentified session": "未識別工作階段",
     "Model mapping": "模型映射",
@@ -10336,6 +10338,7 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "這份報告已經不在了：magpie 只保留最近 5 份。",
   },
   ja: {
+    "Routing group is no longer available": "ルーティンググループは利用できなくなりました。選択し直してください",
     "Workspace": "ワークスペース",
     "Unidentified session": "未識別のセッション",
     "Model mapping": "モデルマッピング",
@@ -15486,6 +15489,7 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "このレポートはもう残っていません。magpie は最新の 5 件だけを保存します。",
   },
   de: {
+    "Routing group is no longer available": "Diese Routinggruppe ist nicht mehr verfügbar. Bitte erneut auswählen.",
     "Workspace": "Arbeitsbereich",
     "Unidentified session": "Nicht zugeordnete Sitzung",
     "Model mapping": "Modellzuordnung",
