@@ -1322,3 +1322,25 @@ See `agent-bulk-visibility.test.cjs` for persistence, partial selection, failed
 saves, narrow layouts and all five languages in Chromium and WebKit.
 
 - A gateway port another program holds names that program (pluoki on X). `gateway.NoteHeld` reads the holder with `proc.PortHolder` (lsof on the Mac, /proc on Linux, Get-NetTCPConnection on Windows) and, when the daemon is root's and unreadable, falls back to `tailscale serve status --json` for the port. Tailscale's line carries `tailscale serve --https=<other> http://127.0.0.1:<port>`. The sentence (`PortHeld.Sentence`) goes to the `magpie serve` standby line and bind error, the app's log, `gatewayHeld` in `/api/state` (Gateway page) and Start's `taken` answer. A holder that can't be read says nothing, and the old wording stands. Nothing is killed or touched. See `TestWhoHolds`, `TestListenErrorNamesTheHolder`, `TestPortHolderNamesTheProgram` and `gateway-port-holder.test.cjs`.
+
+## Intranet workspace composition
+
+The internal asset pack loads workspace.js and workspace-throughput.js before
+app.js; the upstream index and tray default remain unchanged. The workspace
+page moves the existing Agent, Routing and Providers main elements into one
+active host and returns them on leave. There is one original DOM tree per
+surface, with shared state, provider drafts, picker and modal. The native Agent
+renderers now live in plugins/agents/page.js, loaded before app.js; they execute
+only once application state has initialized. This keeps the core budget intact.
+
+Agent connection diagnostics no longer append duplicate configured/not-configured
+rows. agentconnections.js supplies the shared Agent toolbar's bulk connection
+queue, native connect calls, unknown-state diagnostics and failure retry. The
+bulk button belongs to the Agent content, including when expanded in workspace,
+not the workspace header. Leaving cancels remaining queue entries without
+pretending to cancel already-issued configuration writes.
+
+Workspace routing choices bind a declared target Agent's primary model field
+through setPick; choices come from existing templateKind groups and use their
+real ref. There is no global routing-policy preference or automatic template
+creation. Existing independent pages and Sessions remain navigable.

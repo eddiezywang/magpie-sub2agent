@@ -1,4 +1,4 @@
-所有任务待实施；预览通过不代表正式功能已完成。各阶段独立验证后在 develop/intranet 提交并推送。
+所有任务待实施；预览通过不代表正式功能已完成。按用户要求从 develop/intranet 拉出的 feature/intranet-routing-workspace 独立分支实施；各阶段独立验证后提交并推送。
 
 ## 1. 原生模块与生命周期
 

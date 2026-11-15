@@ -32,6 +32,7 @@ func internalIndex(b []byte) []byte {
 			out = append(out, line)
 		}
 	}
-	index := strings.Replace(strings.Join(out, "\n"), "</head>", `<link rel="stylesheet" href="intranet-retro.css"><style>#view-settings>:not(#internalSettings),#barkRow,#barkDailyRow,#updateProxyRow,#updateSourceRow,#update,#updateHide,.pm-mirror,#maskDemo,#birdRow,#setTab-sync{display:none!important}.logo img{object-fit:contain}.ic>img{image-rendering:pixelated;width:100%!important;height:100%!important}.logo img{image-rendering:pixelated}</style></head>`, 1)
+	index := strings.Replace(strings.Join(out, "\n"), "</head>", `<link rel="stylesheet" href="intranet-retro.css"><link rel="stylesheet" href="workspace.css"><style>#view-settings>:not(#internalSettings),#barkRow,#barkDailyRow,#updateProxyRow,#updateSourceRow,#update,#updateHide,.pm-mirror,#maskDemo,#birdRow,#setTab-sync{display:none!important}.logo img{object-fit:contain}.ic>img{image-rendering:pixelated;width:100%!important;height:100%!important}.logo img{image-rendering:pixelated}</style></head>`, 1)
+	index = strings.Replace(index, `<script src="app.js"></script>`, `<script src="workspace.js"></script><script src="workspace-throughput.js"></script><script src="app.js"></script>`, 1)
 	return []byte(strings.Replace(index, `<script src="app.js"></script>`, `<script src="app.js"></script><script src="intranet-titlebar.js"></script>`, 1))
 }

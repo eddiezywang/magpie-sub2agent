@@ -1,45 +1,60 @@
-// One read-only configuration snapshot per visit. No polling or vendor calls.
-let active = false, generation = 0, snapshot = null;
-const visible = () => !document.getElementById("view-agents")?.hidden;
-export function leave() { active = false; snapshot = null; generation++; }
-export async function refresh() { leave(); await enter(); return t("Agents looked for again"); }
-function draw() {
-  if (!snapshot || !visible()) return;
-  for (const row of document.querySelectorAll("#agents .agent[data-id]")) {
-    row.querySelector(".connection-check")?.remove();
-    const check = snapshot[row.dataset.id];
-    if (!check) continue;
-    const box = document.createElement("div");
-    box.className = "sub connection-check";
-    box.title = check.path;
-    box.textContent = t(check.status === "configured" ? "Configured for sub2agent" : check.status === "unknown" ? "Could not read connection configuration" : "Not configured for sub2agent");
-    if (check.status !== "unknown" && !check.managed) {
-      const button = document.createElement("button");
-      button.className = "text action";
-      button.textContent = t(check.status === "configured" ? "Adapt existing connection" : "Connect to sub2agent");
-      button.onclick = async (event) => {
-        event.stopPropagation(); button.disabled = true;
-        try {
-          state = await api("agents/connect/" + encodeURIComponent(row.dataset.id), {});
-          leave(); renderAgents();
-        } catch (err) { statusErr(err); button.disabled = false; }
-      };
-      box.append(" · ", button);
-    }
-    row.querySelector(".who")?.append(box);
+// A shared Agent surface: connection diagnostics and native bulk wiring.
+let active=false,generation=0,snapshot=null,busy=false,failures=[],resultText='';
+const pending=new Set();
+window.agentConnectionBusy=id=>busy||pending.has(id);
+window.agentConnectionStatus=id=>snapshot?.[id]?.status;
+const visible=()=>!document.getElementById('view-agents')?.hidden;
+export function leave(){active=false;snapshot=null;generation++;}
+export async function refresh(){leave();await enter();return t('Agents looked for again');}
+function candidates(){return (state.agents||[]).filter(a=>!a.wired&&connectable(a)&&snapshot?.[a.id]&&snapshot[a.id].status!=='unknown'&&!pending.has(a.id));}
+function draw(){
+ if(!visible())return;
+ const page=document.getElementById('view-agents');
+ let bar=page.querySelector('.agent-bulk');
+ if(!bar){bar=document.createElement('div');bar.className='agent-bulk';page.prepend(bar);}
+ bar.replaceChildren();
+ const button=el('button','text','一键全部接入');const count=candidates().length;
+ button.disabled=busy||!count;button.textContent+=`（${count}）`;button.onclick=()=>run(candidates());bar.append(button);
+ const result=el('span','agent-bulk-result');result.setAttribute('role','status');result.textContent=resultText;bar.append(result);
+ if(failures.length){const retry=el('button','text','重试失败项');retry.disabled=busy;retry.onclick=()=>run(failures.map(x=>state.agents.find(a=>a.id===x.id)).filter(a=>a&&!a.wired));bar.append(retry);result.textContent=failures.map(x=>x.name+'：'+x.error).join('；');}
+ for(const row of document.querySelectorAll('#agents .agent[data-id]')){
+  row.querySelector('.connection-check')?.remove();row.querySelector('.connection-adapt')?.remove();
+  const check=snapshot?.[row.dataset.id];if(!check)continue;
+  if(check.status==='unknown'){
+   const line=row.querySelector('.ag-st-t')||row.querySelector('.sub');if(line){line.textContent=t('Could not read connection configuration');line.setAttribute('role','status');}
+  }else if(check.status==='configured'&&!check.managed){
+   const details=el('button','text connection-adapt',t('Adapt existing connection'));
+   details.onclick=()=>run((state.agents||[]).filter(a=>a.id===row.dataset.id));row.querySelector('.who')?.append(details);
   }
+ }
 }
-export async function enter() {
-  if (!visible()) return;
-  if (active) { draw(); return; }
-  active = true;
-  const visit = generation;
-  try {
-    const next = await api("agents/connections");
-    if (visit !== generation || !visible()) return;
-    snapshot = next.checks;
-    const previous = new Map((state.agents || []).map(a => [a.id, a]));
-    state.agents = next.agents.map(a => ({ ...previous.get(a.id), ...a }));
-    renderAgents(); draw();
-  } catch (err) { if (visit === generation && visible()) statusErr(err); }
+async function run(list){
+ if(busy)return;busy=true;failures=[];const visit=generation;let success=0,skipped=0;
+ draw();
+ for(let i=0;i<list.length;i++){
+  if(visit!==generation||!visible()){skipped+=list.length-i;break;}
+  const a=state.agents.find(x=>x.id===list[i].id);
+  if(!a||pending.has(a.id)){skipped++;continue;}
+  pending.add(a.id);
+  const statusLine=document.querySelector('.agent-bulk-result');resultText=`接入中 ${i+1}/${list.length} · ${a.name}`;if(statusLine)statusLine.textContent=resultText;
+  try{const next=await api('agents/connect/'+encodeURIComponent(a.id),{});if(visit===generation){state=next;renderAgents();}success++;}
+  catch(err){failures.push({id:a.id,name:a.name,error:err.message});}
+  finally{pending.delete(a.id);}
+ }
+ busy=false;
+ if(visit===generation&&visible()){
+  try{state=await api('state');renderAgents();}catch(err){statusErr(err)}
+  snapshot=null;active=false;await enter();draw();
+  resultText=`已接入 ${success} · 失败 ${failures.length} · 跳过 ${skipped}`+(failures.length?'；'+failures.map(x=>x.name+'：'+x.error).join('；'):'');draw();
+ }
+}
+export async function enter(){
+ if(!visible())return;
+ if(active){draw();return;}
+ active=true;const visit=generation;
+ try{
+  const next=await api('agents/connections');if(visit!==generation||!visible())return;
+  snapshot=next.checks;const previous=new Map((state.agents||[]).map(a=>[a.id,a]));
+  state.agents=next.agents.map(a=>({...previous.get(a.id),...a}));renderAgents();draw();
+ }catch(err){if(visit===generation&&visible()){active=false;statusErr(err)}}
 }
