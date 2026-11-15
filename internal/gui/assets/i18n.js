@@ -4,6 +4,7 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+    "Restoring {agent}'s settings…": "正在还原 {agent} 配置…",
     "Model mapping": "模型映射",
     "Map model aliases locally before routing; no network or additional model requests": "在本地将模型别名映射后再路由，无需联网或额外模型请求",
     "Model mappings (JSON)": "模型映射（JSON）",
@@ -5184,6 +5185,8 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "这份报告已经不在了：magpie 只保留最近 5 份。",
   },
   "zh-TW": {
+    "Connecting…": "正在連接…",
+    "Restoring {agent}'s settings…": "正在還原 {agent} 設定…",
     "Model mapping": "模型映射",
     "Map model aliases locally before routing; no network or additional model requests": "在本機映射模型別名後再路由，無需連網或額外模型請求",
     "Model mappings (JSON)": "模型映射（JSON）",
@@ -10328,6 +10331,8 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "這份報告已經不在了：magpie 只保留最近 5 份。",
   },
   ja: {
+    "Connecting…": "接続中…",
+    "Restoring {agent}'s settings…": "{agent} の設定を復元中…",
     "Model mapping": "モデルマッピング",
     "Map model aliases locally before routing; no network or additional model requests": "ルーティング前にローカルでモデル別名を変換します。追加の通信はありません",
     "Model mappings (JSON)": "モデルマッピング（JSON）",
@@ -15474,6 +15479,8 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "このレポートはもう残っていません。magpie は最新の 5 件だけを保存します。",
   },
   de: {
+    "Connecting…": "Verbindung wird hergestellt…",
+    "Restoring {agent}'s settings…": "Einstellungen von {agent} werden wiederhergestellt…",
     "Model mapping": "Modellzuordnung",
     "Map model aliases locally before routing; no network or additional model requests": "Modellnamen lokal vor dem Routing zuordnen, ohne zusätzliche Netzwerkanfragen",
     "Model mappings (JSON)": "Modellzuordnung (JSON)",

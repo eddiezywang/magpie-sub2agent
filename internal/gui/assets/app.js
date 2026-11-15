@@ -1209,32 +1209,53 @@ function libSwitch(cls, on, label) {
 }
 const agentPickPending = new Set();
 const agentConnectPending = new Set();
+const agentWaits = new Map();
+// Delay short waits and keep any visible message long enough to read.
+function delayedWait(show) {
+  let shown = 0;
+  const timer = setTimeout(() => { shown = performance.now(); show(); }, 300);
+  return async () => {
+    clearTimeout(timer);
+    if (shown) await new Promise(resolve => setTimeout(resolve, Math.max(0, 500 - (performance.now() - shown))));
+  };
+}
+function agentWaiting(id, message) {
+  agentWaits.set(id, message);
+  const line = document.querySelector(`.agent[data-id="${CSS.escape(id)}"] .ag-st`);
+  if (line) { line.classList.add("wait"); line.setAttribute("role", "status"); line.querySelector(".ag-st-t").textContent = t(message); }
+}
 
 function connectSwitch(a) {
   const s = libSwitch("ag-conn", a.wired, t("Connect {agent} to magpie", { agent: a.name }));
-  if (agentPickPending.has(a.id) || agentConnectPending.has(a.id)) { s.disabled = true; s.classList.add("agent-wait"); s.setAttribute("aria-busy", "true"); }
+  if (agentPickPending.has(a.id) || agentConnectPending.has(a.id)) { s.setAttribute("aria-disabled", "true"); s.setAttribute("aria-busy", "true"); }
   s.title = a.wired ? t("Connected · switch off to put back what {agent} had before magpie", { agent: a.name }) : t("Switch on and {agent}'s model list gets magpie's models", { agent: a.name });
   // the list opened from a failed connect, drawn again while it is open
   if (!a.wired) holdAgentModels(a, s);
   s.onclick = async (e) => {
     e.stopPropagation();
+    if (agentPickPending.has(a.id) || agentConnectPending.has(a.id)) return;
     if (a.wired) { askDisconnect(a); return; }
-    if (s.disabled) return;
     agentConnectPending.add(a.id);
-    s.disabled = true;
-    s.classList.add("on", "agent-wait");
+    s.setAttribute("aria-disabled", "true");
     s.setAttribute("aria-busy", "true");
+    const done = delayedWait(() => agentWaiting(a.id, "Connecting…"));
     try {
-      state = await api("agents/connect/" + a.id, {});
+      const next = await api("agents/connect/" + a.id, {});
+      await done();
+      agentWaits.delete(a.id);
+      state = next;
       agentConnectPending.delete(a.id);
       renderAgents();
       const msg = connectedSaid(a, state.connected);
       saidOk(msg, msg !== t("{agent} is connected to magpie", { agent: a.name }) ? 7000 : undefined);
     } catch (err) {
+      await done();
+      agentWaits.delete(a.id);
       agentConnectPending.delete(a.id);
-      s.disabled = false;
-      s.classList.remove("on", "agent-wait");
+      s.removeAttribute("aria-disabled");
       s.removeAttribute("aria-busy");
+      const line = s.closest(".agent")?.querySelector(".ag-st");
+      if (line) { line.classList.remove("wait"); line.querySelector(".ag-st-t").textContent = t(err.message); line.classList.add("bad"); line.setAttribute("role", "alert"); }
       // every model taken out of its list: the Pick that puts one back is
       // in a connected agent's row only, so its list opens here (塔哥 on
       // Discord: Grok Build, all hidden, then switched off, couldn't be
@@ -1388,6 +1409,7 @@ function connectLine(a, kind) {
   const words = el("span", "ag-st-t");
   line.append(dot, words);
   const say = (s, cls) => { words.textContent = s; if (cls) line.classList.add(cls); };
+  if (agentWaits.has(a.id)) { say(t(agentWaits.get(a.id)), "wait"); line.setAttribute("role", "status"); return line; }
   // the reason wraps, never cut short: it is the row's only words
   if (kind === "no") { say(t(NATIVE_ONLY[kindOf(a)]), NATIVE_ONLY[kindOf(a)] ? "why" : ""); return line; }
   if (kind === "link") {
@@ -2396,7 +2418,8 @@ function askDisconnect(a) {
   const head = el("div", "ehead");
   head.append(icon(a.icon), el("b", "", t("Disconnect {agent} from magpie?", { agent: a.name })));
   ed.append(head);
-  ed.append(el("p", "lib-confirm", t("{agent} goes back to how it was before it was connected; these are the places put back.", { agent: a.name })));
+  const note = el("p", "lib-confirm", t("{agent} goes back to how it was before it was connected; these are the places put back.", { agent: a.name }));
+  ed.append(note);
   // what changes, line by line, read from a dry run on a copy (preview.go);
   // where none can be had, the old words
   const said = el("p", "lib-confirm", t("magpie takes out everything it wrote into {agent}'s config — its endpoint, key, models and effort — and puts back the settings {agent} had before. magpie's providers and accounts stay as they are.", { agent: a.name }));
@@ -2407,12 +2430,12 @@ function askDisconnect(a) {
   };
   if (previews[a.id]) show(previews[a.id]);
   else body.append(el("div", "ag-diff-loading", t("Reading what changes…")));
-  let previewBlocked = !!a.native, revision = "", offline = false;
+  let previewBlocked = !!a.native, revision = "", offline = false, disconnecting = false;
   loadPreview(a).then((preview) => {
     show(preview.changes);
     revision = preview.revision;
     previewBlocked = !!a.native && !revision;
-    go.disabled = previewBlocked;
+    if (!disconnecting) go.disabled = previewBlocked;
   }, (err) => { if (!a.native) { show(null); return; } previewBlocked = true; go.disabled = true; body.replaceChildren(el("p", "lib-confirm", t(err.message))); });
   ed.append(body);
   if (kindOf(a) === "codex") ed.append(el("p", "ag-note", t("magpie's provider table stays, so sessions opened on magpie's models still open")));
@@ -2421,14 +2444,18 @@ function askDisconnect(a) {
   go.disabled = previewBlocked;
   go.onclick = async (e) => {
     e.stopPropagation();
-    if (previewBlocked) return;
-    go.disabled = true;
-    go.classList.add("busy", "agent-wait");
-    go.setAttribute("aria-busy", "true");
-    const label = go.textContent;
-    go.textContent = t("Saving…");
+    if (previewBlocked || disconnecting) return;
+    disconnecting = true;
+    go.setAttribute("aria-disabled", "true");
+    ed.setAttribute("aria-busy", "true");
+    const original = note.textContent;
+    const done = delayedWait(() => { note.textContent = t("Restoring {agent}'s settings…", { agent: a.name }); note.setAttribute("role", "status"); });
     try {
-      state = await api("agents/" + (offline ? "disconnect-offline/" : "disconnect/") + a.id, offline ? { revision } : {});
+      const next = await api("agents/" + (offline ? "disconnect-offline/" : "disconnect/") + a.id, offline ? { revision } : {});
+      await done();
+      state = next;
+      disconnecting = false;
+      ed.removeAttribute("aria-busy");
       closeConfirmAsk();
       delete previews[a.id];
       if (agentExpanded === a.id) agentExpanded = null;
@@ -2436,10 +2463,12 @@ function askDisconnect(a) {
       const msg = t(offline ? "Saved settings restored; magpie was removed from {agent}" : "{agent} no longer goes through magpie; its own settings are back", { agent: a.name });
       saidOk(msg);
     } catch (err) {
-      go.disabled = false;
-      go.classList.remove("busy", "agent-wait");
-      go.removeAttribute("aria-busy");
-      go.textContent = label;
+      await done();
+      disconnecting = false;
+      go.removeAttribute("aria-disabled");
+      ed.removeAttribute("aria-busy");
+      note.textContent = original;
+      note.removeAttribute("role");
       if (!offline && err.code === "runtime_unavailable" && err.offline === "disconnect" && revision) {
         offline = true;
         head.querySelector("b").textContent = t("Restore saved settings and remove magpie?");
@@ -2448,11 +2477,12 @@ function askDisconnect(a) {
         cancel.focus(NO_SCROLL);
         return;
       }
-      status(t(err.message), "err");
+      note.textContent = t(err.message);
+      note.setAttribute("role", "alert");
     }
   };
   const cancel = el("button", "text", t("Cancel"));
-  cancel.onclick = cancelAsk;
+  cancel.onclick = (e) => { if (!disconnecting) cancelAsk(e); };
   bar.append(reopenNote(a), el("span", "grow"), cancel, go);
   ed.append(bar);
   confirmAsk = ed;
@@ -5688,6 +5718,7 @@ async function setPick(agent, field, value, opt) {
   const seq = commit.seq = (commit.seq || 0) + 1;
   agentPickPending.add(agent.id);
   field.value = value;
+  const done = delayedWait(() => agentWaiting(agent.id, "Saving…"));
   const picked = performance.now();
   // the green flash runs on through the row drawn again with the answer
   const flash = () => {
@@ -5701,6 +5732,8 @@ async function setPick(agent, field, value, opt) {
   flash();
   try {
     const next = await api("set", { agent: agent.id, field: field.key, value });
+    await done();
+    agentWaits.delete(agent.id);
     agentPickPending.delete(agent.id);
     // a later pick is already on its way: its answer is the one to draw
     if (seq !== commit.seq) { renderAgents(); return; }
@@ -5714,11 +5747,15 @@ async function setPick(agent, field, value, opt) {
     else status(`${agent.name} ${t(field.label)} → ${shown}`, "ok");
     if (providers) loadProviders();
   } catch (e) {
+    await done();
+    agentWaits.delete(agent.id);
     agentPickPending.delete(agent.id);
     if (seq === commit.seq && field.value === value) {
       field.value = was;
       renderAgents();
     }
+    const line = document.querySelector(`.agent[data-id="${CSS.escape(agent.id)}"] .ag-st`);
+    if (line) { line.classList.add("bad"); line.setAttribute("role", "alert"); line.querySelector(".ag-st-t").textContent = e.message; }
     statusErr(e);
   }
 }
@@ -18348,6 +18385,7 @@ function cancelAsk(e) { e.stopPropagation(); closeConfirmAsk(); }
 const showNotices = () => import("./notices.js").then(() => noticesSheet(), statusErr);
 function closeConfirmAsk() {
   if (!confirmAsk) return;
+  if (confirmAsk.classList.contains("disconnect-ask") && confirmAsk.getAttribute("aria-busy") === "true") return;
   // Escape and the backdrop must not expose row actions while a bulk write
   // still holds an older full arrangement. Done is disabled for the same reason.
   if (agentsVisibilitySaving && confirmAsk.classList.contains("ag-manager")) return;

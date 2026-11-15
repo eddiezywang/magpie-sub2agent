@@ -140,7 +140,8 @@ test("chromium: pending agent changes show progress and block a racing connect",
   await row.locator('.ag-start').click();
   await page.locator('#list li', { hasText: 'Test group' }).first().click();
   await page.waitForFunction(() => document.querySelector('.row.agent[data-id="codex"] .ag-conn')?.getAttribute('aria-busy') === 'true');
-  assert.equal(await row.locator('.ag-conn').isDisabled(), true);
+  assert.equal(await row.locator('.ag-conn').getAttribute('aria-disabled'), 'true');
+  await row.locator('.ag-st', { hasText: 'Saving…' }).waitFor();
   assert.deepEqual(posts, ['/api/set']);
   release();
   await page.waitForFunction(() => document.querySelector('.row.agent[data-id="codex"] .ag-conn')?.getAttribute('aria-checked') === 'true');
@@ -150,9 +151,11 @@ test("chromium: pending agent changes show progress and block a racing connect",
   await row.locator('.ag-conn').click();
   const go = page.locator('.disconnect-ask .bar button.primary');
   await go.click();
-  await page.waitForFunction(() => document.querySelector('.disconnect-ask .agent-wait')?.getAttribute('aria-busy') === 'true');
-  assert.equal(await go.textContent(), 'Saving…');
-  assert.equal(await go.isDisabled(), true);
+  await page.waitForFunction(() => document.querySelector('.disconnect-ask')?.getAttribute('aria-busy') === 'true');
+  await page.locator('.disconnect-ask [role=status]', { hasText: "Restoring Codex's settings…" }).waitFor();
+  if (process.env.ARTIFACT_DIR) await page.screenshot({ path: path.join(process.env.ARTIFACT_DIR, "agent-disconnect-wait.png") });
+  assert.match(await go.textContent(), /Disconnect/);
+  assert.equal(await go.getAttribute('aria-disabled'), 'true');
   release();
   await page.locator('.disconnect-ask').waitFor({ state: 'detached' });
 });
