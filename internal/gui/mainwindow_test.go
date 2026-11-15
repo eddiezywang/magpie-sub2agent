@@ -13,7 +13,7 @@ import (
 	"github.com/yetone/magpie/internal/settings"
 )
 
-func TestRetroMainFrameIsWindowsIntranetOptIn(t *testing.T) {
+func TestRetroMainFrameDefaultsOnForWindowsIntranet(t *testing.T) {
 	for _, tc := range []struct {
 		goos     string
 		internal bool
@@ -21,7 +21,8 @@ func TestRetroMainFrameIsWindowsIntranetOptIn(t *testing.T) {
 		want     bool
 	}{
 		{"windows", true, "1", true},
-		{"windows", true, "", false},
+		{"windows", true, "", true},
+		{"windows", true, "0", false},
 		{"windows", false, "1", false},
 		{"linux", true, "1", false},
 		{"darwin", true, "1", false},

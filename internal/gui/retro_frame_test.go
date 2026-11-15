@@ -16,7 +16,7 @@ func TestRetroFrameBootFollowsWindowAndBuild(t *testing.T) {
 	t.Setenv("USERPROFILE", h)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(h, "config"))
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(h, "cache"))
-	t.Setenv("SUB2AGENT_RETRO_FRAME", "1")
+	t.Setenv("SUB2AGENT_RETRO_FRAME", "")
 	for _, tc := range []struct {
 		name string
 		host Windows

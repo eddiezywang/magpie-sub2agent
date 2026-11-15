@@ -7,9 +7,9 @@ import (
 	"github.com/yetone/magpie/internal/distribution"
 )
 
-// Keep unverified frame behavior out of normal builds until desktop review.
+// The intranet desktop uses the integrated frame by default on Windows.
 func retroMainFrame(goos string, internal bool, choice string) bool {
-	return goos == "windows" && internal && choice == "1"
+	return goos == "windows" && internal && choice != "0"
 }
 
 func retroMainFrameEnabled() bool {
