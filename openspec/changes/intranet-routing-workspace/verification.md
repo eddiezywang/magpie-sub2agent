@@ -259,3 +259,23 @@ screenshots published (HTTP 200):
 http://124.220.199.224:8805/workspace-review-20261116/bulk-053640/bulk-053640.html
 ZIP SHA256: f07fb4ed2f626021be69f714b7727b397a5623d9eb3007725687661f798ea26f.
 This build is local; KF still has the separately verified 050727 delivery.
+
+### Lifecycle and reference audit
+
+workspace-lifecycle-acceptance.cjs passed Chromium and WebKit against the
+packed 52306cd75 assets: six workspace/Agent round trips, exactly one live
+Agent observer while active, zero after leave, no callbacks from mutations
+after leave, unique native Agent/Routing/Providers trees, and final Sessions
+navigation. Together with the recorded draft cancel/discard, focus, stale-read,
+background/leave abort and paused-queue tests, this completes task 1.3.
+Routing's own visibility listeners/long poll remain the original native
+lifecycle, not an extra workspace subscription.
+
+Task 5.6 references audited against workspace.js, workspace-throughput.js,
+workspace_throughput.go, workspace_throughput_http.go, GUI route registration,
+native group saving, internal_config.go and workspace-launch.ps1. GUI lifecycle,
+routing scope, exact bucket/current/peak/null semantics, first-snapshot/output
+epoch, dimension eviction, owner response limits and access restrictions, QA
+commands, shared configuration and rollback are now documented in their owning
+references. No application code changed in this documentation/lifecycle step.
+Full retained-operation regression (1.4) and broader test gate (5.5) remain open.

@@ -1338,3 +1338,29 @@ queried at `/v1/magpie/throughput` under the trace endpoint's loopback/held-key
 restrictions. Unsupported or unreachable owners return unavailable, not idle.
 The existing `/api/speeds` and Sessions' 120-second/three-second curves are unchanged.
 Tests: `TestWorkspaceThroughput*` in gateway and GUI, under the intranet tag.
+
+The version-1 response is defined by `ThroughputState`/`ThroughputSeries` in
+[`workspace_throughput.go`](../../internal/gateway/workspace_throughput.go).
+`asOf` is the last completed Unix second; `intervalSeconds`, `windowSeconds`
+and `smoothSeconds` are 1, 180 and 5. Each points array holds per-second output
+estimates, oldest first; current is the mean of the last five completed seconds.
+Peak is the largest completed five-second mean, retained beyond the chart
+window. Before a series existed, samples are null; a known idle second is zero.
+An uncalibrated delta makes its second unknown and any overlapping current
+mean null. Partial total calibration sets status to partial. An empty meter
+is available and idle; an unavailable owner is a different state.
+
+The meter starts its epoch on the first snapshot or delivered output. A process restart
+resets all series and peaks. A dimension evicted and later seen again gets a
+new startedAt and peak; total remains independent. Model identity includes the
+provider, session identity includes the Agent, and missing session IDs use an
+unidentified-session series per Agent. `truncated` and cumulative
+`omittedSeries` report eviction; neither implies a partial total. Final usage,
+cached input and undelivered failed attempts do not add output to these buckets.
+
+[`workspace_throughput_http.go`](../../internal/gateway/workspace_throughput_http.go)
+enforces the owner boundary: remote clients and held keys are refused. Owner
+reads have a three-second deadline, refuse redirects, bound JSON to 8 MiB and
+validate the response version/window/total length/epoch. The GUI's authenticated
+API returns unavailable when no supported local owner answers. These routes are
+registered only in internal distributions; Sessions speed contracts stay separate.

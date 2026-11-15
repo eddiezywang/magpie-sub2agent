@@ -177,3 +177,31 @@ reverse. Reverting application code requires rebuilding the complete embedded
 asset bundle as well; replacing only workspace.js cannot update a packed EXE.
 The current evidence and known failing checks are recorded in
 [workspace verification](../openspec/changes/intranet-routing-workspace/verification.md).
+
+Workspace verification includes these independent packed-asset browser checks:
+
+- `workspace-focus-acceptance.cjs`: pending/failed group reads, native menus,
+  focus changes, vanished targets and navigation.
+- `workspace-lifecycle-acceptance.cjs`: native host identity and observer release
+  over repeated navigation.
+- `workspace-bulk-models-acceptance.cjs`: native model-list selection, cancellation,
+  failed reads, delayed saves and leaving a paused bulk queue.
+- `workspace-agent-status-acceptance.cjs`: native drift status/details on both
+  surfaces, alongside unknown/adaptation cases in `workspace-acceptance.cjs`.
+- `workspace-providers-acceptance.cjs` and `workspace-pages-acceptance.cjs`: native
+  provider operations and retained-page layout/browser/theme matrix.
+
+Set `WORKSPACE_ASSETS` to the extracted intranet asset pack, install Playwright
+with Chrome and WebKit available, and run each with Node. Synthetic browser
+fixtures do not establish live vendor authentication. Provider acceptance auth
+diagnostics under `private-auth/` must stay local; publish only explicitly
+selected screenshots and sanitized results. Keep the ZIP and its manifest from
+before QA launch, since the running review folder acquires private QA files.
+
+For rollback with an explicit XDG override, the selected Go configuration is
+`$XDG_CONFIG_HOME/sub2agent`; otherwise it is the user's `~/.sub2agent`.
+Back up that directory before switching versions, stop only the recorded review
+process, and launch the checksum-verified older bundle with the same intentional
+override. Do not copy a QA home over the user's configuration. The workspace
+has no on-disk statistics migration; native Agent/provider writes remain real
+settings changes and are not undone merely by changing the executable.

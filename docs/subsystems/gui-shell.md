@@ -1386,3 +1386,11 @@ Agent chooser, or the Agent disclosure if no connected target remains.
 Provider refresh in the workspace closes only its own anchored menu, leaving
 the sibling native Agent and routing menus alone. These transitions are covered
 by build/workspace-focus-acceptance.cjs in Chromium and WebKit.
+build/workspace-lifecycle-acceptance.cjs instruments the actual host observer
+and checks six leave/reenter cycles per engine: one observer while active,
+none after leave, no callbacks from later Agent mutations and one native tree
+per surface. Routing keeps its original visibility-aware lifecycle. Throughput
+uses one request at a time, aborts on background/leave and ignores stale visits;
+these paths and native provider draft guards are covered by the packed workspace
+acceptance suite. A failed query retains last values with an interruption/time
+status; unavailable data is never painted as a fresh zero.
