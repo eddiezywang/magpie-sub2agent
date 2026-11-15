@@ -114,6 +114,11 @@ authenticated `/admin/report-currency` API updates that reference. Original USD
 cost fields and enterprise POINTS/PLAN_TOKENS remain separate. These usage reports
 are not settlement invoices. The original receipt fonts are JetBrains Mono and
 Noto Sans CJK SC; font files stay in server assets, outside the desktop binary.
+The receipt uses the day-card forest-lake backdrop and paper layout with the blue
+Sub2Agent mark and pixel agent/model icons. Its height grows with displayed
+content; at most eight agents and five models per agent are shown, with a count
+for omitted entries. The underlying report is not truncated. The total is an
+API-price estimate, not a settlement.
 Admin policy edits require the existing admin Bearer token. Clients only receive
 classification boundaries, with exact/trailing-wildcard deployment matching;
 they contain no billing amounts or quota-multiplication rule.

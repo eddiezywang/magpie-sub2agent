@@ -3,7 +3,11 @@
 Source imported from the existing authorized internal deployment on 2026-11-13.
 Only application code and its package manifest were copied. No environment,
 credentials, production data, fonts or node_modules are included.
-The existing deployment retains its assets and persistent data independently.
+The existing deployment retains its persistent data independently. The receipt
+assets include the forest-lake background from the MIT-licensed
+`magpie-community/plugins` day-card (`page/bg/lake.js`, copyright its
+contributors), and the Sub2Agent pixel brand and agent/model icon assets. Fonts
+and node_modules remain deployment-provided.
 
 Run with Node 18+ (`node src/server.js`). Before deploying changes, back up the
 existing code, retain its service environment and data directory, run isolated
