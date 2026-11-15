@@ -298,3 +298,21 @@ for image completion and still asserts positive naturalWidth, so missing/broken
 assets fail. Its full six Chromium/WebKit cases pass at desktop/light and
 narrow/dark, including timeout, retry, HTTP 503, healthy empty directory, cached
 catalog, pixel icon and omitted privacy settings. No product code changed.
+
+### Profile-specific GUI test corrections
+
+The three Codex auto-discovery group cases are upstream-only because internal
+provider.Accounts intentionally reads plugin accounts alone. Their sign-in
+fixture now lives in a common helper. The new intranet negative test uses that
+same complete fixture (valid synthetic JWT/cache/live model list), preventing
+an invalid fixture from falsely proving isolation. The original three cases
+still pass upstream. TestFXStateDoesNotWait now asserts cached/stale rate plus
+zero requests in intranet, while retaining asynchronous refresh upstream.
+
+Verified at this step: production,packedassets,intranet GUI run covering the
+new isolation test, FX behavior and TestProviderSaveModelPrefs passes (4.536s);
+upstream GUI run covering all three original Codex group cases and FX behavior
+passes (6.107s). No product code changed. The previous package timeout occurred
+when the 240s package budget elapsed with TestProviderSaveModelPrefs only 1s
+into its execution; its isolated pass is evidence against calling that test
+itself a reproduced hang. Remaining suite/profile/lifecycle issues stay open.

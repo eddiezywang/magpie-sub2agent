@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/fx"
 	"github.com/yetone/magpie/internal/settings"
 )
@@ -69,9 +70,14 @@ func TestFXStateDoesNotWait(t *testing.T) {
 	sandboxHome(t)
 	fx.Reset()
 	release := make(chan struct{})
+	asked := make(chan struct{}, 1)
 	var once sync.Once
 	let := func() { once.Do(func() { close(release) }) }
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case asked <- struct{}{}:
+		default:
+		}
 		<-release
 		w.Write([]byte(`{"result":"success","rates":{"CNY":7.31}}`))
 	}))
@@ -102,6 +108,20 @@ func TestFXStateDoesNotWait(t *testing.T) {
 	let()
 	if got.Rate != 7.25 || !got.Stale {
 		t.Fatalf("first look: %+v, want yesterday's 7.25, stale", got)
+	}
+	if distribution.Internal {
+		fx.Settle()
+		got = state().FX
+		fx.Settle()
+		if got.Rate != 7.25 || !got.Stale {
+			t.Fatalf("offline distribution lost its cached rate: %+v", got)
+		}
+		select {
+		case <-asked:
+			t.Fatal("offline distribution contacted the rate server")
+		default:
+		}
+		return
 	}
 	for deadline := time.Now().Add(time.Minute); ; time.Sleep(100 * time.Millisecond) {
 		if got = state().FX; got.Rate == 7.31 && !got.Stale {
