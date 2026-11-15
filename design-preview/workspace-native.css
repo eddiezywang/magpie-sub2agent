@@ -1,0 +1,30 @@
+/* Narrow layout adapters only. Native markup, controls and theme stay shared. */
+html,body{height:auto!important;min-height:0!important;background:transparent!important}
+#side,body>.top,#status,#rtToGroups,#rtToSet,#rtMask{display:none!important}
+body{padding:0!important;margin:0!important;display:block!important}
+.view{box-sizing:border-box!important;margin:0!important;padding:4px!important;width:100%!important;max-width:none!important;height:auto!important;overflow:visible!important}
+#view-routing>.row-head{display:none!important}.rt-more{display:none!important}
+#view-agents .profiles,#agents .guide{display:none!important}
+#agents{margin:0 4px 4px 0}.rt{margin-bottom:4px}
+body[data-surface=providers] #pvHead{gap:8px;flex-wrap:wrap;margin:0 0 14px}
+body[data-surface=providers] #pvQ{min-width:0;width:100%;flex:1}
+body[data-surface=providers] #providers>.row.provider{flex-wrap:wrap;gap:10px;min-width:0;padding:12px}
+body[data-surface=providers] .row.provider>.who{min-width:130px;flex:1}
+body[data-surface=providers] .row.provider .actions{margin-left:auto}
+body[data-surface=providers] #addSheet{min-width:0}
+body[data-surface=providers] .presets{grid-template-columns:1fr!important}
+body[data-surface=providers] .after-list.away{transform:none!important}
+body[data-surface=providers] #view-providers .after-list::before{inset:0}
+.ws-throughput{margin:14px 0 0;border-top:1px solid var(--line);padding-top:12px}
+.ws-throughput summary{display:flex;align-items:center;gap:18px;cursor:pointer;list-style:none;padding:4px 0}
+.ws-throughput summary::-webkit-details-marker{display:none}.ws-throughput .rt-stats{flex:1;gap:28px}
+.ws-unit{font-size:11px;color:var(--muted);font-weight:400;margin-left:4px}
+.ws-expand{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.ws-expand svg{width:100px;height:24px;fill:none;stroke:var(--muted);stroke-width:1.3}
+.ws-dimensions{display:flex;gap:16px;padding:10px 0;border-top:1px solid var(--line);margin-top:12px}
+.ws-dimensions button[aria-pressed=true]{color:var(--fg);font-weight:650}
+.ws-table{width:100%;border-collapse:collapse;font-size:12px}.ws-table th{text-align:right;color:var(--muted);font-weight:400}.ws-table th:first-child,.ws-table td:first-child{text-align:left}.ws-table td{text-align:right;font-variant-numeric:tabular-nums}.ws-table td,.ws-table th{padding:9px 4px;border-bottom:1px solid var(--line)}
+.ws-spark{width:100px;height:26px;display:block;margin-left:auto;fill:none;stroke:var(--muted);stroke-width:1.2}.ws-note{font-size:11px;color:var(--muted);margin:8px 0}
+.ws-route-controls{display:flex;align-items:center;gap:10px;padding-bottom:14px;color:var(--muted);font-size:12px}.ws-route-controls select{min-width:130px;background:var(--pill);border:1px solid var(--line);border-radius:4px;padding:5px 8px;color:var(--fg)}.ws-route-controls a{margin-left:auto;color:var(--fg-2);text-decoration:none}.ws-route-controls a:hover{text-decoration:underline}
+.ws-route-controls{flex-wrap:wrap}.ws-route-controls .segs{flex-wrap:wrap}.ws-route-controls label{white-space:nowrap}body[data-surface=providers] #addSheet .grid{grid-template-columns:1fr!important}body[data-surface=providers] #addSheet .sheet-head{flex-wrap:wrap}body[data-surface=providers] .pv-editor{min-width:0}
+@media(max-width:520px){.ws-expand svg,.ws-trend-column{display:none}.ws-throughput .rt-stats{gap:14px}.ws-route-controls{flex-wrap:wrap}}

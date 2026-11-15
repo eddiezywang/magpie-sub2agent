@@ -1,0 +1,28 @@
+// Real app renderers against local synthetic fixtures; never contacts live APIs.
+const {chromium,webkit}=require('playwright');
+const http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+(async()=>{
+ const out=path.resolve(process.argv[2]||path.join(process.env.TEMP,'workspace-preview-review'));await fs.mkdir(out,{recursive:true});
+ const server=http.createServer(async(req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}try{const data=await fs.readFile(file);res.writeHead(200,{'Content-Type':{'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream'});res.end(data)}catch{res.writeHead(404).end()}});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const base=`http://127.0.0.1:${server.address().port}/design-preview/routing-workspace.html`;
+ try{for(const name of (process.env.BROWSER?[process.env.BROWSER]:['chromium','webkit'])){const browser=await(name==='chromium'?chromium.launch({channel:'chrome'}):webkit.launch());try{for(const width of [1440,1024,390]){
+  const page=await browser.newPage({viewport:{width,height:1000},reducedMotion:'reduce'});const errors=[],escaped=[];
+  page.on('pageerror',e=>{if(!e.message.startsWith('ResizeObserver loop'))errors.push(e.message)});page.on('request',r=>{const u=new URL(r.url());if(u.pathname.startsWith('/api/')||(!['127.0.0.1','localhost'].includes(u.hostname)&&u.protocol!=='data:'))escaped.push(u.pathname)});
+  await page.goto(base);const rt=page.frameLocator('#routing-visual');await rt.locator('.rt-hub').waitFor();await rt.locator('#ws-current').waitFor();assert.equal(await page.locator('#agent-disclosure').getAttribute('open'),null);
+  const nativeTheme=await rt.locator('.rt').evaluate(e=>({color:getComputedStyle(e).backgroundColor,border:getComputedStyle(e).borderTopWidth}));assert.equal(nativeTheme.color,'rgb(255, 253, 247)');assert.equal(nativeTheme.border,'1px');
+  await rt.getByRole('button',{name:'稳定优先',exact:true}).click();assert.match(await rt.locator('#ws-route-feedback').innerText(),/稳定优先/);
+  const old=await rt.locator('#ws-current').innerText();await page.waitForTimeout(1200);assert.notEqual(await rt.locator('#ws-current').innerText(),old);assert.ok(Number(await rt.locator('#ws-peak').innerText())>=Number(await rt.locator('#ws-current').innerText()));
+  await rt.locator('#throughput summary').click();for(const d of ['provider','model','session']){await rt.locator(`button[data-dimension=${d}]`).click();assert.ok(await rt.locator('#ws-rows tr').count());assert.ok((await rt.locator('#ws-rows path').first().getAttribute('d')).includes('L'))}
+  await page.screenshot({path:path.join(out,`${name}-${width}-dimensions.png`),fullPage:true});await rt.locator('#throughput summary').click();
+  const providers=page.frameLocator('#provider-native');await providers.locator('#providers>.row.provider').waitFor();await providers.locator('#providers>.row.provider').click();await page.waitForTimeout(500);await page.screenshot({path:path.join(out,`${name}-${width}-provider-editor.png`),fullPage:true});await page.locator('#provider-native').evaluate(e=>e.scrollIntoView({block:'end'}));await providers.locator('#modal').getByRole('button',{name:'取消',exact:true}).click();await providers.locator('#addProvider').click();await providers.locator('#addSheet').waitFor({state:'visible'});
+  await page.screenshot({path:path.join(out,`${name}-${width}-collapsed.png`),fullPage:true});
+  await page.locator('#agent-disclosure summary').click();const agents=page.frameLocator('#agent-native');await agents.locator('#agents .row.agent').nth(9).waitFor();assert.equal(await agents.locator('#agents .row.agent').count(),10);
+  assert.ok(await agents.locator('.ag-conn[role=switch]').count()>=8);await page.waitForTimeout(700);await agents.locator('[data-id=claude] .ag-conn').click();await page.getByText('已接入 3 · 未接入 7',{exact:true}).waitFor();
+  await agents.locator('[data-id=opencode] button[data-key=model]').click();await agents.locator('#pop').waitFor({state:'visible'});await page.waitForTimeout(300);assert.ok(await agents.locator('#list li').count());await page.screenshot({path:path.join(out,`${name}-${width}-model-picker.png`),fullPage:true});await agents.locator('#q').press('Escape');await agents.locator('#pop').waitFor({state:'hidden'});
+  await page.screenshot({path:path.join(out,`${name}-${width}-agents.png`),fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'outer overflow');
+  for(const id of ['agent-native','provider-native','routing-visual'])assert.equal(await page.frameLocator('#'+id).locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,id+' inner overflow');
+  await rt.getByRole('link',{name:'编辑路由组'}).click();await page.waitForURL(/view=groups/);await page.frameLocator('#groups-native').locator('#rtGroups').waitFor({state:'visible'});assert.deepEqual(errors,[]);assert.deepEqual(escaped,[]);console.log(`PASS ${name} ${width}: native pages, connection, presets, peak, sparklines, dimensions, group navigation`);await page.close();
+ }}finally{await browser.close()}}}finally{server.close()}
+})().catch(e=>{console.error(e);process.exitCode=1});
