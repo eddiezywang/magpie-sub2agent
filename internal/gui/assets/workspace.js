@@ -27,12 +27,12 @@
     draft(){if(active&&providers)renderProviders();},
     loading(){if(active)renderProvidersLoading();}
   }));
-  function counts(){if(!active||!state?.agents)return;const list=state.agents.filter(a=>!a.hidden);const unknown=list.filter(a=>window.agentConnectionStatus?.(a.id)==='unknown').length;const on=list.filter(a=>a.wired&&window.agentConnectionStatus?.(a.id)!=='unknown').length;main.querySelector('#ws-agent-counts').textContent=t('Connected {on} · Not connected {off}',{on,off:list.length-on-unknown})+(unknown?t(' · Unknown {n}',{n:unknown}):'');const stamp=JSON.stringify(list.map(a=>[a.id,a.wired,a.fields.find(f=>f.key==='model')?.value]));if(stamp!==routeStamp){routeStamp=stamp;routeControls();}}
+  function counts(){if(!active||!state?.agents)return;const list=state.agents.filter(a=>!a.hidden);const unknown=list.filter(a=>window.agentConnectionStatus?.(a.id)==='unknown').length;const on=list.filter(a=>a.wired&&window.agentConnectionStatus?.(a.id)!=='unknown').length;main.querySelector('#ws-agent-counts').textContent=t('Connected {on} · Not connected {off}',{on,off:list.length-on-unknown})+(unknown?t(' · Unknown {n}',{n:unknown}):'');const stamp=JSON.stringify(list.map(a=>[a.id,a.wired,window.agentConnectionStatus?.(a.id),a.fields.find(f=>f.key==='model')?.value]));if(stamp!==routeStamp){routeStamp=stamp;routeControls();}}
   async function routeControls(){
     const visit=generation,request=++routeRequest,box=main.querySelector('#ws-route-controls');box.replaceChildren();
     try{
       const data=await api('groups');if(!active||visit!==generation||request!==routeRequest)return;
-      const eligible=(state?.agents||[]).filter(a=>a.wired&&a.fields.some(f=>f.key==='model'&&f.options?.length));
+      const eligible=(state?.agents||[]).filter(a=>a.wired&&window.agentConnectionStatus?.(a.id)!=='unknown'&&a.fields.some(f=>f.key==='model'&&f.options?.length));
       if(!eligible.length){box.textContent=t('Connect an Agent to choose a routing group');return;}
       let target=eligible.find(a=>a.id===box.dataset.agent)||eligible[0];box.dataset.agent=target.id;
       const choose=magpie.ui.menu(eligible.map(a=>({v:a.id,name:a.name})),target.id,'Agent',id=>{box.dataset.agent=id;routeControls();});

@@ -12,6 +12,13 @@ async function fixture(page){
   const original=window.fetch;window.qa={failed:false,delay:0,calls:[],sets:0,unavailable:false,telemetryCalls:0,telemetryPending:0,telemetryMax:0,telemetryDelay:0,unknown:false,epoch:1};
   window.fetch=async(input,init={})=>{
    const url=new URL(String(input),location.href);
+   if(url.pathname==='/api/agents/connections'){
+    qa.connectionReads=(qa.connectionReads||0)+1;
+    if(qa.connectionReadFails)return new Response(JSON.stringify({error:'synthetic connection read failed'}),{status:503});
+    const response=await original(input,init),data=await response.json();
+    if(qa.unknownAgent)data.checks[qa.unknownAgent]={status:'unknown'};
+    return Response.json(data);
+   }
    if(url.pathname==='/api/set'){
     qa.sets++;
     if(qa.rejectPick)return new Response(JSON.stringify({error:'Routing group is no longer available'}),{status:400});
@@ -108,6 +115,29 @@ async function test(browser,engine){
   assert.equal(await locking.evaluate(()=>qa.calls.length),8);assert.deepEqual(locking.errors,[]);
   console.log(`${engine}: native row, bulk connection and model saves share write locks`);
  }finally{await locking.close();}
+ const connections=await open(browser);
+ try{
+  await connections.evaluate(async()=>{qa.unknownAgent='codex';await import('/agentconnections.js').then(m=>m.refresh())});
+  await connections.locator('#ws-agent-counts').getByText('已接入 2 · 未接入 7 · 未知 1',{exact:true}).waitFor();
+  await connections.locator('#ws-agents summary').click();
+  await connections.getByRole('button',{name:'一键全部接入（7）',exact:true}).waitFor();
+  assert.equal(await connections.locator('#agents .connection-check').count(),0);
+  await connections.evaluate(async()=>{qa.connectionReadFails=true;await import('/agentconnections.js').then(m=>m.refresh())});
+  await connections.locator('#ws-agent-counts').getByText('已接入 0 · 未接入 0 · 未知 10',{exact:true}).waitFor();
+  await connections.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
+  assert.equal(await connections.locator('#agents .ag-st.on').count(),0,'unknown state has no connected green indicator');
+  assert.equal(await connections.getByRole('button',{name:'一键全部接入（0）',exact:true}).isDisabled(),true);
+  const failedReadCount=await connections.evaluate(()=>qa.connectionReads);
+  await connections.evaluate(()=>{renderAgents();renderAgents()});
+  assert.equal(await connections.evaluate(()=>qa.connectionReads),failedReadCount,'failed read does not loop on redraw');
+  await connections.evaluate(()=>{qa.connectionReadFails=false;qa.unknownAgent=null});
+  await connections.locator('.connection-recheck').click();
+  await connections.locator('#ws-agent-counts').getByText('已接入 2 · 未接入 8',{exact:true}).waitFor();
+  await connections.getByRole('button',{name:'一键全部接入（8）',exact:true}).waitFor();
+  assert.equal(await connections.locator('.connection-recheck').count(),0);
+  assert.deepEqual(connections.errors,[]);
+  console.log(`${engine}: unknown rows excluded from counts/bulk, failed snapshots stay unknown and explicit retry recovers`);
+ }finally{await connections.close();}
  const drafts=await open(browser);
  try{
   await drafts.locator('#providers>.row.provider').click();

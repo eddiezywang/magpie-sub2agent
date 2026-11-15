@@ -1349,6 +1349,11 @@ queue, native connect calls, unknown-state diagnostics and failure retry. The
 bulk button belongs to the Agent content, including when expanded in workspace,
 not the workspace header. Leaving cancels remaining queue entries without
 pretending to cancel already-issued configuration writes.
+An unreadable connection snapshot marks retained rows unknown, removes connected
+green indicators and excludes them from both bulk candidates and workspace
+routing targets. The Agent toolbar offers native Check again; redraws do not
+automatically retry a failed visit. A successful explicit read restores counts
+and candidate eligibility. Missing per-Agent checks are unknown as well.
 
 Workspace routing choices bind a declared target Agent's primary model field
 through setPick; choices come from existing templateKind groups and use their

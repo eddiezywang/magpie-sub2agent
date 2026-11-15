@@ -22,12 +22,16 @@ function draw(){
  const button=el('button','text',t('Connect every Agent'));const count=candidates().length;
  button.disabled=busy||pending.size>0||!count;button.textContent+=`（${count}）`;button.onclick=()=>run(candidates());bar.append(button);
  const result=el('span','agent-bulk-result');result.setAttribute('role','status');result.textContent=resultText;bar.append(result);
+ if((state.agents||[]).some(a=>snapshot?.[a.id]?.status==='unknown')){
+  const recheck=el('button','text connection-recheck',t('Check again'));
+  recheck.disabled=busy||pending.size>0;recheck.onclick=()=>refresh().catch(statusErr);bar.append(recheck);
+ }
  if(failures.length){const retry=el('button','text',t('Retry failed connections'));retry.disabled=busy||pending.size>0;retry.onclick=()=>run(failures.map(x=>state.agents.find(a=>a.id===x.id)).filter(a=>a&&!a.wired));bar.append(retry);result.textContent=failures.map(x=>x.name+': '+t(x.error)).join('; ');}
  for(const row of document.querySelectorAll('#agents .agent[data-id]')){
   row.querySelector('.connection-check')?.remove();row.querySelector('.connection-adapt')?.remove();
   const check=snapshot?.[row.dataset.id];if(!check)continue;
   if(check.status==='unknown'){
-   const line=row.querySelector('.ag-st-t')||row.querySelector('.sub');if(line){line.textContent=t('Could not read connection configuration');line.setAttribute('role','status');}
+   const line=row.querySelector('.ag-st-t')||row.querySelector('.sub');if(line){line.textContent=t('Could not read connection configuration');line.setAttribute('role','status');const status=line.closest('.ag-st');status?.classList.remove('on','bad');status?.classList.add('wait');}
   }else if(check.status==='configured'&&!check.managed){
    const details=el('button','text connection-adapt',t('Adapt existing connection'));
    details.onclick=()=>run((state.agents||[]).filter(a=>a.id===row.dataset.id));row.querySelector('.who')?.append(details);
@@ -62,7 +66,12 @@ export async function enter(){
  active=true;const visit=generation;
  try{
   const next=await api('agents/connections');if(visit!==generation||!visible())return;
-  snapshot=next.checks;const previous=new Map((state.agents||[]).map(a=>[a.id,a]));
+  snapshot=Object.fromEntries(next.agents.map(a=>[a.id,next.checks?.[a.id]||{status:'unknown'}]));const previous=new Map((state.agents||[]).map(a=>[a.id,a]));
   state.agents=next.agents.map(a=>({...previous.get(a.id),...a}));renderAgents();draw();
- }catch(err){if(visit===generation&&visible()){active=false;statusErr(err)}}
+ }catch(err){if(visit===generation&&visible()){
+  // A failed read is unknown, even for rows retained from an earlier state.
+  // Keep this visit active: redraws must not start an automatic retry loop.
+  snapshot=Object.fromEntries((state.agents||[]).map(a=>[a.id,{status:'unknown'}]));
+  renderAgents();draw();statusErr(err);
+ }}
 }
