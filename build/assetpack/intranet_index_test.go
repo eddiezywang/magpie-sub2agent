@@ -25,3 +25,12 @@ func TestInternalIndexLoadsRetroStylesheet(t *testing.T) {
 		t.Fatalf("intranet stylesheet is not loaded once after app.css: %s", got)
 	}
 }
+
+func TestInternalIndexLoadsTitlebarAfterApp(t *testing.T) {
+	input := `<head></head><body><script src="app.js"></script></body>`
+	got := string(internalIndex([]byte(input)))
+	app, titlebar := strings.Index(got, `<script src="app.js"></script>`), strings.Index(got, `<script src="intranet-titlebar.js"></script>`)
+	if app < 0 || titlebar < app || strings.Count(got, `<script src="intranet-titlebar.js"></script>`) != 1 {
+		t.Fatalf("intranet titlebar script is not loaded once after app: %s", got)
+	}
+}
