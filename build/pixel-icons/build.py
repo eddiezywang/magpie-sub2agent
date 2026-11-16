@@ -66,6 +66,10 @@ def main():
         elif name in ('tig', 'cib-zht'):
             rows = double(custom.tig() if name == 'tig' else custom.cib())
             source = 'original: custom.py/'+name
+        elif name == 'workbuddy-cib':
+            rgba = json.loads((ROOT/'build/pixel-icons/workbuddy-cib-rgba.json').read_text(encoding='utf-8'))
+            rows = sampled(rgba)
+            source = 'derived: WorkBuddy CIB executable icon'
         elif key in upstream:
             rows = upstream[key]['rows']
             source = 'OmaPixIcon: '+key
