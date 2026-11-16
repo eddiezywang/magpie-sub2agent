@@ -3,6 +3,7 @@ package gui
 import (
 	"strings"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/settings"
 )
 
@@ -13,6 +14,12 @@ import (
 // windowW, windowH is the main window's size, in points, before it is first
 // given one.
 const windowW, windowH = 660, 600
+
+// openMaximised starts a fresh internal workspace with room for both columns.
+// A saved normal window is an explicit user choice and continues to restore.
+func openMaximised(s settings.Settings) bool {
+	return s.WindowMaximised || distribution.Internal && len(s.Window) == 0
+}
 
 // openSize is the size, in points, the main window opens at: the one it was
 // last given (saved), else windowW×windowH; no smaller than its least (minW,

@@ -17,6 +17,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/w32"
 	"golang.org/x/sys/windows"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/settings"
 )
 
@@ -152,6 +153,9 @@ func init() {
 				waitFor("the window is open", func() bool { return windowOpen(h.main) })
 				if up, min := h.mainUp(); !up || min {
 					fail("shown: mainUp says up=%v minimised=%v", up, min)
+				}
+				if got := onMain(h.main.IsMaximised); got != distribution.Internal {
+					fail("fresh window: maximised=%v, want %v", got, distribution.Internal)
 				}
 				drawn("shown")
 				fmt.Println("minimised: ok")

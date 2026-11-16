@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/settings"
 )
 
@@ -188,5 +189,30 @@ func TestKeepsPlace(t *testing.T) {
 		if got := keepsPlace(c.goos, c.env); got != c.want {
 			t.Errorf("%s: keepsPlace = %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+func TestFirstInternalWindowOpensMaximised(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		s    settings.Settings
+		want bool
+	}{
+		{"fresh", settings.Settings{}, distribution.Internal},
+		{"saved normal", settings.Settings{Window: []int{1100, 800}}, false},
+		{"saved maximised", settings.Settings{Window: []int{1100, 800}, WindowMaximised: true}, true},
+		{"maximised before first restore", settings.Settings{WindowMaximised: true}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := openMaximised(tc.s); got != tc.want {
+				t.Fatalf("openMaximised(%+v) = %v, want %v", tc.s, got, tc.want)
+			}
+		})
+	}
+	// Restoring and resizing a first-run maximised window records a normal size.
+	s := settings.Settings{WindowMaximised: true}
+	settle(&s, 1100, 800, 1920, 1080, false)
+	if openMaximised(s) {
+		t.Fatal("restored window must retain the user's normal size")
 	}
 }

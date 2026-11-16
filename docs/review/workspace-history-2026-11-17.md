@@ -72,3 +72,23 @@ http://124.220.199.224:8805/workspace-history-20261117/index.html
 This verification uses isolated synthetic APIs and no real account credentials
 or Agent configuration writes. Full Go suite, native desktop binary packaging
 and release-feed deployment were not run.
+
+
+## First-launch maximisation
+
+At the user's request, new internal installations now open the main window
+maximised (with the normal title bar/taskbar). Existing saved dimensions and
+normal/maximised state continue to restore. The shared `openMaximised` rule
+is used by Linux creation and Windows/macOS placement. Native Windows tests
+assert the fresh shown window's maximised state, while the upstream build
+keeps its normal first-window behavior.
+
+Native testing exposed an existing Windows quiet-restart issue: native taskbar
+placement bypassed Wails Show, so the restored window's WebView2 controller
+remained hidden. A separate fix shows it on first unminimise and unregisters
+that listener. The native regression seeds explicit saved normal/maximised
+window dimensions and checks the page becomes visible after restoration.
+
+The focused window rules and all three native restart modes pass in both
+intranet and upstream builds. The earlier failing native checks are recorded
+as resolved by this restore fix, rather than being skipped.

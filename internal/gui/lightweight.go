@@ -36,7 +36,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 	minW, minH := windowMin(z, 0, 0)
 	width, height := openSize(settings.Load().Window, minW, minH)
 	state := application.WindowStateNormal
-	if runtime.GOOS == "linux" && settings.Load().WindowMaximised {
+	if runtime.GOOS == "linux" && openMaximised(settings.Load()) {
 		state = application.WindowStateMaximised
 	}
 	// Windows' title bar in the page's colour from the first frame; the
@@ -410,7 +410,7 @@ func (h *host) placeAt(w *application.WebviewWindow) (maximise bool) {
 		}
 		fitted = false
 	}
-	return settings.Load().WindowMaximised && !fitted
+	return openMaximised(settings.Load()) && !fitted
 }
 
 // putBack moves the main window, not shown yet, to where it was last left

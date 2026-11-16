@@ -1447,3 +1447,19 @@ and WebKit: old URL and request selection, policy naming, fixed providers,
 reader position during live updates, 700-record persisted history, date and
 session filters, request details, account disclosure, navigation and narrow
 layout. The guided, lifecycle and retained-page suites cover the shared shell.
+
+
+Fresh internal installations open the main workspace maximised, retaining the
+native title bar and taskbar rather than entering exclusive full screen. A
+saved window size remains the user's choice: subsequent launches restore its
+normal or maximised state as before. `openMaximised` is shared by Linux's
+creation-time StartState and Windows/macOS placement before first reveal.
+`TestFirstInternalWindowOpensMaximised` verifies fresh internal/upstream
+behavior, saved states and restoring a first-run maximised window.
+
+The Windows quiet restart path uses native window placement to remain minimised
+without foreground activation. On its first taskbar restore it also calls Wails
+Show to expose the WebView2 controller; placement alone does not set Wails'
+logical visibility. The one-shot restore listener is removed after showing.
+The native restart regression seeds saved normal/maximised dimensions and
+checks that a fresh shown window starts maximised only in internal builds.
