@@ -3,6 +3,7 @@ package provider
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/url"
 	"os"
@@ -48,8 +49,9 @@ func LegacySub2AgentPreview() (LegacySupplierPreview, error) {
 func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 	out := LegacySupplierPreview{Sources: []LegacySupplierItem{}}
 	var old struct {
-		Version int `json:"version"`
-		Desktop struct {
+		Version      int               `json:"version"`
+		AuthProfiles []json.RawMessage `json:"auth_profiles"`
+		Desktop      struct {
 			Sources []legacySub2AgentSource `json:"sources"`
 		} `json:"desktop"`
 	}
@@ -61,6 +63,12 @@ func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 	}
 	if old.Version != 1 {
 		return out, errors.New("旧版配置版本无法识别")
+	}
+	if len(old.Desktop.Sources) == 0 && len(old.AuthProfiles) > 0 {
+		return out, errors.New("旧版仅包含早期账号数据，无法自动转换，请重新登录供应商")
+	}
+	if !legacySuppliersValid(old.Desktop.Sources) {
+		return out, errors.New("旧版供应商来源编号缺失或重复")
 	}
 	out.Found = true
 	var dismissed struct {
@@ -101,7 +109,8 @@ func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 	if outcomes == nil {
 		return out, errors.New("导入结果记录无效")
 	}
-	for _, s := range old.Desktop.Sources {
+	for _, original := range old.Desktop.Sources {
+		s := normalizeLegacySupplier(original)
 		name, icon := s.Name, "generic"
 		if name == "" {
 			name = "Sub2Agent 来源"

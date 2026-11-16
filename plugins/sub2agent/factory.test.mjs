@@ -7,6 +7,23 @@ const client={auth:{set:async()=>{throw new Error('Unexpected credential write')
 const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
 const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
 
+test('legacy CodeBuddy and Trae bundles reach their configured private paths',async()=>{
+ for(const [kind,bundle,expected] of [
+  ['codebuddy',{accessToken:'fixture-cb',userId:'u',enterpriseId:'e',domain:'fixture.copilot.qq.com',path:'/cb-custom',models:['m'],defaultModel:'m'},'/cb-custom'],
+  ['trae',{token:'fixture-trae',refreshToken:'fixture-refresh',userId:'u',baseUrl:'https://fixture.invalid',path:'/tr-custom',models:['m'],defaultModel:'m',modelMap:{m:'vendor-m'}},'/tr-custom'],
+ ]){
+  const seen=[];
+  const plugin=await createSub2AgentPlugin(kind,{client},{fetchImpl:async(url,init)=>{seen.push({url,init});return sse()}});
+  const auth={type:'oauth',access:JSON.stringify(bundle)};
+  const loader=await plugin.auth.loader(async()=>auth);
+  const response=await loader.fetch('',{body:JSON.stringify({model:'m',messages:[{role:'user',content:'hello'}],stream:true})});
+  await response.text();
+  assert.equal(seen.length,1,kind+' must use the converted credential');
+  assert.equal(new URL(seen[0].url).pathname,expected);
+  assert.match(new Headers(seen[0].init.headers).get('authorization')||'',/fixture-/);
+ }
+});
+
 test('WorkBuddy first post-login listing reuses discovery until its cache expires',async()=>{
  let calls=0,now=0;
  const adapter={requestLoginLink:async()=>({state:'s',url:'https://login.example.invalid'}),

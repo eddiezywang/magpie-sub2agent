@@ -28,25 +28,85 @@ var legacySubscriptionEnabled = func(kind string) bool {
 }
 
 type legacySub2AgentSource struct {
-	ID       string `json:"id"`
-	Kind     string `json:"kind"`
-	Provider string `json:"provider"`
-	Name     string `json:"displayName"`
-	Status   string `json:"status"`
-	Enabled  *bool  `json:"enabled"`
-	Secret   string `json:"secretRef"`
-	Auth     struct {
-		Secret string `json:"secretRef"`
+	ID         string `json:"id"`
+	Kind       string `json:"kind"`
+	Provider   string `json:"provider"`
+	Name       string `json:"displayName"`
+	OldName    string `json:"display_name"`
+	Status     string `json:"status"`
+	Enabled    *bool  `json:"enabled"`
+	OldEnabled *bool  `json:"isEnabled"`
+	Secret     string `json:"secretRef"`
+	OldSecret  string `json:"secret_ref"`
+	Auth       struct {
+		Secret    string `json:"secretRef"`
+		OldSecret string `json:"secret_ref"`
 	} `json:"auth"`
-	Models       []string       `json:"models"`
-	DefaultModel string         `json:"defaultModel"`
-	Subscription map[string]any `json:"subscription"`
-	ModelCredits map[string]any `json:"modelCredits"`
-	Endpoint     struct {
-		Base     string `json:"baseUrl"`
-		Protocol string `json:"protocolFamily"`
+	Models          []string       `json:"models"`
+	DefaultModel    string         `json:"defaultModel"`
+	OldDefaultModel string         `json:"default_model"`
+	Subscription    map[string]any `json:"subscription"`
+	ModelCredits    map[string]any `json:"modelCredits"`
+	Endpoint        struct {
+		Base        string `json:"baseUrl"`
+		OldBase     string `json:"base_url"`
+		Protocol    string `json:"protocolFamily"`
+		OldProtocol string `json:"protocol_family"`
 	} `json:"endpoint"`
-	Transport string `json:"transportPreset"`
+	Transport    string `json:"transportPreset"`
+	OldTransport string `json:"transport_preset"`
+}
+
+// Match the old app's documented normalization, without inventing IDs.
+func normalizeLegacySupplier(s legacySub2AgentSource) legacySub2AgentSource {
+	if s.Name == "" {
+		s.Name = s.OldName
+	}
+	if s.Secret == "" {
+		s.Secret = s.OldSecret
+	}
+	if s.Auth.Secret == "" {
+		s.Auth.Secret = s.Auth.OldSecret
+	}
+	if s.Enabled == nil {
+		s.Enabled = s.OldEnabled
+	}
+	if s.Status == "" {
+		s.Status = "ready"
+	}
+	if s.Kind == "" {
+		s.Kind = "subscription"
+	}
+	if s.Provider == "" && s.Kind == "subscription" {
+		s.Provider = "codebuddy"
+	}
+	if s.DefaultModel == "" {
+		s.DefaultModel = s.OldDefaultModel
+	}
+	if len(s.Models) == 0 && s.DefaultModel != "" {
+		s.Models = []string{s.DefaultModel}
+	}
+	if s.Endpoint.Base == "" {
+		s.Endpoint.Base = s.Endpoint.OldBase
+	}
+	if s.Endpoint.Protocol == "" {
+		s.Endpoint.Protocol = s.Endpoint.OldProtocol
+	}
+	if s.Transport == "" {
+		s.Transport = s.OldTransport
+	}
+	return s
+}
+
+func legacySuppliersValid(sources []legacySub2AgentSource) bool {
+	seen := map[string]bool{}
+	for _, s := range sources {
+		if s.ID == "" || seen[s.ID] {
+			return false
+		}
+		seen[s.ID] = true
+	}
+	return true
 }
 
 func readLegacyJSON(path string, out any) error {
@@ -79,8 +139,9 @@ func ImportSub2AgentAuth() (int, error) {
 
 func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (int, error) {
 	var old struct {
-		Version int `json:"version"`
-		Desktop struct {
+		Version      int               `json:"version"`
+		AuthProfiles []json.RawMessage `json:"auth_profiles"`
+		Desktop      struct {
 			Sources []legacySub2AgentSource `json:"sources"`
 		} `json:"desktop"`
 	}
@@ -92,6 +153,12 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	}
 	if old.Version != 1 {
 		return 0, errors.New("旧版 Sub2Agent 配置版本无法识别，已保留原文件")
+	}
+	if len(old.Desktop.Sources) == 0 && len(old.AuthProfiles) > 0 {
+		return 0, errors.New("旧版仅包含早期账号数据，无法自动转换，请重新登录供应商")
+	}
+	if !legacySuppliersValid(old.Desktop.Sources) {
+		return 0, errors.New("旧版供应商来源编号缺失或重复，未执行导入")
 	}
 	markerPath := filepath.Join(filepath.Dir(Path()), "sub2agent-auth-import.json")
 	imported := map[string]bool{}
@@ -126,7 +193,8 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 		}
 	}
 	count, failed := 0, false
-	for _, source := range old.Desktop.Sources {
+	for _, original := range old.Desktop.Sources {
+		source := normalizeLegacySupplier(original)
 		if source.ID == "" || source.Status != "ready" {
 			failed = true
 			continue
@@ -218,7 +286,7 @@ func importLegacySubscription(source legacySub2AgentSource, identity string, sec
 			return false, errors.New("missing CodeBuddy token")
 		}
 		bundle["accessToken"] = string(secret)
-		for _, key := range []string{"userId", "enterpriseId", "domain", "sourcePath"} {
+		for _, key := range []string{"userId", "enterpriseId", "domain", "sourcePath", "path"} {
 			if value := source.Subscription[key]; value != nil {
 				bundle[key] = value
 			}
@@ -227,7 +295,20 @@ func importLegacySubscription(source legacySub2AgentSource, identity string, sec
 		if json.Unmarshal(secret, &bundle) != nil || str(bundle["token"]) == "" || str(bundle["refreshToken"]) == "" {
 			return false, errors.New("incomplete Trae credential")
 		}
-		for _, key := range []string{"baseUrl", "userId"} {
+		mapping, ok := source.Subscription["modelMap"].(map[string]any)
+		models := source.Models
+		if len(models) == 0 && source.DefaultModel != "" {
+			models = []string{source.DefaultModel}
+		}
+		if !ok || len(models) == 0 {
+			return false, errors.New("Trae model mapping is missing")
+		}
+		for _, model := range models {
+			if str(mapping[model]) == "" {
+				return false, errors.New("Trae model mapping is incomplete")
+			}
+		}
+		for _, key := range []string{"baseUrl", "userId", "path"} {
 			if str(bundle[key]) == "" && source.Subscription[key] != nil {
 				bundle[key] = source.Subscription[key]
 			}

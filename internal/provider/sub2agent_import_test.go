@@ -226,6 +226,48 @@ func TestSub2AgentPreviewIsReadOnlyAndIdentifiesIcons(t *testing.T) {
 	}
 }
 
+func TestSub2AgentImportRejectsDuplicateIDsBeforeWriting(t *testing.T) {
+	azureHome(t)
+	root := legacyImportFixture(t)
+	file := filepath.Join(root, "proxy.json")
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatal(err)
+	}
+	desktop := data["desktop"].(map[string]any)
+	sources := desktop["sources"].([]any)
+	sources[1].(map[string]any)["id"] = sources[0].(map[string]any)["id"]
+	raw, _ = json.Marshal(data)
+	if err := os.WriteFile(file, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := legacySub2AgentPreview(root); err == nil {
+		t.Fatal("duplicate ID preview was accepted")
+	}
+	if _, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err == nil {
+		t.Fatal("duplicate IDs were imported")
+	}
+	if _, err := os.Stat(Path()); !os.IsNotExist(err) {
+		t.Fatal("invalid import wrote providers")
+	}
+}
+
+func TestLegacySupplierAliases(t *testing.T) {
+	var source legacySub2AgentSource
+	err := json.Unmarshal([]byte(`{"id":"old","kind":"endpoint","display_name":"Old","secret_ref":"secret:a","default_model":"m","endpoint":{"base_url":"https://fixture.invalid/v1","protocol_family":"openai_chat"},"isEnabled":false}`), &source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source = normalizeLegacySupplier(source)
+	if source.Name != "Old" || source.Secret != "secret:a" || source.Status != "ready" || source.Enabled == nil || *source.Enabled || source.Endpoint.Base != "https://fixture.invalid/v1" || source.Endpoint.Protocol != "openai_chat" || len(source.Models) != 1 || source.Models[0] != "m" {
+		t.Fatalf("old aliases not normalized: %+v", source)
+	}
+}
+
 func TestSub2AgentImportCIBPreservesSourceAndIcon(t *testing.T) {
 	azureHome(t)
 	s := legacySub2AgentSource{ID: "cib", Kind: "endpoint", Name: "old name", Models: []string{"model-a"}}
@@ -265,8 +307,8 @@ func TestSub2AgentImportMultipleSubscriptionKinds(t *testing.T) {
 	}
 	desktop := data["desktop"].(map[string]any)
 	desktop["sources"] = append(desktop["sources"].([]any),
-		map[string]any{"id": "cb", "kind": "subscription", "provider": "codebuddy", "status": "ready", "secretRef": "secret:cb", "models": []string{"cb-model"}, "subscription": map[string]any{"userId": "cb-user"}},
-		map[string]any{"id": "tr", "kind": "subscription", "provider": "trae", "status": "ready", "secretRef": "secret:tr", "models": []string{"tr-model"}, "subscription": map[string]any{"userId": "tr-user", "baseUrl": "https://fixture.invalid"}})
+		map[string]any{"id": "cb", "kind": "subscription", "provider": "codebuddy", "status": "ready", "secretRef": "secret:cb", "models": []string{"cb-model"}, "subscription": map[string]any{"userId": "cb-user", "path": "/cb-custom"}},
+		map[string]any{"id": "tr", "kind": "subscription", "provider": "trae", "status": "ready", "secretRef": "secret:tr", "models": []string{"tr-model"}, "subscription": map[string]any{"userId": "tr-user", "baseUrl": "https://fixture.invalid", "path": "/tr-custom", "modelMap": map[string]string{"tr-model": "tr-vendor"}}})
 	raw, _ = json.Marshal(data)
 	if err := os.WriteFile(file, raw, 0600); err != nil {
 		t.Fatal(err)
@@ -291,10 +333,10 @@ func TestSub2AgentImportMultipleSubscriptionKinds(t *testing.T) {
 			if json.Unmarshal(value, &auth) != nil || json.Unmarshal([]byte(auth.Access), &bundle) != nil {
 				t.Fatal("bad auth bundle")
 			}
-			if kind == "codebuddy" && bundle["accessToken"] != "codebuddy-fixture-token" {
+			if kind == "codebuddy" && (bundle["accessToken"] != "codebuddy-fixture-token" || bundle["path"] != "/cb-custom") {
 				t.Fatal("CodeBuddy token missing")
 			}
-			if kind == "trae" && (bundle["refreshToken"] != "trae-refresh" || bundle["baseUrl"] != "https://fixture.invalid") {
+			if kind == "trae" && (bundle["refreshToken"] != "trae-refresh" || bundle["baseUrl"] != "https://fixture.invalid" || bundle["path"] != "/tr-custom") {
 				t.Fatal("Trae bundle incomplete")
 			}
 			kinds[kind] = true

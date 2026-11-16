@@ -613,3 +613,11 @@ confirmation results can distinguish them. Endpoint deduplication requires the
 same protocol URLs, key, enabled state and model selection; a source sharing an
 address or key with different model picks remains a separate provider. Outcome
 and completion markers contain source hashes/status only, never credentials.
+
+Legacy supplier normalization accepts the old app's snake_case aliases and
+missing status defaults, while missing/duplicate source IDs fail before writes.
+Earlier auth_profiles-only data is explicitly reported as requiring sign-in,
+not silently treated as an empty successful import. CodeBuddy/Trae bundles
+preserve private paths. Trae imports require complete model mappings; isolated
+plugin loader tests sent synthetic CodeBuddy/Trae requests to their configured
+paths with converted credentials. Vendor accounts remain unverified.
