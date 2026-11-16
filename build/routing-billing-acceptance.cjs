@@ -35,7 +35,7 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
     await page.setViewportSize({width,height:1000});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    }
-   await page.reload();await page.evaluate(()=>show('groups'));
+   await page.goto('http://workspace.test/?view=groups');await page.locator('#view-groups').waitFor({state:'visible'});
    await page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true}).waitFor();
    const note=page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true});
    assert.match(await note.getAttribute('title'),/MaaS · 积分系数 7/);
