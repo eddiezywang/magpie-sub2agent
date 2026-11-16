@@ -4,7 +4,7 @@ package distribution
 
 const Internal = true
 
-const DefaultVersion = "0.6.0"
+const DefaultVersion = "1.0.0-beta"
 
 const Name = "sub2agent"
 const DataDir = "sub2agent"
