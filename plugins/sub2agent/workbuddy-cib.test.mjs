@@ -7,6 +7,87 @@ const auth = {type: 'oauth', access: 'fixture-access', refresh: 'fixture-refresh
   uid: 'fixture-user', enterpriseId: 'fixture-enterprise', expires: Date.now() + 3600000};
 const json = data => Response.json({code: 0, data});
 const client = {auth: {set: async () => {throw Error('Unexpected auth write');}}};
+const readWire = init => JSON.parse(new Headers(init.headers).get('content-encoding') === 'gzip' ? gunzipSync(init.body).toString() : init.body);
+const reply = () => new Response('data: {"choices":[{"delta":{"content":"OK"},"finish_reason":"stop"}],"usage":{"prompt_tokens":14,"completion_tokens":3,"credit":0.01}}\n\ndata: [DONE]\n\n', {headers: {'Content-Type': 'text/event-stream'}});
+const refusal = 'Illegal API invocation from an unapproved channel';
+
+test('CIB maps Claude/Codex templates once before compression, preserving user and tool quotes', async t => {
+  let wire;
+  t.mock.method(globalThis, 'fetch', async (_url, init) => {wire = readWire(init); return reply();});
+  const plugin = await createCib({client});
+  const loader = await plugin.auth.loader(async () => auth);
+  const quote = 'Codex CLI is an open source project led by OpenAI.';
+  const body = {model: DEFAULT_MODEL, stream: true, messages: [
+    {role: 'developer', content: [{type: 'text', text: "x-anthropic-billing-header: test\nYou are Claude Code, Anthropic’s official CLI for Claude.\n" + quote}]},
+    {role: 'user', content: quote},
+    {role: 'assistant', content: quote, tool_calls: [{id: 'call-1', type: 'function', function: {name: 'read_file', arguments: JSON.stringify({quote})}}]},
+    {role: 'tool', tool_call_id: 'call-1', content: quote},
+    {role: 'user', content: 'x'.repeat(20000)},
+  ]};
+  const original = JSON.stringify(body);
+  const response = await loader.fetch(ORIGIN + '/v2/chat/completions', {method: 'POST', body: original});
+  assert.equal(response.status, 200); await response.text();
+  assert.equal(wire.messages[0].role, 'system');
+  assert.match(wire.messages[0].content[0].text, /The Codex CLI/);
+  assert.doesNotMatch(wire.messages[0].content[0].text, /billing-header|official CLI|The The/);
+  assert.equal(wire.messages[1].content, quote);
+  assert.equal(wire.messages[2].content, 'The ' + quote);
+  assert.equal(wire.messages[2].tool_calls[0].function.arguments, JSON.stringify({quote}));
+  assert.equal(wire.messages[3].content, quote);
+  assert.equal(JSON.stringify(body), original);
+});
+
+for (const status of [400, 413, 500]) test(`CIB channel refusal ${status} retries once with system role retained`, async t => {
+  const sent = [];
+  t.mock.method(globalThis, 'fetch', async (_url, init) => {
+    sent.push(readWire(init));
+    return sent.length === 1 ? Response.json({code: 11128, msg: refusal}, {status}) : reply();
+  });
+  const plugin = await createCib({client});
+  const loader = await plugin.auth.loader(async () => auth);
+  const response = await loader.fetch(ORIGIN + '/v2/chat/completions', {method: 'POST', body: JSON.stringify({model: DEFAULT_MODEL, stream: true, messages: [
+    {role: 'system', content: 'You are an AI agent powered by Example Harness.\nKeep safety rules.'},
+    {role: 'user', content: 'hello'},
+  ]})});
+  assert.equal(response.status, 200); await response.text();
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].messages[0].role, 'system');
+  assert.equal(sent[1].messages[0].content, 'You are an AI agent, powered by Example Harness.\nKeep safety rules.');
+  assert.deepEqual(sent[1].messages[1], sent[0].messages[1]);
+});
+
+test('CIB persistent channel failure keeps upstream evidence and never demotes system', async t => {
+  const sent = [];
+  t.mock.method(globalThis, 'fetch', async (_url, init) => {
+    sent.push(readWire(init)); return Response.json({code: 11128, msg: refusal}, {status: 413});
+  });
+  const loader = await (await createCib({client})).auth.loader(async () => auth);
+  const response = await loader.fetch(ORIGIN + '/v2/chat/completions', {method: 'POST', body: JSON.stringify({model: DEFAULT_MODEL, messages: [
+    {role: 'system', content: 'You are an AI agent powered by Example Harness.'}, {role: 'user', content: 'hello'},
+  ], stream: true})});
+  assert.equal(sent.length, 2);
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get('X-Sub2Agent-Upstream-Status'), '413');
+  const error = (await response.json()).error;
+  assert.equal(error.type, 'prompt_refused');
+  assert.equal(error.upstream_status, 413);
+  assert.ok(sent.every(body => body.messages[0].role === 'system'));
+});
+
+test('CIB genuine size refusal and malformed-system 11128 do not trigger prompt retries', async t => {
+  let calls = 0, status = 413, msg = 'Request Entity Too Large';
+  t.mock.method(globalThis, 'fetch', async () => {calls++; return Response.json({code: 11128, msg}, {status});});
+  const loader = await (await createCib({client})).auth.loader(async () => auth);
+  const send = () => loader.fetch(ORIGIN + '/v2/chat/completions', {method: 'POST', body: JSON.stringify({model: DEFAULT_MODEL, messages: [
+    {role: 'system', content: 'You are an AI agent powered by Example Harness.'}, {role: 'user', content: 'hello'},
+  ], stream: true})});
+  let response = await send();
+  assert.equal(response.status, 413); assert.match(await response.text(), /Request Entity Too Large/);
+  assert.equal(calls, 1);
+  status = 400; msg = 'first message is not system prompt';
+  response = await send(); assert.equal(response.status, 400); await response.text();
+  assert.equal(calls, 2);
+});
 
 test('CIB fixed catalog and default do not discover or probe models', async t => {
   t.mock.method(globalThis, 'fetch', async () => {throw Error('Unexpected network');});
