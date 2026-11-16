@@ -607,3 +607,9 @@ receive a credential or completion marker; importing never silently changes a
 user's plugin switch. Synthetic mixed-source tests exercise all three bundle
 shapes and repeat imports. Vendor login/refresh and actual plugin-host execution
 remain unverified; the UI reports unresolved sources and offers manual retry.
+
+Legacy import records per-source outcomes as imported or existing (kept), so
+confirmation results can distinguish them. Endpoint deduplication requires the
+same protocol URLs, key, enabled state and model selection; a source sharing an
+address or key with different model picks remains a separate provider. Outcome
+and completion markers contain source hashes/status only, never credentials.

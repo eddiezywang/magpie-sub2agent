@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -100,6 +101,14 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	if imported == nil {
 		return 0, errors.New("旧认证迁移记录无效，未覆盖现有认证")
 	}
+	outcomePath := filepath.Join(filepath.Dir(Path()), "sub2agent-import-outcomes.json")
+	outcomes := map[string]string{}
+	if err := readLegacyJSON(outcomePath, &outcomes); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return 0, errors.New("旧版供应商处理记录无法读取，未继续导入")
+	}
+	if outcomes == nil {
+		return 0, errors.New("旧版供应商处理记录无效，未继续导入")
+	}
 	completePath := filepath.Join(filepath.Dir(Path()), "sub2agent-import-complete.json")
 	var completion struct {
 		Complete *bool `json:"complete"`
@@ -173,6 +182,15 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 		if err != nil {
 			failed = true
 			continue
+		}
+		if changed {
+			outcomes[identity] = "imported"
+		} else {
+			outcomes[identity] = "existing"
+		}
+		outcomeJSON, _ := json.MarshalIndent(outcomes, "", "  ")
+		if err = writePrivate(outcomePath, append(outcomeJSON, '\n')); err != nil {
+			return count, errors.New("供应商已处理，但结果记录保存失败；可安全重试")
 		}
 		imported[identity] = true
 		raw, _ := json.MarshalIndent(imported, "", "  ")
@@ -352,7 +370,7 @@ func importLegacyEndpoint(s legacySub2AgentSource, identity, key string) (bool, 
 	// The same endpoint may have several independent credentials and model
 	// selections. Only an already saved credential is a duplicate.
 	for _, existing := range f.Providers {
-		if existing.Anthropic == p.Anthropic && existing.Chat == p.Chat && existing.Responses == p.Responses {
+		if existing.Anthropic == p.Anthropic && existing.Chat == p.Chat && existing.Responses == p.Responses && existing.Off == p.Off && slices.Equal(existing.Models, p.Models) {
 			if existing.Key == key {
 				return false, nil
 			}

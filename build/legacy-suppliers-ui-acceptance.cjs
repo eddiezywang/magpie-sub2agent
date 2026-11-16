@@ -10,7 +10,7 @@ const assert=require('node:assert/strict');
   const sources=[{id:'one',name:'WorkBuddy 企业',kind:'subscription',icon:'workbuddy-color',imported:false},{id:'two',name:'TIG-Coding-Plan',kind:'endpoint',icon:'tig-color',imported:false}];
   await page.exposeFunction('legacyTestBackend',method=>{
    if(method==='dismiss') dismissed=true;
-   if(method==='import'){writes++;sources[0].imported=true;if(writes>1){sources[1].imported=true;complete=true;}}
+   if(method==='import'){writes++;sources[0].imported=true;sources[0].outcome='existing';if(writes>1){sources[1].imported=true;sources[1].outcome='imported';complete=true;}}
    const preview={found:true,complete,dismissed,sources};
    return method==='import'?{imported:1,preview,...(!complete?{error:'部分旧认证无法转换'}:{})}:{...preview};
   });
@@ -26,12 +26,12 @@ const assert=require('node:assert/strict');
   await page.evaluate(()=>show('settings'));await page.locator('[data-setting=legacy-import]').waitFor();
   await page.locator('[data-setting=legacy-import] button').click();await dialog.waitFor();
   await dialog.getByRole('button',{name:'导入供应商'}).click();await dialog.getByText('供应商导入结果').waitFor();
-  assert.equal(writes,1);assert.equal(await dialog.getByText('已处理').count(),1);
+  assert.equal(writes,1);assert.equal(await dialog.getByText('已存在，保留现有配置').count(),1);
   await dialog.getByText('待处理：请启用供应商插件或重新登录').waitFor();
   await dialog.getByRole('button',{name:'完成'}).click();await dialog.waitFor({state:'detached'});
   await page.locator('[data-setting=legacy-import] button').click();await dialog.waitFor();
   await dialog.getByRole('button',{name:'导入供应商'}).click();await dialog.getByText('供应商导入结果').waitFor();
-  assert.equal(writes,2);assert.equal(await dialog.getByText('已处理').count(),2);
+  assert.equal(writes,2);assert.equal(await dialog.getByText('已存在，保留现有配置').count(),1);assert.equal(await dialog.getByText('已导入',{exact:true}).count(),1);
   await dialog.getByRole('button',{name:'完成'}).click();await dialog.waitFor({state:'detached'});
   await page.reload();await page.waitForFunction(()=>typeof window.legacySuppliers==='object');assert.equal(await dialog.count(),0);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);

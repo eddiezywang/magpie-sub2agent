@@ -129,6 +129,24 @@ func TestSub2AgentImportKeepsDifferentKeysAtSameEndpoint(t *testing.T) {
 	}
 }
 
+func TestSub2AgentImportKeepsDifferentModelSelectionsAtSameEndpoint(t *testing.T) {
+	azureHome(t)
+	a := legacySub2AgentSource{ID: "a", Kind: "endpoint", Name: "A", Models: []string{"model-a"}}
+	a.Endpoint.Base, a.Endpoint.Protocol = "https://fixture.invalid/v1", "openai_chat"
+	b := a
+	b.ID, b.Name, b.Models = "b", "B", []string{"model-b"}
+	if changed, err := importLegacyEndpoint(a, "model-a", "same-key"); err != nil || !changed {
+		t.Fatal("first source failed")
+	}
+	if changed, err := importLegacyEndpoint(b, "model-b", "same-key"); err != nil || !changed {
+		t.Fatal("different model selection was discarded")
+	}
+	p, err := Find("legacy-model-b")
+	if err != nil || len(p.Models) != 1 || p.Models[0] != "model-b" {
+		t.Fatal("second source lost its models")
+	}
+}
+
 func TestSub2AgentImportCompletionAndPartialRetry(t *testing.T) {
 	azureHome(t)
 	root := legacyImportFixture(t)
@@ -306,6 +324,10 @@ func TestSub2AgentImportKeepsCurrentCredentialsAndRejectsCorruption(t *testing.T
 	count, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil })
 	if err != nil || count != 1 {
 		t.Fatalf("overwrote current settings: %d %v", count, err)
+	}
+	preview, err := legacySub2AgentPreview(root)
+	if err != nil || len(preview.Sources) != 2 || preview.Sources[0].Outcome != "existing" || preview.Sources[1].Outcome != "imported" {
+		t.Fatalf("conflict results were not distinguished: %+v %v", preview.Sources, err)
 	}
 	saved, err := Find(plan.ID)
 	if err != nil || saved.Key != "newer-plan" || len(saved.Models) != 1 || saved.Models[0] != "custom-model" {

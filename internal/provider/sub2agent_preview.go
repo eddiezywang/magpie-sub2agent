@@ -26,6 +26,7 @@ type LegacySupplierItem struct {
 	Kind     string `json:"kind"`
 	Icon     string `json:"icon"`
 	Imported bool   `json:"imported"`
+	Outcome  string `json:"outcome,omitempty"`
 }
 
 func legacySourceID(s legacySub2AgentSource) string {
@@ -93,6 +94,13 @@ func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 	if imported == nil {
 		return out, errors.New("导入记录无效")
 	}
+	outcomes := map[string]string{}
+	if err := readLegacyJSON(filepath.Join(filepath.Dir(Path()), "sub2agent-import-outcomes.json"), &outcomes); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return out, errors.New("导入结果记录无法读取")
+	}
+	if outcomes == nil {
+		return out, errors.New("导入结果记录无效")
+	}
 	for _, s := range old.Desktop.Sources {
 		name, icon := s.Name, "generic"
 		if name == "" {
@@ -114,7 +122,8 @@ func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 				name, icon = zhtPreset.Name, zhtPreset.Icon
 			}
 		}
-		out.Sources = append(out.Sources, LegacySupplierItem{ID: s.ID, Name: name, Kind: s.Kind, Icon: icon, Imported: imported[legacySourceID(s)]})
+		id := legacySourceID(s)
+		out.Sources = append(out.Sources, LegacySupplierItem{ID: s.ID, Name: name, Kind: s.Kind, Icon: icon, Imported: imported[id], Outcome: outcomes[id]})
 	}
 	return out, nil
 }
