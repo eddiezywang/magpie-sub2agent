@@ -67,7 +67,11 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
    await loadProviders();return data.groups.find(g=>g.templateKind==='steady');
   },upstream.address().port);
   assert(routing?.ready,'native group template must be available');
-  await page.locator('#ws-route-controls').getByRole('button',{name:routing.name,exact:true}).click();
+  const refreshed=page.waitForResponse(r=>r.url().endsWith('/api/groups')&&r.request().method()==='GET');
+  await page.evaluate(()=>magpie.call('workspace','render'));await (await refreshed).finished();
+  console.log('Runtime steady prerequisite:',await page.evaluate(async()=>{const d=await api('groups');return d.templates.find(t=>t.kind==='steady')?.need||'ready'}));
+  await page.locator('[data-ws-focus=strategy]').click();
+  await page.getByRole('menuitem',{name:/永不卡住/}).click();
   await page.waitForFunction(ref=>state.agents.find(a=>a.id==='claude').fields.find(f=>f.key==='model').value===ref,routing.ref);
   await page.waitForFunction(()=>!window.agentConnectionBusy('claude'));
   assert.equal(await page.evaluate(()=>state.agents.find(a=>a.id==='codex').fields.find(f=>f.key==='model').value),'workspace-qa/qa-model');
@@ -76,13 +80,15 @@ const {chromium}=require('playwright'),fs=require('node:fs/promises'),path=requi
   assert.equal(grouped.status(),200);assert((await grouped.text()).includes('Synthetic output'));
   try{
    await page.evaluate(async id=>{const r=await api('groups/switch',{id,on:false});if(r.error)throw Error(r.error);magpie.call('workspace','render')},routing.id);
-   await page.getByText('路由组已停用',{exact:true}).waitFor();
-   assert(await page.locator('#ws-route-controls').getByRole('button',{name:routing.name,exact:true}).isDisabled());
+   await page.locator('#ws-route-members').getByText('路由组暂无可用成员',{exact:true}).waitFor();
+   await page.locator('[data-ws-focus=strategy]').click();
+   assert(await page.getByRole('menuitem',{name:/永不卡住/}).isDisabled());
+   await page.keyboard.press('Escape');
    await page.locator('#ws-route-controls').scrollIntoViewIfNeeded();
    await page.screenshot({path:path.join(output,'runtime-group-disabled.png'),animations:'disabled'});
   }finally{
    await page.evaluate(async id=>{const r=await api('groups/switch',{id,on:true});if(r.error)throw Error(r.error);magpie.call('workspace','render')},routing.id);
-   await page.waitForFunction(ref=>{const choice=document.querySelector(`[data-ws-focus="${ref}"]`);return choice&&!choice.disabled},routing.ref);
+   await page.waitForFunction(()=>{const choice=document.querySelector('[data-ws-focus="strategy"]');return choice&&!choice.disabled});
   }
   const retained=['workspace','agents','providers','routing','groups','gateway','sessions','usage','plugins','settings'];
   for(const target of retained){

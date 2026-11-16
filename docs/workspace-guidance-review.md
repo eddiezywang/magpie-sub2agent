@@ -69,3 +69,17 @@ Published-page Playwright verification covers policy writes, Agent expansion,
 no console errors and 390px overflow; milestone screenshots are captured.
 
 Questions skipped: the user already authorized refinement and public publication.
+
+
+Packaged Windows verification: single EXE 119,800,320 bytes, embedded Bun 1.4.2,
+archive contains only sub2agent.exe. Built with the reviewed private source
+`def6059` (`../sub2agent-workbuddy-prompt`); the older sibling checkout lacks
+its shared WorkBuddy prompt helper and cannot build this distribution.
+37 generated-provider tests pass. The isolated real binary passes retained
+10-page verification, native provider saves, Agent writes, routing-group
+selection/reload persistence, disabled-group prevention and seven loopback
+stream replies with attributed 180-second throughput. Runtime acceptance now
+uses the policy menu and waits for the explicit groups refresh, rather than
+looking for removed buttons or clicking a stale prerequisite snapshot.
+All QA runtimes are stopped. No live vendor inference or native WebView2
+installation was tested. Release target is public 8899 only, never internal177.
