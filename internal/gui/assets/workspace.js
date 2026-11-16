@@ -43,7 +43,7 @@
       let target=eligible.find(a=>a.id===box.dataset.agent)||eligible[0];box.dataset.agent=target.id;
       const choose=magpie.ui.menu(eligible.map(a=>({v:a.id,name:a.name})),target.id,'Agent',id=>{box.dataset.agent=id;for(const b of box.querySelectorAll('[aria-pressed]'))b.disabled=true;routeControls();});
       choose.dataset.wsFocus='agent';
-      const current=target.fields.find(f=>f.key==='model'),groups=(data.groups||[]).filter(g=>g.templateKind&&['plan','smart','thrifty','steady'].includes(g.templateKind));
+      const current=target.fields.find(f=>f.key==='model'),groups=(data.groups||[]).filter(g=>g.templateKind&&['smart','thrifty','steady','plan','fast','even'].includes(g.templateKind));
       box.append(choose);const saved=el('span','note',optionFor(current,current.value)?.label||current.value||t('Default'));box.append(saved);
       for(const g of groups){const b=el('button','text',g.name);b.dataset.wsFocus=g.ref;b.disabled=!g.ready||!!g.disabled;b.setAttribute('aria-pressed',String(current.value===g.ref));b.onclick=async()=>{if(!active||visit!==generation||box.dataset.agent!==target.id)return;for(const x of box.querySelectorAll('button'))x.disabled=true;try{await setPick(target,current,g.ref,{value:g.ref,ref:g.ref,label:g.name});}catch(err){statusErr(err)}finally{if(active&&visit===generation)routeControls();}};box.append(b);if(b.disabled){const reason=t(g.disabled?'Routing group is disabled':'Routing group has no available members');b.title=reason;box.append(el('span','note',reason));}}
       if(!groups.length)box.append(el('span','note',t('No predefined routing groups configured')));

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/settings"
@@ -126,10 +125,8 @@ const (
 
 // rated is a model of the catalog with what a template weighs it by.
 type rated struct {
-	e       Entry
-	out     float64 // its output price, 0 when no price is known
-	billing catalog.RoutingBilling
-	priced  bool // distinguishes a real zero price from an unknown price
+	e   Entry
+	out float64 // its output price, 0 when no price is known
 	// maker: a vendor among the presets makes it (MakerPrice), not one of
 	// the hundreds a router lists from labs nobody has heard of
 	maker bool
@@ -141,9 +138,7 @@ type rated struct {
 // served, not a group, that answers an agent's chat, with its price — the
 // model's maker's list price when there is one, so a subscription's or a
 // relay's copy weighs as the model does, else what the provider charges.
-func templateModels() []rated {
-	return templateModelsFrom(Served())
-}
+func templateModels() []rated { return templateModelsFrom(Served()) }
 func templateModelsFrom(entries []Entry) []rated {
 	s := settings.Load()
 	var out []rated
@@ -153,16 +148,12 @@ func templateModelsFrom(entries []Entry) []rated {
 		}
 		r := rated{e: e}
 		if pr, ok := MakerPrice(e.Model); ok {
-			r.out, r.maker, r.priced = pr.Output, true, true
+			r.out, r.maker = pr.Output, true
 		} else if pr, ok := priceOf(s, e.Provider, true, e.Model, time.Time{}); ok {
 			// without a rate window's rate (#2463): a template weighs how
 			// strong a model is, which the hour it is made in doesn't change
-			r.out, r.priced = pr.Output, true
+			r.out = pr.Output
 		}
-		if pr, ok := e.Provider.ListPrice(e.Model); ok && pr.Input == 0 && pr.Output == 0 {
-			r.out, r.priced = 0, true
-		}
-		r.billing = catalog.RoutingBillingOf(e.Provider.ID, e.Model)
 		r.small, r.tiny = sizeOf(e.Model)
 		out = append(out, r)
 	}
@@ -202,9 +193,7 @@ func cheapest(ms []rated, strong rated) []rated {
 		if m.e.ID == strong.e.ID {
 			continue
 		}
-		if m.priced && m.out == 0 {
-			out = append(out, m)
-		} else if strong.out > 0 && m.out > 0 {
+		if strong.out > 0 && m.out > 0 {
 			if m.out <= strong.out/4 {
 				out = append(out, m)
 			}
@@ -214,7 +203,6 @@ func cheapest(ms []rated, strong rated) []rated {
 	}
 	slices.SortStableFunc(out, func(a, b rated) int {
 		return cmp.Or(
-			-cmp.Compare(btoi(a.priced && a.out == 0), btoi(b.priced && b.out == 0)),
 			-cmp.Compare(btoi(a.maker), btoi(b.maker)),
 			cmp.Compare(btoi(a.tiny), btoi(b.tiny)),
 			-cmp.Compare(a.e.Released, b.e.Released),
@@ -240,7 +228,7 @@ func btoi(b bool) int {
 func Templates() []Template {
 	ms, ds := templateModels(), OfferedDeciders(nil)
 	out := make([]Template, 0, len(TemplateKinds))
-	for _, k := range availableTemplateKinds() {
+	for _, k := range TemplateKinds {
 		out = append(out, templateOf(k, ms, ds))
 	}
 	return out
@@ -249,7 +237,7 @@ func Templates() []Template {
 // MakeTemplate is the template kind as the user's models make it now, or
 // why it can't be made.
 func MakeTemplate(kind string) (Template, error) {
-	if !slices.Contains(availableTemplateKinds(), kind) {
+	if !slices.Contains(TemplateKinds, kind) {
 		return Template{}, fmt.Errorf("no template %q: one of %s", kind, strings.Join(TemplateKinds, ", "))
 	}
 	t := templateOf(kind, templateModels(), OfferedDeciders(nil))
@@ -277,11 +265,6 @@ var TemplateIDs = map[string]string{TemplateSmart: "smart-split", TemplateThrift
 // templateOf is the template kind made of ms, its classifier a decider of
 // ds when there is one.
 func templateOf(kind string, ms []rated, ds []Entry) Template {
-	if distribution.Internal && slices.ContainsFunc(ms, func(m rated) bool {
-		return m.e.Provider.isCodingPlan() || strings.HasPrefix(m.e.Provider.ID, "sub2agent-workbuddy")
-	}) {
-		return internalTemplate(kind, ms, ds)
-	}
 	t := Template{Kind: kind, Group: Group{Name: TemplateNames[kind], ID: TemplateIDs[kind], Routing: Ordered}}
 	strong := strongest(ms)
 	if len(strong) == 0 {
@@ -383,18 +366,9 @@ func classifierFor(ms []rated, ds []Entry, low rated) string {
 	if len(ds) > 0 {
 		return ds[0].ID
 	}
-	if distribution.Internal {
-		pick := low
-		for _, m := range ms {
-			if !m.e.Reasoning && !m.tiny && compareInternalCost(m, pick) < 0 {
-				pick = m
-			}
-		}
-		return pick.e.ID
-	}
 	var pick *rated
 	for i, m := range ms {
-		if (m.priced || m.out > 0) && !m.e.Reasoning && !m.tiny && (pick == nil || m.out < pick.out) {
+		if m.out > 0 && !m.e.Reasoning && !m.tiny && (pick == nil || m.out < pick.out) {
 			pick = &ms[i]
 		}
 	}
@@ -444,11 +418,4 @@ func AddTemplate(kind, name string) (Group, error) {
 		}
 	}
 	return g, nil
-}
-
-func availableTemplateKinds() []string {
-	if distribution.Internal {
-		return []string{TemplatePlan, TemplateSmart, TemplateThrifty, TemplateSteady}
-	}
-	return TemplateKinds
 }

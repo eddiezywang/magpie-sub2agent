@@ -3,6 +3,13 @@
 The application retains Magpie's native provider editor and routing-group
 interactions. No component library or additional routing strategy was added.
 
+## Superseded template behavior
+
+The later user decision restores every upstream Magpie recipe. The cost-based
+template ordering described below is superseded; typed billing display and
+conservative credit refusal scope remain. See the routing subsystem reference
+for current behavior.
+
 ## Behavior
 
 - Routing catalog rules retain currency, reference coefficient, source and

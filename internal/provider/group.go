@@ -202,8 +202,8 @@ type Group struct {
 	// which key it is for, why it is ordered so): one line, shown under
 	// its name on the Routing page and by magpie group, never sent to an
 	// agent or a vendor. Empty shows nothing (CleanNote).
-	// TemplateKind marks an internal template that follows current provider
-	// discovery and server routing scores. Manual groups have no marker.
+	// TemplateKind marks a predefined group that follows upstream recipes
+	// and current provider discovery. Manual groups have no marker.
 	TemplateKind string   `json:"templateKind,omitempty"`
 	Note         string   `json:"note,omitempty"`
 	Members      []string `json:"members"` // "provider/model[:effort]" or "group/<id>", in order (see MemberEffort)
@@ -604,6 +604,12 @@ func buildGroupsIn(entries []Entry) []Group {
 				g.Members, g.Rules, g.Classifier, g.Routing = t.Group.Members, t.Group.Rules, t.Group.Classifier, t.Group.Routing
 				g.Placed = nil
 				g.Off = nil
+			} else {
+				// Keep the saved configuration, but never serve stale members
+				// when the recipe's prerequisites no longer hold.
+				g.Members, g.Rules, g.Classifier, g.Match, g.Matched = nil, nil, "", nil, nil
+				g.Placed, g.Off = nil, nil
+				g.Disabled = true
 			}
 		}
 		if g.Hidden {
@@ -2290,6 +2296,12 @@ func SwitchGroup(id string, on bool) error {
 			return fmt.Errorf("%s was found by magpie: remove it, or change it to make it yours, to switch it off", g.Name)
 		}
 		return fmt.Errorf("magpie has no group %q", id)
+	}
+	if on && distribution.Internal && f.Groups[i].TemplateKind != "" {
+		tp := templateOf(f.Groups[i].TemplateKind, templateModels(), OfferedDeciders(nil))
+		if tp.Why != "" {
+			return fmt.Errorf("%s", tp.Why)
+		}
 	}
 	if f.Groups[i].Disabled == !on {
 		return nil

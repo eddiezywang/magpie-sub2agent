@@ -6667,7 +6667,7 @@ function routingPage(part) {
     fast: ["Fastest first", "Whichever provider has answered fastest lately goes first"],
     even: ["Spread evenly", "The strongest model, taken in turn over every provider and account that serves it"],
   };
-  const tplName = (tp) => t((window.bootPrefs?.intranet && { smart: "Balanced first", steady: "Stability first" }[tp.kind]) || TPL[tp.kind]?.[0] || tp.group.name);
+  const tplName = (tp) => t(TPL[tp.kind]?.[0] || tp.group.name);
   // what a template that can't be made is missing (provider.Need*)
   const tplNeed = (tp) => tp.need === "providers" ? t("Needs models from two providers: {name} is the only one", { name: tp.of })
     : tp.need === "cheap" ? t("Needs a model cheap beside {name}", { name: tp.of })
@@ -6963,10 +6963,11 @@ function routingPage(part) {
     const sep = g.routing === "order" ? " → " : " · ";
     const mem = manual ? pickRow(g) : el("div", "mem", shownMembers(g).map((id) => memberLabel(g, id) + (g.off?.includes(id) ? ` (${t("off")})` : "")).join(sep));
     main.append(mem);
-    if (g.templateKind && g.memberInfo?.some((m) => m.routingBilling)) {
-      const cost = el("div", "rt-gnote", t(({plan:"Plan source first; cost preference orders fallback candidates",smart:"Hard turns use capability; easy turns use cost preference",steady:"Strong model from each source first; then cost-based fallback"})[g.templateKind] || "Cost preference: confirmed free, plan allowance, points, pay as you go, unknown"));
-      cost.title = g.memberInfo.map((m) => `${memberLabel(g, m.id)}: ${routingBillingHint(m.routingBilling)}`).join("\n");
-      main.append(cost);
+    if (g.templateKind && TPL[g.templateKind]) {
+      const current = groups.templates?.find((tp) => tp.kind === g.templateKind);
+      const recipe = el("div", "rt-gnote", current?.need ? tplNeed(current) : t(TPL[g.templateKind][1]));
+      recipe.title = (g.memberInfo || []).map((m) => `${memberLabel(g, m.id)}: ${routingBillingHint(m.routingBilling)}`).join("\n");
+      main.append(recipe);
     }
     if (!g.decides) main.append(...groupQuota(g));
     for (const p of g.patterns || []) {

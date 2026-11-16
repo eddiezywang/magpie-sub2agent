@@ -36,8 +36,8 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    }
    await page.reload();await page.evaluate(()=>show('groups'));
-   await page.getByText('成本偏好：确认免费 → 套餐额度 → 积分 → 按量付费 → 未知',{exact:true}).waitFor();
-   const note=page.getByText('成本偏好：确认免费 → 套餐额度 → 积分 → 按量付费 → 未知',{exact:true});
+   await page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true}).waitFor();
+   const note=page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true});
    assert.match(await note.getAttribute('title'),/MaaS · 积分系数 7/);
    await page.screenshot({animations:"disabled",path:path.join(output,engine+'-points-groups.png')});
    for(const view of ['workspace','agents','providers','routing','groups','gateway','usage','sessions','plugins','settings']){

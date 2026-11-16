@@ -3218,30 +3218,22 @@ never read real providers or accounts.
 
 ## Internal routing choices
 
-The internal template picker offers plan, smart (Balanced first), thrifty and
-steady only. Models are selected using the existing catalog prices, release
-metadata and capabilities, without binding templates to model IDs. The group's
-advanced picker omits free-first and expiring-free-quota strategies; existing
-saved strategies are not rewritten. TIG Coding Plan defaults to plan billing,
-while an explicit user billing value still wins.
+All six predefined recipes use the upstream Magpie definitions in
+[Routing recipes](#routing-recipes), including their original model selection,
+prerequisites, classifier and routing mode. The intranet profile does not
+substitute provider-specific templates, rename smart/steady, or rank templates
+by enterprise points, vendor multipliers, TIG preference or model-name tiers.
+WorkBuddy remains a subscription and TIG defaults to plan billing; explicit
+user billing values still win. Billing classification does not waive the
+requirement for two distinct available providers in plan/steady/fast recipes.
 
-A known zero output price is distinct from unknown pricing. Zero-priced models
-are eligible as the cheap member and classifier; a changed price removes that
-eligibility when templates are regenerated through the same algorithm. Saved
-groups created before managed templates remain explicit user configuration.
-New internal templates retain their kind and rebuild members when discovery or
-the managed catalog changes; saving an explicit group edit opts out. Plan-first
-chooses a non-tiny small Coding Plan model, then a low-cost alternate source.
-No model ID is hard-coded in a template. Typed billing rules order known free,
-plan allowance, points, pay-as-you-go and unknown costs as an explicit source
-preference. Coefficients are compared within the same provider and currency, or
-an explicitly established shared pool; different currencies are never converted
-or compared numerically. Unknown enterprise costs do not borrow maker USD prices
-or infer free status from names. Capability ranking retains independent maker
-facts and USD reference prices; changing points never changes capability rank.
-A classifier still prefers a decision
-API, else the cheapest known-price non-reasoning/non-tiny model, else the cheap
-member. No promotion is permanently encoded by model name.
+Saved predefined groups retain `templateKind` to rebuild using those same
+upstream recipes when discovery changes. When prerequisites fail, their runtime
+members and rules are cleared so an old one-provider plan cannot continue
+serving; saved configuration remains intact and recovers when sources return.
+Explicitly edited groups have no marker and are never regenerated. Workspace
+can select any of the six existing predefined group kinds and never creates one
+automatically. Unready groups are unavailable for selection.
 
 The internal catalog refreshes server routing scores every five minutes,
 independent of telemetry opt-out. Bounded failures retain the last valid cache;
@@ -3256,8 +3248,8 @@ are not dollar prices or balance claims. A shared quota pool is unknown unless
 explicitly established; the catalog does not infer one from a MaaS model name.
 Provider model chips and routing-group members display the same typed billing
 metadata. Hover text names the rule revision and unresolved shared allowance
-scope. Template cards explain their capability/source/cost preference; these
-describe configured order, not a fabricated per-request estimate or deduction.
+scope. Template cards use the original recipe descriptions; billing hints describe
+reference rules, not a per-request estimate or deduction.
 WorkBuddy discovery's `modelCredits` is retained as the vendor display multiplier
 on the plugin model (`rate`), distinct from server token-point coefficients. It
 is displayed with its own unit explanation and is not used as a USD price, free
@@ -3279,7 +3271,7 @@ their balances are separate; shared-pool exhaustion requires upstream evidence.
 Workspace selects an existing internal template group for one explicit Agent
 through the native primary-model save path; it creates no routing strategy and
 does not edit group members. Groups without templateKind or outside the four
-supported kinds are omitted, and unready groups cannot be selected. Editing
+supported six kinds are omitted, and unready groups cannot be selected. Editing
 opens the retained Groups page. A stale group reference is rejected before an
 Agent file write. See [GUI composition](gui-shell.md#intranet-workspace-composition)
 for picker state and [Agent wiring](agent-wiring.md) for the native save behavior.
