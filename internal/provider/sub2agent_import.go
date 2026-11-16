@@ -63,10 +63,6 @@ func ImportSub2AgentAuth() (int, error) {
 }
 
 func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (int, error) {
-	repaired, err := repairImportedCodingPlans()
-	if err != nil {
-		return repaired, err
-	}
 	var old struct {
 		Version int `json:"version"`
 		Desktop struct {
@@ -75,9 +71,9 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	}
 	if err := readLegacyJSON(filepath.Join(root, "proxy.json"), &old); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return repaired, nil
+			return 0, nil
 		}
-		return repaired, errors.New("旧版 Sub2Agent 认证文件无法读取，已保留原文件")
+		return 0, errors.New("旧版 Sub2Agent 认证文件无法读取，已保留原文件")
 	}
 	if old.Version != 1 {
 		return 0, errors.New("旧版 Sub2Agent 配置版本无法识别，已保留原文件")
@@ -90,7 +86,7 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	if imported == nil {
 		return 0, errors.New("旧认证迁移记录无效，未覆盖现有认证")
 	}
-	count, failed := repaired, false
+	count, failed := 0, false
 	for _, source := range old.Desktop.Sources {
 		if source.ID == "" || source.Status != "ready" {
 			continue

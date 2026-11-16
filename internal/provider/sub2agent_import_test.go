@@ -161,8 +161,7 @@ func TestSub2AgentImportRepairsAlreadyImportedTIG(t *testing.T) {
 	if err := store(f); err != nil {
 		t.Fatal(err)
 	}
-	root := filepath.Join(t.TempDir(), "missing-old-config")
-	if _, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil {
+	if _, err := repairImportedCodingPlans(); err != nil {
 		t.Fatal(err)
 	}
 	fixed, err := Find("sub2agent-tigcodingplan")
@@ -177,8 +176,35 @@ func TestSub2AgentImportRepairsAlreadyImportedTIG(t *testing.T) {
 	if f.Groups[0].Members[0] != "sub2agent-tigcodingplan/glm-5.3-flash-zp" {
 		t.Fatal("group reference not moved")
 	}
-	if n, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil || n != 0 {
+	if n, err := repairImportedCodingPlans(); err != nil || n != 0 {
 		t.Fatal("repair is not idempotent")
+	}
+}
+
+func TestSub2AgentImportDoesNotRepairOrRewriteRouting(t *testing.T) {
+	azureHome(t)
+	p := Provider{ID: "legacy-fixture", Name: "API", Chat: "http://172.21.11.82/public/v1", Key: "fixture-key"}
+	if err := Save(p); err != nil {
+		t.Fatal(err)
+	}
+	f, err := read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Groups = []Group{{ID: "fixture", Members: []string{"legacy-fixture/model"}}}
+	if err := store(f); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(t.TempDir(), "missing-old-config")
+	if n, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil || n != 0 {
+		t.Fatalf("unexpected import: %d %v", n, err)
+	}
+	f, err = read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(f.Groups) != 1 || f.Groups[0].Members[0] != "legacy-fixture/model" || len(f.Providers) != 1 || f.Providers[0].ID != "legacy-fixture" {
+		t.Fatal("supplier import changed an existing provider or routing group")
 	}
 }
 

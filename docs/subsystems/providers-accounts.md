@@ -580,3 +580,8 @@ selections at the same endpoint. Those are separate providers, while an
 already-saved matching key is not duplicated. Existing preferences are not
 overwritten. This transition is not ready to build or deliver as a completed
 migration workflow; account-type coverage and explicit per-item results remain.
+
+Legacy supplier import does not invoke the independent TIG repair: importing
+suppliers and credentials must not rename existing providers or rewrite route
+group members. The existing repair remains separately testable, but is not part
+of this import. TestSub2AgentImportDoesNotRepairOrRewriteRouting verifies this.
