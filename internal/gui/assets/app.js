@@ -22576,6 +22576,7 @@ addEventListener("scroll", () => import("./scrollends.js"), { capture: true, pas
 
 let settingsLoad = Promise.resolve(); // show()'s read of Settings, for openSettingsAt
 async function show(v) {
+  v = window.wsView?.(v) || v;
   const jump = jumpNext;
   jumpNext = false;
   // a built-in page a plugin's page replaces (magpie.page.replaces) opens that

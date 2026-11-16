@@ -1421,3 +1421,45 @@ the Groups page. `plugins/workspace/client.js` owns this composition; the old
 workspace.js is only a compatibility loader. Packed intranet pages load the
 plugin directly. `build/workspace-guided-acceptance.cjs` covers the guided menu
 contract that replaces the earlier row of separate template buttons.
+
+
+### Workspace request history
+
+The internal workspace is the only navigation entry for live routing and request
+history. `show()` asks the workspace plugin's `wsView` resolver before changing
+pages, so saved `view=routing` URLs, tray request links and internal request
+openers reach the workspace. Request IDs still select the existing routing
+record. The existing Groups page is presented as Routing policies; group IDs,
+configuration and request-time routing semantics are unchanged.
+
+At widths above 900px, `.ws-primary` owns vertical scrolling for Agent controls,
+policies, the original live stage, throughput and request history. The provider
+column stays in place and scrolls independently only when its contents overflow.
+At narrower widths the workspace itself scrolls, retaining provider-first order.
+The routing page keeps one DOM instance and its original poller. `scrollView`
+and `requestView` select the active workspace scroller for stage geometry,
+history virtualization and redraw position preservation. Historical records
+remain windowed; the request list has no nested vertical scroller in the
+workspace. Account activity is an optional disclosure beneath the requests.
+
+`build/workspace-history-acceptance.cjs` exercises packed assets in Chromium
+and WebKit: old URL and request selection, policy naming, fixed providers,
+reader position during live updates, 700-record persisted history, date and
+session filters, request details, account disclosure, navigation and narrow
+layout. The guided, lifecycle and retained-page suites cover the shared shell.
+
+
+Fresh internal installations open the main workspace maximised, retaining the
+native title bar and taskbar rather than entering exclusive full screen. A
+saved window size remains the user's choice: subsequent launches restore its
+normal or maximised state as before. `openMaximised` is shared by Linux's
+creation-time StartState and Windows/macOS placement before first reveal.
+`TestFirstInternalWindowOpensMaximised` verifies fresh internal/upstream
+behavior, saved states and restoring a first-run maximised window.
+
+The Windows quiet restart path uses native window placement to remain minimised
+without foreground activation. On its first taskbar restore it also calls Wails
+Show to expose the WebView2 controller; placement alone does not set Wails'
+logical visibility. The one-shot restore listener is removed after showing.
+The native restart regression seeds saved normal/maximised dimensions and
+checks that a fresh shown window starts maximised only in internal builds.

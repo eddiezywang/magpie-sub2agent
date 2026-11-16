@@ -14,11 +14,12 @@ const pages=['workspace','agents','providers','routing','groups','gateway','sess
     await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
     for(const target of pages){
      await page.evaluate(target=>show(target),target);
-     const host=page.locator('#view-'+target);await host.waitFor({state:'visible'});
+     const shownTarget=target==='routing'?'workspace':target;
+     const host=page.locator('#view-'+shownTarget);await host.waitFor({state:'visible'});
      await page.evaluate(()=>document.fonts.ready);
      assert(await host.evaluate(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0}),`${target}: visible surface`);
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${engine} ${theme} ${width} ${target}: viewport overflow`);
-     assert.equal(await page.locator('#view-'+target).count(),1,`${target}: unique native host`);
+     assert.equal(await page.locator('#view-'+shownTarget).count(),1,`${target}: unique native host`);
      assert((await page.locator('#pageTitle').innerText()).trim(),`${target}: named page`);
      if(target==='workspace'){
       const summary=page.locator('#ws-agents summary');await summary.focus();

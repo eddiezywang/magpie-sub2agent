@@ -62,6 +62,9 @@ function routingPage(part) {
   if (toSet) toSet.onclick = (e) => openSettingsAt(e, "models", "#routeList .row");
   const NS = "http://www.w3.org/2000/svg";
   const still = calm;
+  // The intranet workspace owns scrolling while it hosts this one page instance.
+  const scrollView = () => window.workspaceScrollRoot?.() || $("#view-routing");
+  const requestView = () => window.workspaceScrollRoot?.() || reqs;
   const shown = () => !$("#view-routing").hidden && !document.hidden;
   // the Routing groups page, which this script draws too (gsec)
   const gView = () => $("#view-groups");
@@ -69,9 +72,19 @@ function routingPage(part) {
   // steady redraws a part of the page where the reader is: WebKit has no
   // scroll anchoring, and a part emptied and filled again, measured between,
   // pulls the page up to what was left of it for that moment
-  function steady(fn, v = $("#view-routing")) {
+  function steady(fn, v = scrollView()) {
     const top = v.scrollTop;
-    try { return fn(); } finally { if (v.scrollTop !== top) v.scrollTop = top; }
+    const bounds = v.getBoundingClientRect();
+    const anchor = window.workspaceScrollRoot?.() && [...v.querySelectorAll('.rt-req')].find(row => {
+      const r = row.getBoundingClientRect();
+      return r.bottom > bounds.top && r.top < bounds.bottom;
+    });
+    const at = anchor?.getBoundingClientRect().top;
+    try { return fn(); } finally {
+      const moved = anchor?.isConnected ? anchor.getBoundingClientRect().top - at : 0;
+      const target = top + moved;
+      if (v.scrollTop !== target) v.scrollTop = target;
+    }
   }
 
   // ---------- the stage ----------
@@ -255,7 +268,7 @@ function routingPage(part) {
     // the button clicked stays where it is on the screen, the rows coming
     // in (or going) above it: neither engine's scroll anchoring does it
     // for every place the page can be scrolled to
-    const v = $("#view-routing"), y = actMore.getBoundingClientRect().top;
+    const v = scrollView(), y = actMore.getBoundingClientRect().top;
     steady(() => renderActs(listed()));
     const moved = actMore.getBoundingClientRect().top - y;
     if (moved) v.scrollTop += moved;
@@ -267,6 +280,7 @@ function routingPage(part) {
   actFoot.append(actMore, el("span", "grow"), actUsage);
   const hist = el("div", "rt-cols");
   const colA = el("div", "rt-col"), colB = el("div", "rt-col");
+  const activity = window.bootPrefs?.intranet ? el("details", "ws-account-activity") : null;
   const filters = el("div", "rt-filters");
   const purposeTools = el("div", "rt-purpose-tools");
   const purposePick = el("button", "text rt-purpose"), purposeLabel = el("span");
@@ -311,7 +325,12 @@ function routingPage(part) {
   };
   filters.append(dayBar, groupBar);
   colA.append(reqHead, filters, reqs);
-  colB.append(actHead, acts, actFoot);
+  if (activity) {
+    const summary = el("summary");
+    summary.append(actLabel);
+    activity.append(summary, actHead, acts, actFoot);
+    colB.append(activity);
+  } else colB.append(actHead, acts, actFoot);
   hist.append(colA, colB);
   more.append(hist);
   // the narrow and wide layouts go by a box's own width, as container
@@ -1665,7 +1684,7 @@ function routingPage(part) {
   let traceTotals = { requests: 0, rerouted: 0, errors: 0 };
   let offMsg = ""; // why the trace can't be watched here, when it can't
   // the request the window was opened on (?req=), from the tray panel
-  let wanted = document.body.classList.contains("window") && Number(params.get("req")) || 0;
+  let wanted = (document.body.classList.contains("window") || window.bootPrefs?.intranet) && Number(params.get("req")) || 0;
   let cur = null;           // the route the header and the log tell of: the newest played
   let pinned = null;        // a past route picked from the strip
   let rows = new Map();     // id → { li, wire, st, bi, tg, w, rid, up }
@@ -2111,7 +2130,7 @@ function routingPage(part) {
     const a = Math.max(0, Math.floor(s0 / 8) * 8 - 64), z = Math.ceil(s1 / 8) * 8 + 64;
     return a <= 0 && z >= len ? "" : `0 ${a} ${"3 5 ".repeat((z - a) / 8)}0 ${Math.ceil(len) + 64}`;
   };
-  $("#view-routing").addEventListener("scroll", (e) => { scrolled = e.currentTarget.scrollTop; flowSoon(); if (win) placeSoon(); }, { passive: true });
+  document.addEventListener("scroll", (e) => { if (e.target !== scrollView()) return; scrolled = e.target.scrollTop; flowSoon(); if (win) placeSoon(); }, { capture: true, passive: true });
 
   // with hundreds of keys open (#3164) only the keys near sight are in the
   // list: a run of the others is one gap as tall as they are, and a key in
@@ -2180,18 +2199,18 @@ function routingPage(part) {
     // read again: a fold opened is held where it was by a scrollTop set
     // after the layout that asked, and the scroll event of it can come a
     // frame after this one, the list left around where the view was
-    scrolled = $("#view-routing").scrollTop;
+    scrolled = scrollView().scrollTop;
     const m = (viewH || innerHeight) / 2, lo = scrolled - listAt;
     if (lo - m >= win.lo && lo + viewH + m <= win.hi) return;
     // what is in sight stays where it is, the gaps above it as tall as
     // they guess or not
-    const vt = $("#view-routing").getBoundingClientRect().top;
+    const vt = scrollView().getBoundingClientRect().top;
     const anchor = [...list.children].find((e) => !e.classList.contains("rt-gap") && e.getBoundingClientRect().bottom > vt);
     const was = anchor?.getBoundingClientRect().top;
     put(place(laid));
     if (anchor?.isConnected) {
       const d = anchor.getBoundingClientRect().top - was;
-      if (Math.abs(d) >= 1) $("#view-routing").scrollTop += d;
+      if (Math.abs(d) >= 1) scrollView().scrollTop += d;
     }
     layout();
   }); };
@@ -2261,7 +2280,7 @@ function routingPage(part) {
     // stage, which in its own ResizeObserver WebKit reports as a loop
     if (rowH && list.style.getPropertyValue("--rt-row") !== rowH + "px") requestAnimationFrame(() => list.style.setProperty("--rt-row", rowH + "px"));
     // read before the wires are set, which lays the stage out again
-    const view = $("#view-routing"), v = view.getBoundingClientRect();
+    const view = scrollView(), v = view.getBoundingClientRect();
     scrolled = view.scrollTop;
     // what place() lays the next list out by: the list's top in the view's
     // content, and each li's height as it is now
@@ -4493,7 +4512,7 @@ function routingPage(part) {
     const kids = reqs.children;
     if (kids.length === els.length && els.every((e, i) => kids[i] === e)) return;
     rowsMoved = true;
-    const listTop = reqs.scrollTop;
+    const listScroll = requestView(), listTop = listScroll.scrollTop;
     let kept = 0;
     for (const e of els) if (e.parentNode === reqs) kept++;
     if (kept * 2 < els.length) reqs.replaceChildren(...els);
@@ -4507,7 +4526,7 @@ function routingPage(part) {
       }
       while (at) { const n = at.nextElementSibling; at.remove(); at = n; }
     }
-    if (reqs.scrollTop !== listTop) reqs.scrollTop = listTop;
+    if (listScroll.scrollTop !== listTop) listScroll.scrollTop = listTop;
   }
   function drawList() {
     const n = listItems.length;
@@ -4530,7 +4549,7 @@ function routingPage(part) {
     if (live && listKey !== winKey) { if (winKey.split("|").filter((x, i) => i !== 2).join() !== listKey.split("|").filter((x, i) => i !== 2).join()) winAvg = 0; winKey = listKey; heights.clear(); }
     const pad = parseFloat(getComputedStyle(reqs).paddingTop) || 0;
     // the first row in sight, and where: it stays there
-    const box = reqs.getBoundingClientRect();
+    const viewport = requestView(), box = viewport.getBoundingClientRect();
     let anchor = null, anchorAt = 0;
     for (const e of reqs.children) {
       if (e.classList.contains("rt-gap") || e === sizer) continue;
@@ -4541,7 +4560,7 @@ function routingPage(part) {
     const off = new Float64Array(n + 1);
     const sum = () => { for (let i = 0; i < n; i++) off[i + 1] = off[i] + (heights.get(itemKey(listItems[i])) ?? est); };
     sum();
-    const view = reqs.clientHeight, over = Math.max(view, 300), y = reqs.scrollTop - pad;
+    const view = viewport.clientHeight, over = Math.max(view, 300), y = viewport === reqs ? reqs.scrollTop - pad : box.top - reqs.getBoundingClientRect().top - pad;
     let i0 = 0, i1 = n;
     while (i0 < n - 1 && off[i0 + 1] <= y - over) i0++;
     for (let i = i0; i < n; i++) if (off[i] >= y + view + over) { i1 = i; break; }
@@ -4567,8 +4586,8 @@ function routingPage(part) {
     if (gapAbove.style.height !== above) gapAbove.style.height = above;
     if (gapBelow.style.height !== below) gapBelow.style.height = below;
     if (anchor?.parentNode === reqs) {
-      const moved = anchor.getBoundingClientRect().top - reqs.getBoundingClientRect().top - anchorAt;
-      if (Math.abs(moved) >= 0.5) reqs.scrollTop += moved;
+      const moved = anchor.getBoundingClientRect().top - viewport.getBoundingClientRect().top - anchorAt;
+      if (Math.abs(moved) >= 0.5) viewport.scrollTop += moved;
     }
   }
   // scrolled or resized: the rows now in sight drawn, once a frame
@@ -4576,7 +4595,7 @@ function routingPage(part) {
     if (winSoon || !reqs.classList.contains("win")) return;
     winSoon = requestAnimationFrame(() => { winSoon = 0; if (reqs.classList.contains("win")) drawList(); });
   };
-  reqs.addEventListener("scroll", redrawList, { passive: true });
+  document.addEventListener("scroll", e => { if (e.target === requestView()) redrawList(); }, { capture: true, passive: true });
   new ResizeObserver(redrawList).observe(reqs);
   // morphRow makes old what neu is, keeping old's nodes wherever they are
   // of the same kind (context.js's morph); a row's handler is its own,
@@ -5152,7 +5171,7 @@ function routingPage(part) {
   function drawAll() {
     drawing = 0;
     if (!shown()) return;
-    render(); renderLog(); renderHist();
+    steady(() => { render(); renderLog(); renderHist(); });
   }
   const newest = () => (day ? past : [...routes.values()]).filter(matchesPurpose).reduce((a, b) => (!a || b.id > a.id ? b : a), null);
   // told: the request the live card tells of. Following the newest, with
@@ -5215,6 +5234,7 @@ function routingPage(part) {
   async function play(id, synced) {
     const routes = src(); // a replay's, if it is one
     let r = routes.get(id);
+    if (!r) return; // a burst may evict a request before its animation starts
     const g = gen;
     playing.set(id, g);
     // live, it flies, and the card stays on the request it tells of
@@ -5854,7 +5874,7 @@ function routingPage(part) {
   let gFrom = null;
   const gBack = el("button", "text rt-gback");
   gBack.type = "button";
-  gBack.append("‹ ", el("span", "", t("Routing")));
+  gBack.append("‹ ", el("span", "", t(window.bootPrefs?.intranet ? "Workspace" : "Routing")));
   gBack.onclick = () => groupsBack();
   gHead.append(gBack);
   async function groupsBack() {
@@ -8960,9 +8980,17 @@ function routingPage(part) {
   // with the stage in sight at the top, the view stays as it is. The
   // routing groups sat below them until they had a page of their own.
   const rv = $("#view-routing");
-  keepInView(rv, () => {
-    const mid = rv.getBoundingClientRect().top + rv.clientHeight / 2;
+  const historyAnchor = () => {
+    const v = scrollView(), mid = v.getBoundingClientRect().top + v.clientHeight / 2;
     return hist.offsetParent && hist.getBoundingClientRect().top <= mid ? hist : null;
+  };
+  keepInView(rv, historyAnchor);
+  document.addEventListener("workspace-layout", () => {
+    const v = scrollView();
+    keepInView(v, historyAnchor);
+    layout();
+    redrawList();
+    fitSoon();
   });
 
   // ---------- the tray panel's Routing tab ----------
@@ -9386,7 +9414,8 @@ function routingPage(part) {
   // scrolls the list, not the page, and a request picked plays in view.
   // Its top stays where it is as it is sized, so a row just clicked does too
   function fitReqs() {
-    const v = $("#view-routing");
+    const v = scrollView();
+    if (window.workspaceScrollRoot?.()) { reqs.style.maxHeight = "none"; return; }
     if (v.hidden || !reqs.offsetParent) return;
     const above = reqs.getBoundingClientRect().top - box.getBoundingClientRect().top;
     const room = v.clientHeight - above - 28;

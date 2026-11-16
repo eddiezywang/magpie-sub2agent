@@ -1,6 +1,7 @@
 # Gateway routing and fallback
 
-The intranet workspace is a second host for the original routing visualization.
+The intranet workspace hosts the original routing visualization and request history;
+its navigation replaces the standalone Routing page.
 Its quick choices use existing groups carrying plan/smart/thrifty/steady
 templateKind, applied through the native main-model writer to one explicitly
 selected, connected Agent. It creates no global routing policy and creates no

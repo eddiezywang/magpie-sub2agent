@@ -42,7 +42,7 @@ const assert=require('node:assert/strict');
   assert.equal(await page.locator('#view-workspace #view-routing').count(),0);
   await page.evaluate(()=>show('workspace'));await group.waitFor();await group.focus();
   await page.evaluate(()=>{state.agents.forEach(a=>a.wired=false);renderAgents()});
-  await page.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
+  await page.getByText('接入 Agent 后可选择路由策略',{exact:true}).waitFor();
   assert(await page.locator('#ws-agents summary').evaluate(e=>e===document.activeElement),'no eligible target returns focus to Agent disclosure');
   assert.deepEqual(page.errors,[]);await page.close();
   console.log(`${engine}: route refresh retains keyboard focus and ignores user focus/navigation changes`);
