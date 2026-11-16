@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/w32"
 )
 
@@ -24,6 +25,17 @@ const wpfRestoreToMaximized = 0x0002
 // maximise, its page shown (TestRestartMinimisedComesBackMinimised). On
 // the main thread.
 func showMinimised(w *application.WebviewWindow, maximise bool) {
+	// SetWindowPlacement bypasses Wails' Show, so its controller still thinks
+	// this window is hidden. The first taskbar restore must show it as well.
+	var unlisten func()
+	unlisten = w.OnWindowEvent(events.Common.WindowUnMinimise, func(*application.WindowEvent) {
+		application.InvokeAsync(func() {
+			if w.IsVisible() && !w.IsMinimised() {
+				showWebview(w)
+				unlisten()
+			}
+		})
+	})
 	hwnd := w32.HWND(uintptr(w.NativeWindow()))
 	wp := w32.WINDOWPLACEMENT{}
 	wp.Length = uint32(unsafe.Sizeof(wp))

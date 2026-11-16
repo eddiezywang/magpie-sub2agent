@@ -69,9 +69,10 @@ func init() {
 		fmt.Printf("minimised: "+format+"\n", a...)
 		os.Exit(1)
 	}
-	if mode == "minimised-maximised" {
+	if mode != "shown" {
 		s := settings.Load()
-		s.WindowMaximised = true
+		s.Window = []int{1100, 800}
+		s.WindowMaximised = mode == "minimised-maximised"
 		if err := settings.Save(s); err != nil {
 			fail("settings: %v", err)
 		}
