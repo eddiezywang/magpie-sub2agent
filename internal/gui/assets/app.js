@@ -7180,12 +7180,13 @@ function routingBillingText(b) {
   if (!b) return "";
   if (b.state === "expired") return t("Billing rule expired");
   if (b.state !== "active" || b.coefficient == null) return t("Billing rule unknown");
+  if (b.currency === "POINTS" && b.source === "MaaS") return t("MaaS coefficient {n}", {n:b.coefficient});
   const unit = { POINTS: "Point coefficient {n}", PLAN_TOKENS: "Plan coefficient {n}", USD: "USD coefficient {n}" }[b.currency];
   return unit ? [b.source, t(unit, { n: b.coefficient })].filter(Boolean).join(" · ") : t("Billing rule unknown");
 }
 function routingBillingHint(b) {
   if (!b) return "";
-  return [routingBillingText(b), b.revision, b.pool ? t("Allowance pool: {pool}", {pool:b.pool}) : t("Shared allowance scope unknown"), t("Reference coefficient; actual usage is determined by the provider")].filter(Boolean).join("\n");
+  return [routingBillingText(b), b.currency === "POINTS" && b.source === "MaaS" ? t("MaaS: tokens × coefficient; 300M points/week per pool. Separate from official points.") : "", b.revision, b.pool ? t("Allowance pool: {pool}", {pool:b.pool}) : t("Shared allowance scope unknown"), t("Reference coefficient; actual usage is determined by the provider")].filter(Boolean).join("\n");
 }
 // billingField: provider.Billing, the user's word over magpie's reading
 // of its endpoints (EV_John_Liu on X)
@@ -10851,9 +10852,9 @@ function renderModels(p) {
       const free = !m.routingBilling && (m.free || m.zero || namedFree(m.id, m.name));
       if (free) c.append(el("span", "badge free", t("free")));
       const rate = m.routingBilling
-        ? (m.rate > 0 ? el("span", "badge rate", t("Vendor multiplier {n}×", {n:m.rate})) : null)
+        ? (m.rate > 0 ? el("span", "badge rate", t(p.id.includes("workbuddy") ? "Official points ×{n}" : "Vendor multiplier {n}×", {n:m.rate})) : null)
         : rateTag(m.rate, m.rateWas);
-      if (rate && m.routingBilling) rate.title = t("Vendor display multiplier; not comparable to a per-token point coefficient");
+      if (rate && m.routingBilling) rate.title = t(p.id.includes("workbuddy") ? "WorkBuddy official points: separate from MaaS; never multiply factors." : "Vendor display multiplier; not comparable to a per-token point coefficient");
       if (rate) c.append(rate);
       const load = loadTag(m.load);
       if (load) c.append(load);
@@ -10877,7 +10878,7 @@ function renderModels(p) {
       const kb = !draft.unlisted && (on || served.has(m.id)) ? p.keptBy?.[m.id] || [] : [];
       if (kb.length) c.title = (c.title || m.id) + "\n" + t("Kept out of agents' lists by {groups}, a routing group listed alone", { groups: kb.join(", ") });
       if (m.routingBilling) {
-        const billing = el("span", "badge", routingBillingText(m.routingBilling));
+        const billing = el("span", "badge" + (m.routingBilling.currency === "POINTS" && m.routingBilling.source === "MaaS" ? " maas-points" : ""), routingBillingText(m.routingBilling));
         billing.title = routingBillingHint(m.routingBilling);
         c.append(billing);
         c.title = (c.title || m.id) + "\n" + billing.title;
@@ -11444,6 +11445,7 @@ function renderModels(p) {
     box.append(bulk);
   }
   box.append(chips, fold, names);
+  if (p.id.includes("workbuddy") && p.models.some(m => m.routingBilling)) box.append(el("div", "hint billing-legend", t("Official points ≠ MaaS (300M/week). Separate pools; never multiply factors. Unknown ≠ free.")));
   const foot = el("div", "mfoot");
   // a model the list leaves out, added by its id (Tom on X)
   const add = input(draft.typed || "", t("add a model id…"));

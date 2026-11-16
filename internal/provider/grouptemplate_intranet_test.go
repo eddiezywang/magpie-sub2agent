@@ -7,6 +7,81 @@ import (
 	"testing"
 )
 
+func TestInternalEvenModelPreferences(t *testing.T) {
+	ms := []rated{
+		tm("tig", "glm-5.3-flash-zp", 2, true, "2026-09-20"),
+		tm("wb", "glm-5.3-flash-maas", 2, true, "2026-09-20"),
+		tm("tig", "glm-5.3-zp-openai", 20, true, "2026-09-20"),
+		tm("wb", "glm-5.3-maas", 20, true, "2026-09-20"),
+		tm("other", "unrelated-pro", 50, true, "2026-10-20"),
+	}
+	for _, tc := range []struct {
+		kind    string
+		indices []int
+	}{
+		{"even-glm53-flash", []int{0, 1}}, {"even-glm53", []int{2, 3}},
+	} {
+		t.Run(tc.kind, func(t *testing.T) {
+			tp := templateOf(tc.kind, ms, nil)
+			if tp.Need != "" || tp.Group.Routing != Rotate || tp.Group.Affinity != AffinitySession ||
+				!slices.Equal(tp.Group.Members, []string{ms[tc.indices[0]].e.ID, ms[tc.indices[1]].e.ID}) {
+				t.Fatalf("model preference selected wrong models or affinity: %+v", tp)
+			}
+			one := templateOf(tc.kind, ms[tc.indices[0]:tc.indices[0]+1], nil)
+			if one.Need != NeedProviders || len(one.Group.Members) != 0 {
+				t.Fatalf("single source accepted as balanced pair: %+v", one)
+			}
+			missing := templateOf(tc.kind, ms[4:], nil)
+			if missing.Need == "" || len(missing.Group.Members) != 0 {
+				t.Fatalf("silently substituted unrelated model: %+v", missing)
+			}
+		})
+	}
+}
+
+func TestInternalEvenPreferencesPersistAndRecover(t *testing.T) {
+	azureHome(t)
+	p := Provider{ID: "tig", Key: "fixture", Chat: "http://127.0.0.1:19999/v1", Models: []string{"glm-5.3-flash-zp", "glm-5.3-zp"}}
+	q := Provider{ID: "wb", Key: "fixture", Chat: "http://127.0.0.1:19998/v1", Models: []string{"glm-5.3-flash-maas", "glm-5.3-maas"}}
+	for _, p := range []Provider{p, q} {
+		if err := Save(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, kind := range []string{TemplateEvenGLMFlash, TemplateEvenGLM} {
+		if _, err := AddTemplate(kind, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	check := func(n int) {
+		t.Helper()
+		found := 0
+		for _, g := range Groups() {
+			if g.TemplateKind != TemplateEvenGLMFlash && g.TemplateKind != TemplateEvenGLM {
+				continue
+			}
+			found++
+			if len(g.Members) != n || g.Affinity != AffinitySession || g.Routing != Rotate {
+				t.Fatalf("saved preference did not retain its contract: %+v", g)
+			}
+		}
+		if found != 2 {
+			t.Fatalf("lost saved preference: %d", found)
+		}
+	}
+	check(2)
+	q.Off = true
+	if err := Save(q); err != nil {
+		t.Fatal(err)
+	}
+	check(0)
+	q.Off = false
+	if err := Save(q); err != nil {
+		t.Fatal(err)
+	}
+	check(2)
+}
+
 func TestInternalEvenGroupsDeploymentAliasesAcrossSources(t *testing.T) {
 	for _, tigID := range []string{"glm-5.3-flash-zp", "glm-5.3-flash-zp-openai"} {
 		t.Run(tigID, func(t *testing.T) {

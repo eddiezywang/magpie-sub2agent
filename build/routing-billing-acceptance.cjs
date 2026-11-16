@@ -25,8 +25,11 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
    await page.goto('http://workspace.test/?view=providers');
    await page.evaluate(()=>openProvider('workbuddy'));
    const chip=page.locator('.mchip').filter({hasText:'示例模型 A'});
-   await chip.getByText('MaaS · 积分系数 7',{exact:true}).waitFor();
-   await chip.getByText('上游倍率 0.34×',{exact:true}).waitFor();
+   await chip.getByText('MaaS 系数 7',{exact:true}).waitFor();
+   await chip.getByText('官方积分 ×0.34',{exact:true}).waitFor();
+   assert.notEqual(await chip.locator('.maas-points').evaluate(e=>getComputedStyle(e).boxShadow), 'none');
+   assert.notEqual(await chip.locator('.rate').evaluate(e=>getComputedStyle(e).backgroundColor), await chip.locator('.maas-points').evaluate(e=>getComputedStyle(e).backgroundColor));
+   await page.locator('.billing-legend').getByText(/两者属于独立额度池，系数不相乘/).waitFor();
    assert.match(await chip.getAttribute('title'),/共享额度范围未确认/);
    assert.match(await chip.getAttribute('title'),/synthetic-v1/);
    await page.locator('.mchip').filter({hasText:'示例模型 B'}).getByText('计费规则已过期',{exact:true}).waitFor();
@@ -38,7 +41,7 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
    await page.goto('http://workspace.test/?view=groups');await page.locator('#view-groups').waitFor({state:'visible'});
    await page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true}).waitFor();
    const note=page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true});
-   assert.match(await note.getAttribute('title'),/MaaS · 积分系数 7/);
+   assert.match(await note.getAttribute('title'),/MaaS 系数 7/);
    await page.screenshot({animations:"disabled",path:path.join(output,engine+'-points-groups.png')});
    for(const view of ['workspace','agents','providers','routing','groups','gateway','usage','sessions','plugins','settings']){
     await page.evaluate(view=>show(view),view);

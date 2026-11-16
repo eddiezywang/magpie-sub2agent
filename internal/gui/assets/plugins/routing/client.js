@@ -6660,6 +6660,8 @@ function routingPage(part) {
   // a template's name and what it does, in the user's language
   // (provider.TemplateNames)
   const TPL = {
+    'even-glm53-flash': ["Spread evenly · GLM 5.3 Flash first", "GLM 5.3 Flash across sources, with session affinity; recommended for daily use"],
+    'even-glm53': ["Spread evenly · GLM 5.3 first", "GLM 5.3 across sources, with session affinity; check MaaS point consumption before choosing"],
     smart: ["Hard to strong, easy to cheap", "A hard task goes to the strongest model, an easy one and compaction to a cheap one"],
     thrifty: ["Cheap first", "A cheap model first; the strongest for high reasoning, or when the cheap ones fail"],
     steady: ["Never stuck", "The strongest model of each provider, each behind the other: one down doesn't stop the agent"],
@@ -6670,6 +6672,7 @@ function routingPage(part) {
   const tplName = (tp) => t(TPL[tp.kind]?.[0] || tp.group.name);
   // what a template that can't be made is missing (provider.Need*)
   const tplNeed = (tp) => tp.need === "providers" ? t("Needs models from two providers: {name} is the only one", { name: tp.of })
+    : tp.need === "model" ? t("Needs available model: {name}", {name:tp.of})
     : tp.need === "cheap" ? t("Needs a model cheap beside {name}", { name: tp.of })
     : tp.need === "plan" ? t("Needs a subscription or token plan")
     : tp.need ? t("Add a provider first") : "";
@@ -6687,7 +6690,7 @@ function routingPage(part) {
     if (groupDirty() && !(await confirmDiscard())) return;
     const g = tp.group;
     gSel = null;
-    gEdit = { id: "", draft: { name: tplName(tp), slug: g.id, members: [...g.members], match: [], matched: [], fast: [], ultra: [], off: [], routing: g.routing || "", affinity: "", rules: (g.rules || []).map((r) => ({ ...r, ...(r.more?.length ? { more: [...r.more] } : {}), intent: r.intent || "", agents: [...(r.agents || [])], folders: [], exceptFolders: [], where: (r.where || []).map((c) => ({ ...c })), time: null })), classifier: g.classifier || "", effort: "", levels: [] } };
+    gEdit = { id: "", draft: { name: tplName(tp), slug: g.id, members: [...g.members], match: [], matched: [], fast: [], ultra: [], off: [], routing: g.routing || "", affinity: g.affinity || "", rules: (g.rules || []).map((r) => ({ ...r, ...(r.more?.length ? { more: [...r.more] } : {}), intent: r.intent || "", agents: [...(r.agents || [])], folders: [], exceptFolders: [], where: (r.where || []).map((c) => ({ ...c })), time: null })), classifier: g.classifier || "", effort: "", levels: [] } };
     renderGroups();
     const ed = gList.querySelector(".rt-gedit");
     if (ed && window.scrollOnPurpose?.(ev)) ed.scrollIntoView({ block: "start", behavior: "smooth" });

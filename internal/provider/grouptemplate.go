@@ -52,6 +52,18 @@ const (
 // TemplateKinds are the templates, in the order they are offered.
 var TemplateKinds = []string{TemplateSmart, TemplateThrifty, TemplateSteady, TemplatePlan, TemplateFast, TemplateEven}
 
+const (
+	TemplateEvenGLMFlash = "even-glm53-flash"
+	TemplateEvenGLM      = "even-glm53"
+)
+
+func templateKinds() []string {
+	if distribution.Internal {
+		return append([]string{TemplateEvenGLMFlash, TemplateEvenGLM}, TemplateKinds...)
+	}
+	return TemplateKinds
+}
+
 // The intents TemplateSmart's classifier chooses between. Hard comes
 // first, so a turn the classifier can't place stays on the strong model,
 // the group's first.
@@ -80,7 +92,8 @@ const (
 	NeedCheap     = "cheap"
 	// NeedPlan: no provider is billed by a plan, so "plan first" has
 	// nothing to put first
-	NeedPlan = "plan"
+	NeedPlan  = "plan"
+	NeedModel = "model"
 )
 
 // nonChat are words of a model id that isn't for an agent's chat: it
@@ -233,7 +246,7 @@ func btoi(b bool) int {
 func Templates() []Template {
 	ms, ds := templateModels(), OfferedDeciders(nil)
 	out := make([]Template, 0, len(TemplateKinds))
-	for _, k := range TemplateKinds {
+	for _, k := range templateKinds() {
 		out = append(out, templateOf(k, ms, ds))
 	}
 	return out
@@ -242,8 +255,8 @@ func Templates() []Template {
 // MakeTemplate is the template kind as the user's models make it now, or
 // why it can't be made.
 func MakeTemplate(kind string) (Template, error) {
-	if !slices.Contains(TemplateKinds, kind) {
-		return Template{}, fmt.Errorf("no template %q: one of %s", kind, strings.Join(TemplateKinds, ", "))
+	if !slices.Contains(templateKinds(), kind) {
+		return Template{}, fmt.Errorf("no template %q: one of %s", kind, strings.Join(templateKinds(), ", "))
 	}
 	t := templateOf(kind, templateModels(), OfferedDeciders(nil))
 	if t.Why != "" {
@@ -255,22 +268,46 @@ func MakeTemplate(kind string) (Template, error) {
 // TemplateNames are the templates' names in English, which the GUI says in
 // the user's language.
 var TemplateNames = map[string]string{
-	TemplateSmart:   "Hard to strong, easy to cheap",
-	TemplateThrifty: "Cheap first",
-	TemplateSteady:  "Never stuck",
-	TemplatePlan:    "Plan first",
-	TemplateFast:    "Fastest first",
-	TemplateEven:    "Spread evenly",
+	TemplateSmart:        "Hard to strong, easy to cheap",
+	TemplateThrifty:      "Cheap first",
+	TemplateSteady:       "Never stuck",
+	TemplatePlan:         "Plan first",
+	TemplateFast:         "Fastest first",
+	TemplateEven:         "Spread evenly",
+	TemplateEvenGLMFlash: "Spread evenly · GLM 5.3 Flash first",
+	TemplateEvenGLM:      "Spread evenly · GLM 5.3 first",
 }
 
 // TemplateIDs are the ids agents pick a template's group as, before a
 // number when one is in use.
-var TemplateIDs = map[string]string{TemplateSmart: "smart-split", TemplateThrifty: "cheap-first", TemplateSteady: "never-stuck", TemplatePlan: "plan-first", TemplateFast: "fastest-first", TemplateEven: "spread-evenly"}
+var TemplateIDs = map[string]string{TemplateSmart: "smart-split", TemplateThrifty: "cheap-first", TemplateSteady: "never-stuck", TemplatePlan: "plan-first", TemplateFast: "fastest-first", TemplateEven: "spread-evenly", TemplateEvenGLMFlash: "spread-glm53-flash", TemplateEvenGLM: "spread-glm53"}
 
 // templateOf is the template kind made of ms, its classifier a decider of
 // ds when there is one.
 func templateOf(kind string, ms []rated, ds []Entry) Template {
 	t := Template{Kind: kind, Group: Group{Name: TemplateNames[kind], ID: TemplateIDs[kind], Routing: Ordered}}
+	if distribution.Internal && (kind == TemplateEvenGLMFlash || kind == TemplateEvenGLM) {
+		model := "glm-5.3"
+		if kind == TemplateEvenGLMFlash {
+			model = "glm-5.3-flash"
+		}
+		t.Group.Routing, t.Group.Affinity = Rotate, AffinitySession
+		seen := map[string]bool{}
+		for _, m := range ms {
+			if bareModel(m.e.Model) == catalog.SameModel(model) && !seen[m.e.Provider.ID] && len(t.Group.Members) < 4 {
+				seen[m.e.Provider.ID] = true
+				t.Group.Members = append(t.Group.Members, m.e.ID)
+				t.Of = m.e.Provider.Name
+			}
+		}
+		if len(t.Group.Members) == 0 {
+			t.Need, t.Of, t.Why = NeedModel, model, "no available source of "+model
+		} else if len(t.Group.Members) < 2 {
+			t.Need, t.Why = NeedProviders, "needs two providers of "+model
+			t.Group.Members = nil
+		}
+		return t
+	}
 	strong := strongest(ms)
 	if len(strong) == 0 {
 		t.Why, t.Need = "no model to make it of: add a provider first", NeedProvider

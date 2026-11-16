@@ -29,13 +29,10 @@ are untouched. The gateway does not replace or rewrite conversation history.
 The private transport owns each model's byte budget, avoiding a shared learned
 image cap. Failure of hy4free follows the existing error path without a cycle.
 
-The internal cheap template prefers WorkBuddy's hy4free, then MaaS deployments,
-then other WorkBuddy models even when the managed relative-price service is
-unreachable. This is an offline ordering preference, not a free-price or balance
-claim. A positive managed score for hy4free removes its free-first preference;
-the server remains responsible for prices and promotions. Within each tier the
-existing managed-price/model ranking remains. Template-backed groups recompute
-their members; manually edited groups retain their explicit order.
+The internal cheap template retains the original Magpie price-based selection;
+it does not order WorkBuddy models by MaaS points or assume hy4free eligibility.
+Template-backed groups recompute their members; manually edited groups retain
+their explicit order.
 
 The gateway is magpie's local LLM endpoint (`127.0.0.1:3425` by default). It
 serves Chat Completions, Responses, Anthropic Messages and Gemini. It finds
@@ -3226,6 +3223,26 @@ by enterprise points, vendor multipliers, TIG preference or model-name tiers.
 WorkBuddy remains a subscription and TIG defaults to plan billing; explicit
 user billing values still win. Billing classification does not waive the
 requirement for two distinct available providers in plan/steady/fast recipes.
+
+Internal builds additionally offer two fixed-model presets before the original
+six: `even-glm53-flash` (recommended for daily use) and `even-glm53`.
+They use Rotate and session affinity, take one deployment per provider (up to
+four), and require at least two sources of the designated model. They never
+substitute another version or capability tier; missing models or sources leave
+creation unavailable. They are created through the existing template action,
+not automatically assigned to an Agent. Editing before creation preserves the
+preset's affinity. Saved presets regenerate through the existing templateKind
+path and pause/recover with source availability; manual edits clear the marker.
+The workspace accepts both preset kinds alongside all original recipes.
+
+WorkBuddy's model configuration distinguishes the upstream official point
+multiplier (neutral badge) from a confirmed MaaS point coefficient (accent
+outline). The latter describes billed tokens times coefficient against the
+weekly 300 million point MaaS allowance, shared inside its applicable pool;
+it is neither the official point multiplier nor multiplied by it. The editor
+also includes a visible explanation. Unknown or expired rules are displayed
+without asserting free usage or inventing balances. Billing hints retain the
+rule revision and whether pool membership is known.
 
 For internal template comparisons, `bareModel` uses the catalog's `SameModel`
 identity, including managed deployment suffixes (`-maas`, `-zp`, `-zp-openai`).
