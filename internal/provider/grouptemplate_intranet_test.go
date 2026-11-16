@@ -151,3 +151,49 @@ func TestInternalTemplateGroupUpdatesDiscoveryAndManualEditOptsOut(t *testing.T)
 		}
 	}
 }
+
+func TestInternalSavedTemplateRebuildsAfterBillingCacheReload(t *testing.T) {
+	azureHome(t)
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	p := Provider{ID: "sub2agent-tigcodingplan", Preset: "aiep-coding-plan", Key: "fixture", Chat: "http://127.0.0.1:19999/v1", Models: []string{"glm-5.3-flash-zp", "glm-5.3-zp"}}
+	file := appdir.Join(appdir.Cache(), "routing-catalog.json")
+	write := func(first, second float64) {
+		t.Helper()
+		raw, _ := json.Marshal(map[string]any{"revision": "fixture", "expires_at": time.Now().Add(time.Hour), "models": []map[string]any{
+			{"provider": p.ID, "model": "glm-5.3-flash", "currency": "PLAN_TOKENS", "coefficient": first, "score": first},
+			{"provider": p.ID, "model": "glm-5.3", "currency": "PLAN_TOKENS", "coefficient": second, "score": second},
+		}})
+		if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+		catalog.Reset()
+	}
+	write(1, 7)
+	if err := Save(p); err != nil {
+		t.Fatal(err)
+	}
+	g, err := AddTemplate(TemplateThrifty, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := func(want string) {
+		t.Helper()
+		for _, next := range Groups() {
+			if next.ID == g.ID {
+				if next.Members[0] != want {
+					t.Fatalf("stale persisted template: %v, want %s", next.Members, want)
+				}
+				return
+			}
+		}
+		t.Fatal("saved template missing")
+	}
+	check(p.ID + "/" + p.Models[0])
+	write(7, 1)
+	check(p.ID + "/" + p.Models[1])
+	catalog.Reset()
+	check(p.ID + "/" + p.Models[1])
+}
