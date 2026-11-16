@@ -1,8 +1,18 @@
 // Internal-only composition. Each original page has one active DOM host.
 (() => {
   if (!window.bootPrefs?.intranet) return;
+  // This distribution presents the existing group editor as routing policies.
+  for (const [lang, label] of Object.entries({en:'Routing policies',zh:'路由策略','zh-TW':'路由策略',ja:'ルーティングポリシー',de:'Routingstrategien'})) {
+    (I18N[lang] ||= {})['Routing groups'] = label;
+    if (lang === 'zh' || lang === 'zh-TW') for (const key of Object.keys(I18N[lang])) I18N[lang][key] = I18N[lang][key].replaceAll('路由组','路由策略').replaceAll('路由組','路由策略');
+  }
   const nav=document.querySelector('#nav');
   const navButton=document.createElement('button');navButton.dataset.view='workspace';navButton.innerHTML='<svg class="nav-ic" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h5v5h-5z" fill="none" stroke="currentColor"/></svg><span data-t>Workspace</span>';nav.querySelector('[data-view=agents]').before(navButton);
+  nav.querySelector('[data-view=routing]')?.remove();
+  window.wsView=v=>v==='routing'?'workspace':v;
+  window.workspaceScrollRoot=()=>active ? (matchMedia('(min-width:901px)').matches ? main.querySelector('.ws-primary') : main) : null;
+  const layout=()=>document.dispatchEvent(new Event('workspace-layout'));
+  addEventListener('resize',()=>{if(active)layout();});
   let main, homes=[], active=false, observer, generation=0, routeRequest=0, routeStamp='', routeData=null, saving=false, routeError='';
   magpie.plugin('workspace',ctx=>ctx.slots.add('page',{
     key:'workspace',title:'Workspace',loads:'providers',
@@ -16,6 +26,7 @@
         main.querySelector('#ws-'+host+'-host').append(page);page.hidden=false;
       }
       document.body.classList.add('workspace-active');
+      layout();
       const details=main.querySelector('#ws-agents');details.ontoggle=()=>{details.querySelector('.ws-fold').textContent=t(details.open?'Collapse agents':'Show all agents')+(details.open?'⌃':'⌄');};details.ontoggle();
       observer?.disconnect();observer=new MutationObserver(counts);observer.observe(document.querySelector('#agents'),{childList:true,subtree:true});
       renderAgents();counts();if(providers)renderProviders();
