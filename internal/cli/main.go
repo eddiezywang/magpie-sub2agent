@@ -289,9 +289,6 @@ var startUp = func() {
 	update.AwaitPredecessor()
 	makeDirs()
 	settings.Migrate()
-	if _, err := provider.ImportSub2AgentAuth(); err != nil {
-		fmt.Fprintln(os.Stderr, "Sub2Agent:", err)
-	}
 	// every built-in plugin starts on (plugins.yml), on a new install too
 	if _, err := pluginrt.Settle(); err != nil {
 		fmt.Fprintf(os.Stderr, "magpie: plugins.yml: %v\n", err)

@@ -236,11 +236,18 @@ func importLegacyEndpoint(s legacySub2AgentSource, identity, key string) (bool, 
 		p.Icon = codingPlanPreset.Icon
 		p.AuthHeader = AuthBearer
 	}
-	// Do not duplicate an endpoint already configured in the new app, nor
-	// replace a user's more recent credential or routing/model preferences.
+	// The same endpoint may have several independent credentials and model
+	// selections. Only an already saved credential is a duplicate.
 	for _, existing := range f.Providers {
 		if existing.Anthropic == p.Anthropic && existing.Chat == p.Chat && existing.Responses == p.Responses {
-			return false, nil
+			if existing.Key == key {
+				return false, nil
+			}
+			for _, account := range existing.Keys {
+				if account.Key == key {
+					return false, nil
+				}
+			}
 		}
 	}
 	if err := Save(p); err != nil {

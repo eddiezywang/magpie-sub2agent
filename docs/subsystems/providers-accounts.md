@@ -568,3 +568,15 @@ It checks Add-sheet bounds at 1440/1024/390 and authentication input bounds at
 1440/390. Vendor authentication is mocked; it does not certify vendor service
 availability. Authentication screenshots are private local diagnostics, excluded
 from the review site's explicitly selected public images.
+
+### Legacy supplier import transition
+
+The CLI no longer starts legacy authentication import automatically: a user
+must be asked before any legacy suppliers or credentials are written. The
+interactive confirmation and manual retry entry are not implemented yet;
+until then legacy supplier import is unavailable through the application.
+A direct importer regression check now covers two distinct API keys and model
+selections at the same endpoint. Those are separate providers, while an
+already-saved matching key is not duplicated. Existing preferences are not
+overwritten. This transition is not ready to build or deliver as a completed
+migration workflow; account-type coverage and explicit per-item results remain.

@@ -84,6 +84,28 @@ func TestSub2AgentImportIsIdempotentAndPreservesOriginal(t *testing.T) {
 	}
 }
 
+func TestSub2AgentImportKeepsDifferentKeysAtSameEndpoint(t *testing.T) {
+	azureHome(t)
+	a := legacySub2AgentSource{ID: "a", Kind: "endpoint", Name: "Team A", Models: []string{"model-a"}}
+	a.Endpoint.Base, a.Endpoint.Protocol = "https://fixture.invalid/v1", "openai_chat"
+	b := a
+	b.ID, b.Name, b.Models = "b", "Team B", []string{"model-b"}
+	if changed, err := importLegacyEndpoint(a, "fixture-a", "key-a"); err != nil || !changed {
+		t.Fatalf("first endpoint: %v %v", changed, err)
+	}
+	if changed, err := importLegacyEndpoint(b, "fixture-b", "key-b"); err != nil || !changed {
+		t.Fatalf("second distinct credential lost: %v %v", changed, err)
+	}
+	first, err := Find("legacy-fixture-a")
+	if err != nil || first.Key != "key-a" || len(first.Models) != 1 || first.Models[0] != "model-a" {
+		t.Fatal("first endpoint changed")
+	}
+	second, err := Find("legacy-fixture-b")
+	if err != nil || second.Key != "key-b" || len(second.Models) != 1 || second.Models[0] != "model-b" {
+		t.Fatal("second endpoint lost its key or model selection")
+	}
+}
+
 func TestSub2AgentImportKeepsCurrentCredentialsAndRejectsCorruption(t *testing.T) {
 	azureHome(t)
 	root := legacyImportFixture(t)
@@ -98,7 +120,7 @@ func TestSub2AgentImportKeepsCurrentCredentialsAndRejectsCorruption(t *testing.T
 		t.Fatal(err)
 	}
 	count, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil })
-	if err != nil || count != 0 {
+	if err != nil || count != 1 {
 		t.Fatalf("overwrote current settings: %d %v", count, err)
 	}
 	saved, err := Find(plan.ID)
