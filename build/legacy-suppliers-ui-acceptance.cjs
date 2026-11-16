@@ -27,7 +27,7 @@ const assert=require('node:assert/strict');
   await page.locator('[data-setting=legacy-import] button').click();await dialog.waitFor();
   await dialog.getByRole('button',{name:'导入供应商'}).click();await dialog.getByText('供应商导入结果').waitFor();
   assert.equal(writes,1);assert.equal(await dialog.getByText('已处理').count(),1);
-  await dialog.getByText('待处理：请检查凭据和供应商插件状态').waitFor();
+  await dialog.getByText('待处理：请启用供应商插件或重新登录').waitFor();
   await dialog.getByRole('button',{name:'完成'}).click();await dialog.waitFor({state:'detached'});
   await page.locator('[data-setting=legacy-import] button').click();await dialog.waitFor();
   await dialog.getByRole('button',{name:'导入供应商'}).click();await dialog.getByText('供应商导入结果').waitFor();
