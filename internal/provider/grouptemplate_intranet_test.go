@@ -22,6 +22,40 @@ func TestInternalRoutingTemplateSet(t *testing.T) {
 	}
 }
 
+func TestInternalPointsChangeOrderWithoutChangingCapability(t *testing.T) {
+	azureHome(t)
+	ms := []rated{tm("sub2agent-workbuddy", "glm-5.3-flash-maas", 1, true, "2026-11-01"), tm("sub2agent-workbuddy", "deepseek-v4-pro-maas", 20, true, "2026-11-01")}
+	one, seven := 1.0, 7.0
+	ms[0].billing = catalog.RoutingBilling{State: "active", Currency: "POINTS", Coefficient: &seven}
+	ms[1].billing = catalog.RoutingBilling{State: "active", Currency: "POINTS", Coefficient: &one}
+	if got := internalTemplate(TemplateThrifty, ms, nil).Group.Members[0]; got != ms[1].e.ID {
+		t.Fatalf("ignored points: %s", got)
+	}
+	strongBefore := strongest(ms)[0].e.ID
+	ms[0].billing.Coefficient = &one
+	ms[1].billing.Coefficient = &seven
+	if got := internalTemplate(TemplateThrifty, ms, nil).Group.Members[0]; got != ms[0].e.ID {
+		t.Fatalf("did not follow changed points: %s", got)
+	}
+	if strongest(ms)[0].e.ID != strongBefore {
+		t.Fatal("point price changed capability rank")
+	}
+	ms[0].billing.State = "expired"
+	if got := internalTemplate(TemplateThrifty, ms, nil).Group.Members[0]; got != ms[1].e.ID {
+		t.Fatalf("expired rule still selected over known points: %s", got)
+	}
+}
+
+func TestInternalDifferentCurrenciesUseSourcePreference(t *testing.T) {
+	ms := []rated{tm("sub2agent-workbuddy", "points", 1, true, ""), tm("tig", "plan", 1, true, "")}
+	low, high := 0.01, 1000.0
+	ms[0].billing = catalog.RoutingBilling{State: "active", Currency: "POINTS", Coefficient: &low}
+	ms[1].billing = catalog.RoutingBilling{State: "active", Currency: "PLAN_TOKENS", Coefficient: &high}
+	if got := internalTemplate(TemplateThrifty, ms, nil).Group.Members[0]; got != ms[1].e.ID {
+		t.Fatalf("compared unrelated coefficients as money: %s", got)
+	}
+}
+
 func TestInternalCheapFallbackWithoutManagedPrices(t *testing.T) {
 	ms := []rated{
 		tm("sub2agent-workbuddy", "Deepseek-V4-Flash", 1, true, "2026-11-01"),
@@ -30,7 +64,8 @@ func TestInternalCheapFallbackWithoutManagedPrices(t *testing.T) {
 	}
 	ms[0].priced, ms[1].priced, ms[2].priced = true, true, false
 	g := internalTemplate(TemplateThrifty, ms, nil).Group
-	want := []string{ms[2].e.ID, ms[1].e.ID, ms[0].e.ID}
+	// Unknown point costs never become free because of a model's name.
+	want := []string{ms[0].e.ID, ms[1].e.ID, ms[2].e.ID}
 	if !slices.Equal(g.Members, want) {
 		t.Fatalf("offline cheap order %v, want %v", g.Members, want)
 	}
@@ -45,7 +80,7 @@ func TestInternalPlanAndPriceTemplatesFollowServerScores(t *testing.T) {
 	file := appdir.Join(appdir.Cache(), "routing-catalog.json")
 	os.MkdirAll(filepath.Dir(file), 0700)
 	setScore := func(free float64) {
-		raw, _ := json.Marshal(map[string]any{"revision": "fixture", "expires_at": time.Now().Add(time.Hour), "models": []map[string]any{{"provider": "sub2agent-workbuddy*", "model": "hy4free", "score": free}, {"provider": "sub2agent-workbuddy*", "model": "glm-5.3-flash-maas", "score": 1}, {"provider": "sub2agent-workbuddy*", "model": "deepseek-v4-flash-maas", "score": 2}, {"provider": "sub2agent-tigcodingplan*", "model": "glm-*", "score": 1}}})
+		raw, _ := json.Marshal(map[string]any{"revision": "fixture", "expires_at": time.Now().Add(time.Hour), "models": []map[string]any{{"provider": "sub2agent-workbuddy*", "model": "hy4free", "score": free, "currency": "POINTS", "coefficient": free}, {"provider": "sub2agent-workbuddy*", "model": "glm-5.3-flash-maas", "score": 1, "currency": "POINTS", "coefficient": 1}, {"provider": "sub2agent-workbuddy*", "model": "deepseek-v4-flash-maas", "score": 2, "currency": "POINTS", "coefficient": 2}, {"provider": "sub2agent-tigcodingplan*", "model": "glm-*", "score": 1, "currency": "POINTS", "coefficient": 1}}})
 		os.WriteFile(file, raw, 0600)
 		catalog.Reset()
 	}
@@ -54,9 +89,9 @@ func TestInternalPlanAndPriceTemplatesFollowServerScores(t *testing.T) {
 	ms[3].e.Provider.Preset = "aiep-coding-plan"
 	ms[4].e.Provider.Preset = "aiep-coding-plan"
 	for i := range ms {
-		score, ok := catalog.RoutingScore(ms[i].e.Provider.ID, ms[i].e.Model)
+		_, ok := catalog.RoutingScore(ms[i].e.Provider.ID, ms[i].e.Model)
 		if ok {
-			ms[i].out, ms[i].priced, ms[i].managed = score, true, true
+			ms[i].billing = catalog.RoutingBillingOf(ms[i].e.Provider.ID, ms[i].e.Model)
 		}
 	}
 	plan := templateOf(TemplatePlan, ms, nil)
@@ -69,9 +104,9 @@ func TestInternalPlanAndPriceTemplatesFollowServerScores(t *testing.T) {
 	}
 	setScore(3)
 	for i := range ms {
-		score, ok := catalog.RoutingScore(ms[i].e.Provider.ID, ms[i].e.Model)
+		_, ok := catalog.RoutingScore(ms[i].e.Provider.ID, ms[i].e.Model)
 		if ok {
-			ms[i].out = score
+			ms[i].billing = catalog.RoutingBillingOf(ms[i].e.Provider.ID, ms[i].e.Model)
 		}
 	}
 	cheap = templateOf(TemplateThrifty, ms, nil)

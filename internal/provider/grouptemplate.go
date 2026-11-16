@@ -128,8 +128,8 @@ const (
 type rated struct {
 	e       Entry
 	out     float64 // its output price, 0 when no price is known
-	managed bool    // scheduling score from the server, never a displayed USD price
-	priced  bool    // distinguishes a real zero price from an unknown price
+	billing catalog.RoutingBilling
+	priced  bool // distinguishes a real zero price from an unknown price
 	// maker: a vendor among the presets makes it (MakerPrice), not one of
 	// the hundreds a router lists from labs nobody has heard of
 	maker bool
@@ -162,9 +162,7 @@ func templateModelsFrom(entries []Entry) []rated {
 		if pr, ok := e.Provider.ListPrice(e.Model); ok && pr.Input == 0 && pr.Output == 0 {
 			r.out, r.priced = 0, true
 		}
-		if score, ok := catalog.RoutingScore(e.Provider.ID, e.Model); ok {
-			r.out, r.priced, r.managed = score, true, true
-		}
+		r.billing = catalog.RoutingBillingOf(e.Provider.ID, e.Model)
 		r.small, r.tiny = sizeOf(e.Model)
 		out = append(out, r)
 	}
@@ -184,7 +182,6 @@ func strongest(ms []rated) []rated {
 	}
 	slices.SortStableFunc(out, func(a, b rated) int {
 		return cmp.Or(
-			-cmp.Compare(btoi(a.managed), btoi(b.managed)),
 			-cmp.Compare(btoi(a.maker), btoi(b.maker)),
 			-cmp.Compare(btoi(a.out >= frontierOut), btoi(b.out >= frontierOut)),
 			cmp.Compare(btoi(a.small), btoi(b.small)),
@@ -385,6 +382,15 @@ func templateOf(kind string, ms []rated, ds []Entry) Template {
 func classifierFor(ms []rated, ds []Entry, low rated) string {
 	if len(ds) > 0 {
 		return ds[0].ID
+	}
+	if distribution.Internal {
+		pick := low
+		for _, m := range ms {
+			if !m.e.Reasoning && !m.tiny && compareInternalCost(m, pick) < 0 {
+				pick = m
+			}
+		}
+		return pick.e.ID
 	}
 	var pick *rated
 	for i, m := range ms {

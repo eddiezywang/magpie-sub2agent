@@ -3232,8 +3232,13 @@ groups created before managed templates remain explicit user configuration.
 New internal templates retain their kind and rebuild members when discovery or
 the managed catalog changes; saving an explicit group edit opts out. Plan-first
 chooses a non-tiny small Coding Plan model, then a low-cost alternate source.
-No model ID is hard-coded in a template. Server routing scores prioritize the
-enterprise MaaS deployments over unclassified WorkBuddy built-in deployments.
+No model ID is hard-coded in a template. Typed billing rules order known free,
+plan allowance, points, pay-as-you-go and unknown costs as an explicit source
+preference. Coefficients are compared within the same provider and currency, or
+an explicitly established shared pool; different currencies are never converted
+or compared numerically. Unknown enterprise costs do not borrow maker USD prices
+or infer free status from names. Capability ranking retains independent maker
+facts and USD reference prices; changing points never changes capability rank.
 A classifier still prefers a decision
 API, else the cheapest known-price non-reasoning/non-tiny model, else the cheap
 member. No promotion is permanently encoded by model name.

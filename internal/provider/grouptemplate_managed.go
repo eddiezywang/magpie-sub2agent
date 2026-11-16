@@ -22,7 +22,7 @@ func internalTemplate(kind string, ms []rated, ds []Entry) Template {
 	}
 	cheap := slices.Clone(ms)
 	slices.SortStableFunc(cheap, func(a, b rated) int {
-		return cmp.Or(cmp.Compare(workBuddyCheapTier(a), workBuddyCheapTier(b)), -cmp.Compare(btoi(a.priced), btoi(b.priced)), cmp.Compare(a.out, b.out), -cmp.Compare(btoi(a.managed), btoi(b.managed)), cmp.Compare(btoi(a.tiny), btoi(b.tiny)), -cmp.Compare(a.e.Released, b.e.Released))
+		return compareInternalCost(a, b)
 	})
 	add := func(m rated) {
 		if !slices.Contains(t.Group.Members, m.e.ID) {
@@ -88,19 +88,57 @@ func internalTemplate(kind string, ms []rated, ds []Entry) Template {
 	return t
 }
 
-// An offline scheduling preference is not a price declaration. Prefer the
-// enterprise fallback, then MaaS, before other WorkBuddy models even without
-// the managed catalog. A positive managed score ends the free-first preference.
-func workBuddyCheapTier(m rated) int {
-	if !strings.HasPrefix(m.e.Provider.ID, "sub2agent-workbuddy") {
-		return 2
+// Cross-currency ordering is an explicit preference, never a conversion:
+// confirmed free, plan allowance, points, pay-as-you-go, unknown.
+func internalCost(m rated) (int, string, float64) {
+	b := m.billing
+	if b.State == "active" && b.Coefficient != nil {
+		if *b.Coefficient == 0 {
+			return 0, b.Currency, 0
+		}
+		switch b.Currency {
+		case "PLAN_TOKENS":
+			return 1, b.Currency, *b.Coefficient
+		case "POINTS":
+			return 2, b.Currency, *b.Coefficient
+		case "USD":
+			return 3, b.Currency, *b.Coefficient
+		}
 	}
-	id := strings.ToLower(m.e.Model)
-	if id == "hy4free" && (!m.managed || m.out == 0) {
-		return 0
+	if strings.HasPrefix(m.e.Provider.ID, "sub2agent-workbuddy") || m.e.Provider.isCodingPlan() {
+		return 4, "", 0
 	}
-	if strings.Contains(id, "-maas-") || strings.HasSuffix(id, "-maas") {
-		return 1
+	if m.e.Free || (m.priced && m.out == 0) {
+		return 0, "USD", 0
 	}
-	return 2
+	if m.priced {
+		return 3, "USD", m.out
+	}
+	return 4, "", 0
+}
+
+func compareInternalCost(a, b rated) int {
+	ar, ac, av := internalCost(a)
+	br, bc, bv := internalCost(b)
+	if n := cmp.Compare(ar, br); n != 0 {
+		return n
+	}
+	// An unidentified pool cannot establish comparable enterprise costs across
+	// providers. Stable source order is a preference, not a cheaper-cost claim.
+	key := func(m rated, currency string) string {
+		if currency == "USD" {
+			return currency
+		}
+		if m.billing.Pool != "" {
+			return currency + "/pool/" + m.billing.Pool
+		}
+		return currency + "/provider/" + m.e.Provider.ID
+	}
+	if n := strings.Compare(key(a, ac), key(b, bc)); n != 0 {
+		return n
+	}
+	if n := cmp.Compare(av, bv); n != 0 {
+		return n
+	}
+	return cmp.Or(cmp.Compare(btoi(a.tiny), btoi(b.tiny)), -cmp.Compare(a.e.Released, b.e.Released), strings.Compare(a.e.ID, b.e.ID))
 }
