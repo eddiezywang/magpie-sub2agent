@@ -18,6 +18,7 @@ type LegacySupplierPreview struct {
 	Found     bool                 `json:"found"`
 	Complete  bool                 `json:"complete"`
 	Dismissed bool                 `json:"dismissed"`
+	Attempted bool                 `json:"attempted"`
 	Sources   []LegacySupplierItem `json:"sources"`
 }
 
@@ -102,6 +103,21 @@ func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 	if imported == nil {
 		return out, errors.New("导入记录无效")
 	}
+	// Earlier releases recorded successful sources without a global completion
+	// marker. They are already handled; unresolved sources remain manually retryable.
+	for _, done := range imported {
+		if done {
+			out.Attempted = true
+			break
+		}
+	}
+	var attempt struct {
+		Attempted bool `json:"attempted"`
+	}
+	if err := readLegacyJSON(filepath.Join(filepath.Dir(Path()), "sub2agent-import-attempted.json"), &attempt); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return out, errors.New("导入尝试记录无法读取")
+	}
+	out.Attempted = out.Attempted || attempt.Attempted
 	outcomes := map[string]string{}
 	if err := readLegacyJSON(filepath.Join(filepath.Dir(Path()), "sub2agent-import-outcomes.json"), &outcomes); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return out, errors.New("导入结果记录无法读取")

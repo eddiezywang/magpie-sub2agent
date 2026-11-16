@@ -213,8 +213,15 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 		}
 	}
 	count, failed := 0, false
+	if err := writePrivate(filepath.Join(filepath.Dir(Path()), "sub2agent-import-attempted.json"), []byte("{\"attempted\":true}\n")); err != nil {
+		return 0, errors.New("无法保存导入尝试记录，未执行导入")
+	}
 	for _, original := range old.Desktop.Sources {
 		source := normalizeLegacySupplier(original)
+		identity := legacySourceID(source)
+		if imported[identity] {
+			continue
+		}
 		if source.ID == "" || source.Status != "ready" {
 			failed = true
 			continue
@@ -231,10 +238,6 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 		}
 		if source.Kind != "endpoint" && !legacySubscriptionEnabled(source.Provider) {
 			failed = true
-			continue
-		}
-		identity := legacySourceID(source)
-		if imported[identity] {
 			continue
 		}
 		ref := source.Auth.Secret

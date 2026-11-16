@@ -621,3 +621,10 @@ not silently treated as an empty successful import. CodeBuddy/Trae bundles
 preserve private paths. Trae imports require complete model mappings; isolated
 plugin loader tests sent synthetic CodeBuddy/Trae requests to their configured
 paths with converted credentials. Vendor accounts remain unverified.
+
+Legacy supplier automatic prompts recognize both the historical per-source
+sub2agent-auth-import.json and the newer attempted/completion records. Any
+successful historical entry counts as an earlier handled attempt. A confirmed
+import records its attempt before converting credentials, including partial or
+failed imports. Automatic startup prompts stop after that attempt; Settings
+retains explicit retry and completion remains separate from attempt status.

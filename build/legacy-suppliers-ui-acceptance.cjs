@@ -11,7 +11,7 @@ const assert=require('node:assert/strict');
   await page.exposeFunction('legacyTestBackend',method=>{
    if(method==='dismiss') dismissed=true;
    if(method==='import'){writes++;sources[0].imported=true;sources[0].outcome='existing';if(writes>1){sources[1].imported=true;sources[1].outcome='imported';complete=true;}}
-   const preview={found:true,complete,dismissed,sources};
+   const preview={found:true,complete,dismissed,attempted:writes>0,sources};
    return method==='import'?{imported:1,preview,...(!complete?{error:'部分旧认证无法转换'}:{})}:{...preview};
   });
   await fixture(page);
@@ -29,6 +29,9 @@ const assert=require('node:assert/strict');
   assert.equal(writes,1);assert.equal(await dialog.getByText('已存在，保留现有配置').count(),1);
   await dialog.getByText('待处理：请启用供应商插件或重新登录').waitFor();
   await dialog.getByRole('button',{name:'完成'}).click();await dialog.waitFor({state:'detached'});
+  dismissed=false;
+  await page.reload();await page.waitForFunction(()=>typeof window.legacySuppliers==='object');assert.equal(await dialog.count(),0,'partial attempt suppresses automatic re-prompt after restart');
+  await page.evaluate(()=>show('settings'));await page.locator('[data-setting=legacy-import]').waitFor();
   await page.locator('[data-setting=legacy-import] button').click();await dialog.waitFor();
   await dialog.getByRole('button',{name:'导入供应商'}).click();await dialog.getByText('供应商导入结果').waitFor();
   assert.equal(writes,2);assert.equal(await dialog.getByText('已存在，保留现有配置').count(),1);assert.equal(await dialog.getByText('已导入',{exact:true}).count(),1);

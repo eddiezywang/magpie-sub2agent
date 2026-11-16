@@ -59,6 +59,39 @@ func TestSub2AgentImportDoesNotClaimDisabledPluginSuccess(t *testing.T) {
 	}
 }
 
+func TestLegacyPreviewRetainsOldImportAttemptAcrossReads(t *testing.T) {
+	azureHome(t)
+	root := legacyImportFixture(t)
+	marker := filepath.Join(filepath.Dir(Path()), "sub2agent-auth-import.json")
+	if err := writePrivate(marker, []byte(`{"aadc14e83b4c6d939e603abfc3838e5d":true}`)); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		p, err := legacySub2AgentPreview(root)
+		if err != nil || !p.Attempted || p.Complete {
+			t.Fatalf("old partial import lost: %+v %v", p, err)
+		}
+	}
+}
+
+func TestLegacyFailedAttemptRemainsManuallyRetryable(t *testing.T) {
+	azureHome(t)
+	root := legacyImportFixture(t)
+	if err := os.RemoveAll(filepath.Join(root, "secrets")); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err == nil || n != 0 {
+		t.Fatal("expected failed import")
+	}
+	p, err := legacySub2AgentPreview(root)
+	if err != nil || !p.Attempted || p.Complete {
+		t.Fatalf("failed attempt lost: %+v %v", p, err)
+	}
+	if _, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err == nil {
+		t.Fatal("manual retry was skipped")
+	}
+}
+
 func TestSub2AgentImportIsIdempotentAndPreservesOriginal(t *testing.T) {
 	azureHome(t)
 	root := legacyImportFixture(t)

@@ -59,6 +59,6 @@
   style.textContent = ".legacy-supplier-list{border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);margin:0 0 14px}.legacy-supplier-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line-2)}.legacy-supplier-row:last-child{border-bottom:0}.legacy-supplier-row .ic{width:22px;height:22px;flex:none}.legacy-supplier-name{font-weight:600;min-width:0;overflow-wrap:anywhere}.legacy-supplier-state{margin-left:auto;text-align:right;color:var(--muted);font-size:12px}.legacy-supplier-dialog .legacy-supplier-note{font-size:12px;color:var(--muted)}";
   document.head.append(style);
   window.addEventListener("load", () => api("legacy-suppliers").then(data => {
-    if (data.found && !data.complete && !data.dismissed && data.sources.length) show(data);
+    if (data.found && !data.complete && !data.dismissed && !data.attempted && data.sources.length) show(data);
   }).catch(statusErr), {once:true});
 })();
