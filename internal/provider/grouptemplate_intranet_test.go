@@ -7,6 +7,27 @@ import (
 	"testing"
 )
 
+func TestInternalEvenGroupsDeploymentAliasesAcrossSources(t *testing.T) {
+	for _, tigID := range []string{"glm-5.3-flash-zp", "glm-5.3-flash-zp-openai"} {
+		t.Run(tigID, func(t *testing.T) {
+			tig := tm("sub2agent-tigcodingplan", tigID, 2, true, "2026-09-20")
+			wb := tm("sub2agent-workbuddy", "glm-5.3-flash-maas", 2, true, "2026-09-20")
+			g := templateOf(TemplateEven, []rated{tig, wb}, nil).Group
+			if g.Routing != Rotate || !slices.Equal(g.Members, []string{tig.e.ID, wb.e.ID}) {
+				t.Fatalf("deployment aliases must rotate across both original source IDs, got %+v", g)
+			}
+			if tig.e.Model != tigID || wb.e.Model != "glm-5.3-flash-maas" {
+				t.Fatal("grouping rewrote upstream request model IDs")
+			}
+			for _, different := range []string{"glm-5.3-pro-maas", "glm-5.2-flash-zp", "glm-5.3-flash-lite-zp"} {
+				if bareModel(different) == bareModel(tigID) {
+					t.Fatalf("distinct model %s merged with %s", different, tigID)
+				}
+			}
+		})
+	}
+}
+
 func TestInternalTemplatesUseUpstreamPrerequisites(t *testing.T) {
 	plan := tm("sub2agent-workbuddy", "gpt-6.1", 40, true, "2026-09-20")
 	plan.e.Provider.Account = &Account{Agent: "plugin", User: "fixture"}

@@ -3227,6 +3227,15 @@ WorkBuddy remains a subscription and TIG defaults to plan billing; explicit
 user billing values still win. Billing classification does not waive the
 requirement for two distinct available providers in plan/steady/fast recipes.
 
+For internal template comparisons, `bareModel` uses the catalog's `SameModel`
+identity, including managed deployment suffixes (`-maas`, `-zp`, `-zp-openai`).
+Thus TIG's `glm-5.3-flash-zp` and WorkBuddy's `glm-5.3-flash-maas` can be
+members of the same evenly spread model group. They retain separate provider,
+account, request model ID and billing identities. Model versions and capability
+variants such as Flash versus Pro or Flash Lite remain distinct. This also
+lets cheap-first distinguish a different model from another deployment of the
+same model; strongest-model ranking and the original recipes remain intact.
+
 Saved predefined groups retain `templateKind` to rebuild using those same
 upstream recipes when discovery changes. When prerequisites fail, their runtime
 members and rules are cleared so an old one-provider plan cannot continue

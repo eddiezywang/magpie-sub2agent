@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/settings"
@@ -213,7 +214,11 @@ func cheapest(ms []rated, strong rated) []rated {
 
 // bareModel is a model's id without a router's vendor before it:
 // "openai/gpt-6-luna" is "gpt-6-luna".
+// Internal deployments share the catalog's identity; request IDs stay intact.
 func bareModel(model string) string {
+	if distribution.Internal {
+		return catalog.SameModel(model)
+	}
 	return strings.ToLower(model[strings.LastIndex(model, "/")+1:])
 }
 
