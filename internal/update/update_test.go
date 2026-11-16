@@ -7,6 +7,9 @@ func TestNewer(t *testing.T) {
 		a, b string
 		want bool
 	}{
+		{"1.0.0-beta.1", "0.6.1", true},
+		{"1.0.0-beta.2", "1.0.0-beta.1", true},
+		{"1.0.0", "1.0.0-beta.1", true},
 		{"0.2.0", "0.1.0", true},
 		{"0.1.0", "0.2.0", false},
 		{"0.1.0", "0.1.0", false},

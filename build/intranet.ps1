@@ -1,7 +1,7 @@
 param(
     [string]$BunArchive = '',
     [string]$OutputRoot = '',
-    [string]$Version = '0.6.1',
+    [string]$Version = '1.0.0-beta.1',
     [string]$Sub2AgentSource = '',
     [string]$BillingKeyFile = '',
     [switch]$WithoutBun,
