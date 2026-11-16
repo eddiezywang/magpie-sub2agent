@@ -559,3 +559,18 @@ Local isolated process 27908 was confirmed to run the 070219 EXE; current ZIP
 SHA256 remains 98c532448e43a5dc4477d3fd5a1abd2976bc21310462aa059083ac82fcf7341e.
 Work is delivered for user review, not recorded as user-approved visuals or
 real enterprise-account production acceptance.
+
+### Single-file actual runtime verification 145501
+
+Clean source 06ff6a800 built with -SingleFile; archive contains only
+sub2agent.exe, ZIP SHA256 9e38424165feb7b26103cae31a755d30f295338ec2c58c3b9558fc9f893372b4.
+The isolated single EXE (PID 43356) opened the real confirmation UI. Windows
+CurrentUser DPAPI fixtures from a synthetic Tauri proxy.json imported WorkBuddy
+and two separate API credentials at the same endpoint. WorkBuddy's plugin
+account became visible via /api/providers. The completion marker suppressed
+reload prompts and the old proxy file remained byte-identical. Actual application
+screenshot, containing synthetic data only, returned HTTP 200:
+http://124.220.199.224:8805/workspace-review-20261116/legacy-import-actual.png
+This runtime used an explicitly supplied local Bun executable. It did not test
+first-run Bun download, real vendor authentication or CodeBuddy/Trae plugin
+execution. The old sources and QA data are local and were not uploaded.
