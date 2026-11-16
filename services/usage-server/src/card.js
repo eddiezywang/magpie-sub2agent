@@ -191,16 +191,6 @@ function multiple(r) {
   return (v >= 100 ? Math.round(v).toLocaleString('en-US') : v.toFixed(1)) + '×';
 }
 
-// proxy active-window milliseconds → "6.2h" / "48m" / "<1m"
-function duration(ms) {
-  const v = Number(ms);
-  if (!Number.isFinite(v) || v <= 0) return '';
-  const minutes = v / 60_000;
-  if (minutes < 1) return '<1m';
-  if (minutes < 90) return `${Math.round(minutes)}m`;
-  return `${(v / 3_600_000).toFixed(1)}h`;
-}
-
 function cnDate(iso) {
   const d = new Date(iso);
   return Number.isFinite(d.getTime()) ? `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日` : '';
@@ -280,10 +270,7 @@ function receipt(report) {
     { label: '连续使用', value: `${streakDays} 天` },
     { label: '请求数', value: count(calls) },
   ];
-  const active = duration(stats.active_ms);
-  if (active) statRows.push({ label: '使用时长', value: active });
   if (errors > 0) statRows.push({ label: '错误', value: count(errors) });
-  if(valuation)for(const [unit,amount] of amounts)if(unit!=='USD')statRows.push({label:unitName(unit),value:count(amount)});
   if (weekly) {
     const had = day
       ? day.days.filter((d) => d.date >= day.from && d.date <= day.date && d.calls > 0).length
@@ -320,10 +307,9 @@ function receipt(report) {
     note: pending > 0 ? `${pending} 次${billing ? '调用尝试待定价' : '请求没有价格'}` : '',
     empty: (calls ?? 0) === 0 ? (weekly ? '这段时间没有调用。' : '这一天没有调用。') : '',
     footer: [
-      ['用量账单由 ', 'Sub2Agent', ' 生成'],
       ['仅采集 token 数值与模型名 · 不含对话内容'],
     ],
-    credit: valuation ? `汇率 ${valuation.usd_to_cny} · ${valuation.as_of} · 非结算凭证` : '用量统计仅供参考 · 非结算凭证',
+    credit: '非结算凭证',
   };
 }
 

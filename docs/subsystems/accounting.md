@@ -107,8 +107,8 @@ are not accepted. Administrator prices take precedence over the catalog snapshot
 Normal reports
 include a billing breakdown as well as their existing JSON/SVG/PNG shape.
 Receipt images identify the username and show unpriced usage as pending pricing,
-never as zero dollars. Points and plan-token amounts retain their own units;
-mixed currencies are itemized, not summed. The primary receipt shows API-equivalent
+never as zero dollars. JSON billing points and plan-token amounts retain their own
+units; mixed currencies are itemized, not summed. The primary receipt shows API-equivalent
 CNY at the dated server-maintained `report-currency.json` exchange rate. Its
 authenticated `/admin/report-currency` API updates that reference. Original USD
 cost fields and enterprise POINTS/PLAN_TOKENS remain separate. These usage reports
@@ -119,6 +119,15 @@ Sub2Agent mark and pixel agent/model icons. Its height grows with displayed
 content; at most eight agents and five models per agent are shown, with a count
 for omitted entries. The underlying report is not truncated. The total is an
 API-price estimate, not a settlement.
+Receipt data rows follow the upstream `@magpie-community/page-day-card`
+`page/view.js` card: streak, calls, nonzero errors, comparison with prior active
+days (or a weekly active-day count and average), agent/model costs, input/output
+and total tokens, cache hit rate, and unpriced-call notices. Proxy uptime from
+legacy telemetry and enterprise points/plan-token counters are not receipt rows;
+they remain available in their existing report JSON fields. The receipt footer
+keeps the privacy statement and non-settlement notice, omitting the generated-by
+line and the exchange rate/date. Currency conversion still uses the maintained
+server rate, and JSON `valuation` retains that rate and date.
 Admin policy edits require the existing admin Bearer token. Aggregation rules
 only expose classification boundaries. The separate routing catalog exposes
 currency and reference coefficients for model selection and explanation, with
