@@ -328,6 +328,9 @@ func importLegacySubscription(source legacySub2AgentSource, identity string, sec
 				return false, errors.New("Trae model mapping is incomplete")
 			}
 		}
+		if source.DefaultModel != "" && str(mapping[source.DefaultModel]) == "" {
+			return false, errors.New("Trae default model mapping is missing")
+		}
 		for _, key := range []string{"baseUrl", "userId", "path"} {
 			if str(bundle[key]) == "" && source.Subscription[key] != nil {
 				bundle[key] = source.Subscription[key]

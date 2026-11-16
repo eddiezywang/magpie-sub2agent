@@ -279,6 +279,13 @@ func TestLegacyEndpointNestedModelsAndTopLevelBase(t *testing.T) {
 	}
 }
 
+func TestLegacyTraeRejectsUnmappedDefaultModel(t *testing.T) {
+	s := legacySub2AgentSource{Provider: "trae", Models: []string{"m1"}, DefaultModel: "m2", Subscription: map[string]any{"modelMap": map[string]any{"m1": "vendor-m1"}}}
+	if _, err := importLegacySubscription(s, "test", []byte(`{"token":"fixture","refreshToken":"fixture"}`)); err == nil {
+		t.Fatal("accepted a default model without a vendor mapping")
+	}
+}
+
 func TestSub2AgentImportCIBPreservesSourceAndIcon(t *testing.T) {
 	azureHome(t)
 	s := legacySub2AgentSource{ID: "cib", Kind: "endpoint", Name: "old name", Models: []string{"model-a"}}
