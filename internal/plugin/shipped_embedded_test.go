@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yetone/magpie/internal/appdir"
 )
@@ -28,5 +29,26 @@ func TestSingleFileBaselineWithoutExternalFolders(t *testing.T) {
 	adapter := AIEPAdapter()
 	if adapter == nil || adapter.ID != "aiep-coding-plan" || adapter.Anthropic != "http://172.21.11.82/public" {
 		t.Fatalf("embedded AIEP defaults missing: %+v", adapter)
+	}
+}
+
+func TestEmbeddedDirectoryReadsDoNotWaitForExtractionLock(t *testing.T) {
+	storeSandbox(t)
+	if defaultShippedDirectory() == "" {
+		t.Fatal("baseline unavailable")
+	}
+	baselineMu.Lock()
+	done := make(chan string, 1)
+	go func() { done <- defaultShippedDirectory() }()
+	select {
+	case root := <-done:
+		baselineMu.Unlock()
+		if root == "" {
+			t.Fatal("cached baseline unavailable")
+		}
+	case <-time.After(2 * time.Second):
+		baselineMu.Unlock()
+		<-done
+		t.Fatal("ordinary provider lookup waited for baseline extraction")
 	}
 }
