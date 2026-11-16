@@ -11,7 +11,7 @@ const models = [
  {id:'wb/glm-5.3-maas',name:'GLM 5.3 · WorkBuddy',providerName:'WorkBuddy',icon:'workbuddy-color'},
 ];
 const templates = ['smart','thrifty','steady','plan','fast','even'].map(kind=>({kind,group:{id:kind,name:kind,members:models.map(m=>m.id),routing:'order',...(kind==='smart'?{classifier:models[1].id,rules:[{use:models[0].id,intent:'hard task'},{use:models[1].id,intent:'easy task'}]}:{})}}));
-templates.unshift(...['even-glm53-flash','even-glm53'].map(kind=>({kind,group:{id:kind,name:kind,members:models.filter(m=>m.id.includes('flash')===kind.endsWith('flash')).map(m=>m.id),routing:'rotate',affinity:'session'}})));
+templates.unshift(...['flash-first','flagship-first'].map(kind=>({kind,group:{id:kind,name:kind,members:models.filter(m=>m.id.includes('flash')===(kind==='flash-first')).map(m=>m.id),routing:'rotate',affinity:'session'}})));
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});
  const results=[];
@@ -43,13 +43,13 @@ templates.unshift(...['even-glm53-flash','even-glm53'].map(kind=>({kind,group:{i
    });
    await page.goto('http://sub2agent.test/?view=groups');
    const cards=page.locator('.rt-gtpl-card');await cards.nth(7).waitFor();
-   assert.deepEqual(await cards.evaluateAll(cs=>cs.map(c=>c.dataset.kind)),['even-glm53-flash','even-glm53','smart','thrifty','steady','plan','fast','even']);
-   if(locale==='zh')assert.deepEqual(await cards.locator('b').allTextContents(),['均匀分摊 · GLM 5.3 Flash 优先','均匀分摊 · GLM 5.3 优先','难题给强模型，简单的给便宜模型','便宜优先','永不卡住','计划优先','最快优先','均匀分担']);
+   assert.deepEqual(await cards.evaluateAll(cs=>cs.map(c=>c.dataset.kind)),['flash-first','flagship-first','smart','thrifty','steady','plan','fast','even']);
+   if(locale==='zh')assert.deepEqual(await cards.locator('b').allTextContents(),['Flash 优先','旗舰模型优先','难题给强模型，简单的给便宜模型','便宜优先','永不卡住','计划优先','最快优先','均匀分担']);
    assert.equal(await page.title(),'Sub2Agent');
    assert.ok(!/magpie/i.test(await page.locator('body').innerText()));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    await page.screenshot({path:path.join(output,`16-routing-${engine}-${locale}-${width}.png`),fullPage:true});
-   for(const kind of ['even-glm53-flash','even-glm53']) {
+   for(const kind of ['flash-first','flagship-first']) {
     await page.locator(`.rt-gtpl-card[data-kind="${kind}"] .rt-gtpl-edit`).click();
     const editor=page.locator('.rt-gedit');await editor.waitFor();
     assert.equal(await editor.locator('[data-seg="session"][aria-pressed="true"]').count(),1,'editing must preserve session affinity');

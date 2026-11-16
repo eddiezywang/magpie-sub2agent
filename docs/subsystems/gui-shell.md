@@ -1404,3 +1404,20 @@ The confirmation dialog reads this endpoint. POST /api/legacy-suppliers/import
 starts an explicit user-requested import, while /dismiss persists the later
 choice; Settings keeps a manual entry. Successful overall completion suppresses
 automatic prompts. Partial results show processed and unresolved sources.
+
+The workspace guides Providers → Agent connections → Routing policy with one
+current next action. Counts come from actual provider readiness and native Agent
+connection checks; unknown connection checks never imply a successful connection.
+Provider add/edit/toggle and Agent connection/model controls use the same DOM and
+native saves as their dedicated pages. Agent rows are collapsed by default.
+Narrow layouts place providers before Agent connections and routing.
+
+The policy menu lists template previews and saved custom groups for the selected
+Agent. It applies one policy to that Agent, with the same connection write gate
+as bulk and native operations. While saving, selectors are disabled; failures
+retain the actual selection and offer refresh. An existing direct-model pick is
+explicitly preserved until the user changes policy. Group details are edited on
+the Groups page. `plugins/workspace/client.js` owns this composition; the old
+workspace.js is only a compatibility loader. Packed intranet pages load the
+plugin directly. `build/workspace-guided-acceptance.cjs` covers the guided menu
+contract that replaces the earlier row of separate template buttons.

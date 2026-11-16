@@ -6660,6 +6660,8 @@ function routingPage(part) {
   // a template's name and what it does, in the user's language
   // (provider.TemplateNames)
   const TPL = {
+    'flash-first': ['Flash first', 'Fast everyday models across your available providers, with session affinity'],
+    'flagship-first': ['Flagship models first', 'Flagship models across your available providers, with session affinity'],
     'even-glm53-flash': ["Spread evenly · GLM 5.3 Flash first", "GLM 5.3 Flash across sources, with session affinity; recommended for daily use"],
     'even-glm53': ["Spread evenly · GLM 5.3 first", "GLM 5.3 across sources, with session affinity; check MaaS point consumption before choosing"],
     smart: ["Hard to strong, easy to cheap", "A hard task goes to the strongest model, an easy one and compaction to a cheap one"],

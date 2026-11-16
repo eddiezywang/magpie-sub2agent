@@ -48,7 +48,7 @@ func TestInternalEvenPreferencesPersistAndRecover(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, kind := range []string{TemplateEvenGLMFlash, TemplateEvenGLM} {
+	for _, kind := range []string{TemplateFlashFirst, TemplateFlagshipFirst} {
 		if _, err := AddTemplate(kind, ""); err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +57,7 @@ func TestInternalEvenPreferencesPersistAndRecover(t *testing.T) {
 		t.Helper()
 		found := 0
 		for _, g := range Groups() {
-			if g.TemplateKind != TemplateEvenGLMFlash && g.TemplateKind != TemplateEvenGLM {
+			if g.TemplateKind != TemplateFlashFirst && g.TemplateKind != TemplateFlagshipFirst {
 				continue
 			}
 			found++
@@ -74,7 +74,7 @@ func TestInternalEvenPreferencesPersistAndRecover(t *testing.T) {
 	if err := Save(q); err != nil {
 		t.Fatal(err)
 	}
-	check(0)
+	check(1)
 	q.Off = false
 	if err := Save(q); err != nil {
 		t.Fatal(err)

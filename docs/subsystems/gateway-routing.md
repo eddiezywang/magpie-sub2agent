@@ -3224,16 +3224,26 @@ WorkBuddy remains a subscription and TIG defaults to plan billing; explicit
 user billing values still win. Billing classification does not waive the
 requirement for two distinct available providers in plan/steady/fast recipes.
 
-Internal builds additionally offer two fixed-model presets before the original
-six: `even-glm53-flash` (recommended for daily use) and `even-glm53`.
-They use Rotate and session affinity, take one deployment per provider (up to
-four), and require at least two sources of the designated model. They never
-substitute another version or capability tier; missing models or sources leave
-creation unavailable. They are created through the existing template action,
-not automatically assigned to an Agent. Editing before creation preserves the
-preset's affinity. Saved presets regenerate through the existing templateKind
-path and pause/recover with source availability; manual edits clear the marker.
-The workspace accepts both preset kinds alongside all original recipes.
+Internal builds offer two capability presets before the original six:
+`flash-first` (Flash first, recommended) and `flagship-first` (Flagship models
+first). The explicit model-tier registry in `workspace_presets.go` is independent
+of provider identity, cost and point coefficients. A shared model across sources
+is preferred, otherwise the registry picks one model of the requested tier per
+provider, up to four. A single source is valid; unknown models are not guessed
+from names and require manual member selection. Both presets use Rotate and
+session affinity. Original recipes and existing GLM-scoped saved presets retain
+their semantics. Manual edits clear templateKind and stop automatic regeneration.
+
+`EnsureTemplate` creates or reuses a managed preset only during an explicit
+configuration action; disabled presets are not resurrected. The internal
+`POST /api/workspace/strategy` checks the connected Agent and expected current
+model, validates the template, ensures the group, verifies visibility in the
+Agent's model picker, then writes through the original Agent Pick path. First
+connection defaults to Flash first only when the Agent has no main model value
+and no native runtime adapter; existing explicit choices and repeat connections
+remain unchanged. No recognized fast model leaves the native connect behavior
+intact, and the workspace offers manual selection rather than claiming Flash
+was applied. Opening or refreshing the workspace never creates or writes groups.
 
 WorkBuddy's model configuration distinguishes the upstream official point
 multiplier (neutral badge) from a confirmed MaaS point coefficient (accent
@@ -3294,12 +3304,14 @@ not the entire enterprise account. Other models remain candidates and are tried
 on their own upstream response. This is conservative fallback, not a claim that
 their balances are separate; shared-pool exhaustion requires upstream evidence.
 
-Workspace selects an existing internal template group for one explicit Agent
-through the native primary-model save path; it creates no routing strategy and
-does not edit group members. Groups without templateKind or outside the four
-supported six kinds are omitted, and unready groups cannot be selected. Editing
-opens the retained Groups page. A stale group reference is rejected before an
-Agent file write. See [GUI composition](gui-shell.md#intranet-workspace-composition)
+Workspace selects a template or saved group for one explicit Agent through the
+native primary-model save path. POST /api/workspace/strategy materializes a
+template only on explicit selection, reuses its existing group and checks the
+Agent's expected current model before writing. Reads never create groups.
+Disabled or unready groups cannot be selected. Editing opens the retained Groups
+page; the workspace does not edit group members. First connection with no prior
+model preference applies Flash first if recognized models are available; existing
+choices and reconnects are preserved. See [GUI composition](gui-shell.md#intranet-workspace-composition)
 for picker state and [Agent wiring](agent-wiring.md) for the native save behavior.
 Delivered-output monitoring is independent of route selection and billing; its
 source, limits and API are documented in

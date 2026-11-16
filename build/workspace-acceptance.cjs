@@ -20,6 +20,11 @@ async function fixture(page){
     if(qa.unmanagedAgent)data.checks[qa.unmanagedAgent]={status:'configured',managed:false};
     return Response.json(data);
    }
+   if(url.pathname==='/api/workspace/strategy'){
+    const b=JSON.parse(init.body),value='group/'+b.kind;
+    input='/api/set';init={...init,body:JSON.stringify({agent:b.agent,field:'model',value})};
+    url.pathname='/api/set';
+   }
    if(url.pathname==='/api/set'){
     qa.sets++;
     if(qa.rejectPick)return new Response(JSON.stringify({error:'Routing group is no longer available'}),{status:400});
@@ -64,12 +69,12 @@ async function test(browser,engine){
   await page.locator('#ws-agents summary').click();await page.getByRole('button',{name:'一键全部接入（8）'}).waitFor();
   await page.evaluate(()=>qa.failed=true);await page.getByRole('button',{name:'一键全部接入（8）'}).click();
   await page.getByRole('button',{name:'重试失败项'}).waitFor();
-  assert.match(await page.locator('.agent-bulk-result').innerText(),/已接入 7 · 失败 1 · 跳过 0/);
+  await page.getByText('已接入 7 · 失败 1 · 跳过 0',{exact:false}).waitFor();
   assert.match(await page.locator('.agent-bulk-result').innerText(),/Codex.*配置只读/);
   assert.equal(await page.evaluate(()=>state.agents.filter(a=>a.wired).length),9);
   await page.evaluate(()=>qa.failed=false);await page.getByRole('button',{name:'重试失败项'}).click();
   await page.getByText('已接入 1 · 失败 0 · 跳过 0',{exact:true}).waitFor();
-  await page.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).click();
+  await page.locator('[data-ws-focus=strategy]').click();await page.getByRole('menuitem',{name:'永不卡住',exact:true}).click();
   await page.waitForFunction(()=>state.agents.find(a=>a.id==='opencode').fields[0].value==='group/steady');
   assert.equal(await page.evaluate(()=>state.agents.find(a=>a.id==='pi').fields[0].value),'workbuddy/model-a');
   await page.locator('#ws-throughput summary').click();
@@ -188,63 +193,15 @@ async function test(browser,engine){
   await drafts.locator('#nav button[data-view=workspace]').click();
   await drafts.waitForFunction(()=>view==='workspace'&&document.querySelectorAll('#view-workspace #view-agents,#view-workspace #view-routing,#view-workspace #view-providers').length===3);
   for(const id of ['agents','routing','providers'])assert.equal(await drafts.locator('#view-workspace #view-'+id).count(),1);
-  await drafts.locator('#ws-route-controls').getByRole('button',{name:'编辑路由组 ›',exact:true}).click();
+  await drafts.locator('#ws-route-controls').getByRole('button',{name:'编辑路由组',exact:true}).click();
   await drafts.waitForFunction(()=>view==='groups');
   await drafts.locator('#nav button[data-view=workspace]').click();
-  await drafts.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).waitFor();
+  await drafts.locator('[data-ws-focus=strategy]').waitFor();
   assert.equal(await drafts.evaluate(()=>qa.providerSaves||0),0);
   assert.deepEqual(drafts.errors,[]);
   console.log(`${engine}: provider draft navigation cancellation/discard, unique native hosts and group management return`);
  }finally{await drafts.close();}
- const races=await open(browser);
- try{
-  const controls=races.locator('#ws-route-controls');
-  await controls.getByRole('button',{name:'稳定优先',exact:true}).waitFor();
-  await races.evaluate(()=>qa.rejectPick=true);
-  await controls.getByRole('button',{name:'稳定优先',exact:true}).click();
-  await races.waitForFunction(()=>qa.sets===1&&!window.agentConnectionBusy('opencode'));
-  assert.equal(await races.evaluate(()=>state.agents.find(a=>a.id==='opencode').fields[0].value),'workbuddy/model-a');
-  await controls.getByRole('button',{name:'稳定优先',exact:true}).waitFor();
-  assert.equal(await controls.getByRole('button',{name:'稳定优先',exact:true}).getAttribute('aria-pressed'),'false');
-  await races.evaluate(()=>{qa.rejectPick=false;qa.holdPick=true});
-  await controls.getByRole('button',{name:'稳定优先',exact:true}).click();
-  await races.waitForFunction(()=>typeof qa.releasePick==='function');
-  await races.evaluate(()=>{document.querySelector('#ws-route-controls').dataset.agent='pi';magpie.call('workspace','render')});
-  await controls.locator('button.proto').getByText('Pi',{exact:true}).waitFor();
-  await races.evaluate(()=>qa.releasePick());
-  await races.waitForFunction(()=>!window.agentConnectionBusy('opencode'));
-  assert.equal(await races.evaluate(()=>state.agents.find(a=>a.id==='pi').fields[0].value),'workbuddy/model-a');
-  await controls.locator('button.proto').getByText('Pi',{exact:true}).waitFor();
-  assert.equal(await controls.getByRole('button',{name:'稳定优先',exact:true}).getAttribute('aria-pressed'),'false');
-  await races.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').name='过期路由组';qa.holdGroups=true;magpie.call('workspace','render')});
-  await races.waitForFunction(()=>typeof qa.releaseGroups==='function');
-  await races.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').name='当前路由组';magpie.call('workspace','render')});
-  await controls.getByRole('button',{name:'当前路由组',exact:true}).waitFor();
-  await races.evaluate(()=>qa.releaseGroups());await races.waitForFunction(()=>qa.groupsReleased);
-  assert.equal(await controls.getByRole('button',{name:'过期路由组',exact:true}).count(),0);
-  assert.equal(await controls.getByRole('button',{name:'当前路由组',exact:true}).count(),1);
-  assert.deepEqual(races.errors,[]);
-  console.log(`${engine}: refused group restores old pick, late save preserves new target and stale group reads cannot replace controls`);
- }finally{await races.close();}
- const history=await open(browser,1440,'/');
- try{
-  await history.evaluate(()=>show('agents'));await history.reload();await history.locator('#view-agents').waitFor({state:'visible'});
-  await history.waitForFunction(()=>typeof view!=='undefined'&&view==='agents');
-  await history.goto('http://workspace.test/?view=routing');await history.waitForFunction(()=>view==='routing');
-  await history.goto('http://workspace.test/?view=workspace');await history.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).waitFor();
-  const summary=history.locator('#ws-agents summary');await summary.focus();await history.keyboard.press('Enter');assert(await history.locator('#ws-agents').evaluate(e=>e.open));
-  await history.keyboard.press('Enter');assert.equal(await history.locator('#ws-agents').evaluate(e=>e.open),false);
-  await history.evaluate(()=>{workspaceSamples.groups.find(g=>g.id==='steady').ready=false;workspaceSamples.groups.push({id:'manual',name:'手工配置组',ref:'group/manual',ready:true});magpie.call('workspace','render')});
-  await history.getByText('路由组暂无可用成员',{exact:true}).waitFor();
-  await history.evaluate(()=>{Object.assign(workspaceSamples.groups.find(g=>g.id==='steady'),{disabled:true,ready:true});magpie.call('workspace','render')});
-  await history.getByText('路由组已停用',{exact:true}).waitFor();
-  await history.waitForFunction(()=>[...document.querySelectorAll('#ws-route-controls button[aria-pressed]')].some(b=>b.textContent==='稳定优先'&&b.disabled));
-  assert(await history.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true}).isDisabled());
-  assert.equal(await history.locator('#ws-route-controls').getByRole('button',{name:'手工配置组',exact:true}).count(),0);
-  await history.evaluate(()=>{workspaceSamples.groups.splice(0);magpie.call('workspace','render')});await history.getByText('暂无已配置的预定义路由组',{exact:true}).waitFor();
-  await history.evaluate(()=>{state.agents.forEach(a=>a.wired=false);renderAgents()});await history.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
-  assert.deepEqual(history.errors,[]);console.log(`${engine}: default/history/deep links, keyboard disclosure, predefined unavailable/empty groups and reactive targets`);
- }finally{await history.close();}
+ // Routing menu, save failure and target isolation: workspace-guided-acceptance.cjs.
  for(const [lang,title,bulk,calibration] of [
   ['en','Workspace','Connect every Agent','Awaiting calibration'],
   ['zh','工作台','一键全部接入','待校准'],

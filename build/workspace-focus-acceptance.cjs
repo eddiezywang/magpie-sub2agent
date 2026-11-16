@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 (async()=>{for(const [engine,type] of [['chromium',chromium],['webkit',webkit]]){
  const browser=await type.launch(engine==='chromium'?{channel:'chrome'}:{});
  try{
-  const page=await open(browser),group=page.locator('#ws-route-controls').getByRole('button',{name:'稳定优先',exact:true});
+  const page=await open(browser),group=page.locator('[data-ws-focus=strategy]');
   await group.waitFor();await group.focus();await group.evaluate(e=>qa.oldRoute=e);
   await page.evaluate(()=>{qa.holdGroups=true;magpie.call('workspace','render')});
   await page.waitForFunction(()=>typeof qa.releaseGroups==='function');
@@ -41,9 +41,6 @@ const assert=require('node:assert/strict');
   assert(await page.locator('#nav button[data-view=agents]').evaluate(e=>e===document.activeElement),'late workspace read does not steal focus after leave');
   assert.equal(await page.locator('#view-workspace #view-routing').count(),0);
   await page.evaluate(()=>show('workspace'));await group.waitFor();await group.focus();
-  await page.evaluate(()=>{workspaceSamples.groups.splice(workspaceSamples.groups.findIndex(g=>g.id==='steady'),1);magpie.call('workspace','render')});
-  await page.waitForFunction(()=>!document.querySelector('[data-ws-focus="group/steady"]'));
-  assert(await page.locator('#ws-route-controls .proto').evaluate(e=>e===document.activeElement),'vanished focused group returns keyboard focus to Agent chooser');
   await page.evaluate(()=>{state.agents.forEach(a=>a.wired=false);renderAgents()});
   await page.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
   assert(await page.locator('#ws-agents summary').evaluate(e=>e===document.activeElement),'no eligible target returns focus to Agent disclosure');

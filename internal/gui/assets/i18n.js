@@ -4,6 +4,16 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+    "Agent model changed; refresh and try again": "Agent 模型已发生变化，请刷新后重试",
+    "Routing group is not available to this Agent": "该路由组不在此 Agent 的可用模型列表中",
+    "Connect an Agent to choose a routing group": "接入 Agent 后可选择路由组",
+    "Routing group is disabled": "路由组已停用",
+
+    "Flash first": "Flash 优先",
+    "Flagship models first": "旗舰模型优先",
+    "Fast everyday models across your available providers, with session affinity": "在可用来源的日常快速模型之间分摊，保持会话亲和",
+    "Flagship models across your available providers, with session affinity": "在可用来源的旗舰模型之间分摊，保持会话亲和",
+
     "Spread evenly · GLM 5.3 Flash first": "均匀分摊 · GLM 5.3 Flash 优先",
     "Spread evenly · GLM 5.3 first": "均匀分摊 · GLM 5.3 优先",
     "GLM 5.3 Flash across sources, with session affinity; recommended for daily use": "在多个来源的 GLM 5.3 Flash 之间分摊，保持会话亲和；推荐日常使用",
@@ -5209,6 +5219,16 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "这份报告已经不在了：magpie 只保留最近 5 份。",
   },
   "zh-TW": {
+    "Agent model changed; refresh and try again": "Agent 模型已變更，請重新整理後重試",
+    "Routing group is not available to this Agent": "該路由組不在此 Agent 的可用模型列表中",
+    "Connect an Agent to choose a routing group": "接入 Agent 後可選擇路由組",
+    "Routing group is disabled": "路由群組已停用",
+
+    "Flash first": "Flash 優先",
+    "Flagship models first": "旗艦模型優先",
+    "Fast everyday models across your available providers, with session affinity": "在可用來源的日常快速模型之間分攤，保持工作階段親和",
+    "Flagship models across your available providers, with session affinity": "在可用來源的旗艦模型之間分攤，保持工作階段親和",
+
     "Spread evenly · GLM 5.3 Flash first": "均勻分攤 · GLM 5.3 Flash 優先",
     "Spread evenly · GLM 5.3 first": "均勻分攤 · GLM 5.3 優先",
     "GLM 5.3 Flash across sources, with session affinity; recommended for daily use": "在多個來源的 GLM 5.3 Flash 之間分攤，保持工作階段親和；推薦日常使用",
@@ -10378,6 +10398,16 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "這份報告已經不在了：magpie 只保留最近 5 份。",
   },
   ja: {
+    "Agent model changed; refresh and try again": "Agent のモデルが変更されました。更新して再試行してください",
+    "Routing group is not available to this Agent": "この Agent ではこのグループを利用できません",
+    "Connect an Agent to choose a routing group": "Agent を接続するとルーティンググループを選べます",
+    "Routing group is disabled": "ルーティンググループは無効です",
+
+    "Flash first": "Flash 優先",
+    "Flagship models first": "フラッグシップ優先",
+    "Fast everyday models across your available providers, with session affinity": "利用可能な提供元の高速モデルに分散し、セッションを維持",
+    "Flagship models across your available providers, with session affinity": "利用可能な提供元のフラッグシップに分散し、セッションを維持",
+
     "Spread evenly · GLM 5.3 Flash first": "均等分散 · GLM 5.3 Flash 優先",
     "Spread evenly · GLM 5.3 first": "均等分散 · GLM 5.3 優先",
     "GLM 5.3 Flash across sources, with session affinity; recommended for daily use": "複数の提供元の GLM 5.3 Flash に分散し、セッションを維持。日常利用に推奨",
@@ -15549,6 +15579,16 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "このレポートはもう残っていません。magpie は最新の 5 件だけを保存します。",
   },
   de: {
+    "Agent model changed; refresh and try again": "Agent-Modell geändert; aktualisieren und erneut versuchen",
+    "Routing group is not available to this Agent": "Routinggruppe für diesen Agent nicht verfügbar",
+    "Connect an Agent to choose a routing group": "Agent verbinden, um eine Routinggruppe zu wählen",
+    "Routing group is disabled": "Routinggruppe ist deaktiviert",
+
+    "Flash first": "Flash bevorzugen",
+    "Flagship models first": "Flaggschiffmodelle bevorzugen",
+    "Fast everyday models across your available providers, with session affinity": "Schnelle Alltagsmodelle über verfügbare Anbieter verteilen, mit Sitzungsbindung",
+    "Flagship models across your available providers, with session affinity": "Flaggschiffmodelle über verfügbare Anbieter verteilen, mit Sitzungsbindung",
+
     "Spread evenly · GLM 5.3 Flash first": "Gleichmäßig verteilen · GLM 5.3 Flash bevorzugen",
     "Spread evenly · GLM 5.3 first": "Gleichmäßig verteilen · GLM 5.3 bevorzugen",
     "GLM 5.3 Flash across sources, with session affinity; recommended for daily use": "GLM 5.3 Flash auf mehrere Anbieter verteilen, mit Sitzungsbindung; für den Alltag empfohlen",

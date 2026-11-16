@@ -53,13 +53,13 @@ const (
 var TemplateKinds = []string{TemplateSmart, TemplateThrifty, TemplateSteady, TemplatePlan, TemplateFast, TemplateEven}
 
 const (
-	TemplateEvenGLMFlash = "even-glm53-flash"
-	TemplateEvenGLM      = "even-glm53"
+	TemplateFlashFirst    = "flash-first"
+	TemplateFlagshipFirst = "flagship-first"
 )
 
 func templateKinds() []string {
 	if distribution.Internal {
-		return append([]string{TemplateEvenGLMFlash, TemplateEvenGLM}, TemplateKinds...)
+		return append([]string{TemplateFlashFirst, TemplateFlagshipFirst}, TemplateKinds...)
 	}
 	return TemplateKinds
 }
@@ -255,7 +255,7 @@ func Templates() []Template {
 // MakeTemplate is the template kind as the user's models make it now, or
 // why it can't be made.
 func MakeTemplate(kind string) (Template, error) {
-	if !slices.Contains(templateKinds(), kind) {
+	if !slices.Contains(templateKinds(), kind) && !(distribution.Internal && (kind == "even-glm53-flash" || kind == "even-glm53")) {
 		return Template{}, fmt.Errorf("no template %q: one of %s", kind, strings.Join(templateKinds(), ", "))
 	}
 	t := templateOf(kind, templateModels(), OfferedDeciders(nil))
@@ -268,27 +268,31 @@ func MakeTemplate(kind string) (Template, error) {
 // TemplateNames are the templates' names in English, which the GUI says in
 // the user's language.
 var TemplateNames = map[string]string{
-	TemplateSmart:        "Hard to strong, easy to cheap",
-	TemplateThrifty:      "Cheap first",
-	TemplateSteady:       "Never stuck",
-	TemplatePlan:         "Plan first",
-	TemplateFast:         "Fastest first",
-	TemplateEven:         "Spread evenly",
-	TemplateEvenGLMFlash: "Spread evenly · GLM 5.3 Flash first",
-	TemplateEvenGLM:      "Spread evenly · GLM 5.3 first",
+	TemplateSmart:         "Hard to strong, easy to cheap",
+	TemplateThrifty:       "Cheap first",
+	TemplateSteady:        "Never stuck",
+	TemplatePlan:          "Plan first",
+	TemplateFast:          "Fastest first",
+	TemplateEven:          "Spread evenly",
+	TemplateFlashFirst:    "Flash first",
+	TemplateFlagshipFirst: "Flagship models first",
 }
 
 // TemplateIDs are the ids agents pick a template's group as, before a
 // number when one is in use.
-var TemplateIDs = map[string]string{TemplateSmart: "smart-split", TemplateThrifty: "cheap-first", TemplateSteady: "never-stuck", TemplatePlan: "plan-first", TemplateFast: "fastest-first", TemplateEven: "spread-evenly", TemplateEvenGLMFlash: "spread-glm53-flash", TemplateEvenGLM: "spread-glm53"}
+var TemplateIDs = map[string]string{TemplateSmart: "smart-split", TemplateThrifty: "cheap-first", TemplateSteady: "never-stuck", TemplatePlan: "plan-first", TemplateFast: "fastest-first", TemplateEven: "spread-evenly", TemplateFlashFirst: "flash-first", TemplateFlagshipFirst: "flagship-first"}
 
 // templateOf is the template kind made of ms, its classifier a decider of
 // ds when there is one.
 func templateOf(kind string, ms []rated, ds []Entry) Template {
 	t := Template{Kind: kind, Group: Group{Name: TemplateNames[kind], ID: TemplateIDs[kind], Routing: Ordered}}
-	if distribution.Internal && (kind == TemplateEvenGLMFlash || kind == TemplateEvenGLM) {
+	if distribution.Internal && (kind == TemplateFlashFirst || kind == TemplateFlagshipFirst) {
+		return workspaceTemplate(kind, ms)
+	}
+	// Existing explicitly GLM-scoped groups keep their saved meaning.
+	if distribution.Internal && (kind == "even-glm53-flash" || kind == "even-glm53") {
 		model := "glm-5.3"
-		if kind == TemplateEvenGLMFlash {
+		if kind == "even-glm53-flash" {
 			model = "glm-5.3-flash"
 		}
 		t.Group.Routing, t.Group.Affinity = Rotate, AffinitySession

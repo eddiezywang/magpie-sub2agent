@@ -1133,6 +1133,7 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		webPage.Store(true)
 	}
 	mux := http.NewServeMux()
+	workspaceStrategy(mux)
 	legacySupplierPreviewRoutes(mux)
 	mux.Handle("/", devPage(revalidated(http.FileServer(http.FS(staticFS())))))
 	devRoutes(mux)
@@ -1518,7 +1519,7 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 			a.Keep()
 		case "connect":
 			var c agent.Connection
-			c, err = a.ConnectHow()
+			c, err = connectWithWorkspaceDefault(a)
 			how = &c
 			if err == nil {
 				resumeOnWire(a)
