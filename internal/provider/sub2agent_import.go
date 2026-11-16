@@ -12,6 +12,17 @@ import (
 	"github.com/yetone/magpie/internal/plugin"
 )
 
+// Never turn on a plugin the user has left off during a credential import.
+// Its credential must not be reported as usable until its provider is enabled.
+var legacySubscriptionEnabled = func(kind string) bool {
+	for _, entry := range plugin.Load().Plugins {
+		if plugin.Name(entry.Spec) == "@sub2agent/"+kind {
+			return !entry.Off
+		}
+	}
+	return false
+}
+
 type legacySub2AgentSource struct {
 	ID       string `json:"id"`
 	Kind     string `json:"kind"`
@@ -110,9 +121,13 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 			failed = true
 			continue
 		}
-		// Legacy auth_profiles/tokens are CodeBuddy credentials, never WorkBuddy
-		// SSO or an API key. They are deliberately not mislabelled as a retained source.
-		if source.Kind != "endpoint" && source.Provider != "workbuddy" {
+		// Only explicit source records with a known provider are converted;
+		// legacy auth_profiles/tokens alone do not establish the required bundle.
+		if source.Kind != "endpoint" && source.Provider != "workbuddy" && source.Provider != "codebuddy" && source.Provider != "trae" {
+			failed = true
+			continue
+		}
+		if source.Kind != "endpoint" && !legacySubscriptionEnabled(source.Provider) {
 			failed = true
 			continue
 		}
@@ -144,8 +159,10 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 		changed := false
 		if source.Kind == "endpoint" {
 			changed, err = importLegacyEndpoint(source, identity, string(secret))
-		} else {
+		} else if source.Provider == "workbuddy" {
 			changed, err = importLegacyWorkBuddy(source, identity, secret)
+		} else {
+			changed, err = importLegacySubscription(source, identity, secret)
 		}
 		clear(secret)
 		if err != nil {
@@ -168,6 +185,79 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 		return count, errors.New("供应商已导入，但完成标记保存失败；可安全重试")
 	}
 	return count, nil
+}
+
+func importLegacySubscription(source legacySub2AgentSource, identity string, secret []byte) (bool, error) {
+	bundle := map[string]any{}
+	switch source.Provider {
+	case "codebuddy":
+		if strings.TrimSpace(string(secret)) == "" {
+			return false, errors.New("missing CodeBuddy token")
+		}
+		bundle["accessToken"] = string(secret)
+		for _, key := range []string{"userId", "enterpriseId", "domain", "sourcePath"} {
+			if value := source.Subscription[key]; value != nil {
+				bundle[key] = value
+			}
+		}
+	case "trae":
+		if json.Unmarshal(secret, &bundle) != nil || str(bundle["token"]) == "" || str(bundle["refreshToken"]) == "" {
+			return false, errors.New("incomplete Trae credential")
+		}
+		for _, key := range []string{"baseUrl", "userId"} {
+			if str(bundle[key]) == "" && source.Subscription[key] != nil {
+				bundle[key] = source.Subscription[key]
+			}
+		}
+	default:
+		return false, errors.New("unsupported subscription")
+	}
+	bundle["models"], bundle["defaultModel"] = source.Models, source.DefaultModel
+	if mapping := source.Subscription["modelMap"]; mapping != nil {
+		bundle["modelMap"] = mapping
+	}
+	access, err := json.Marshal(bundle)
+	if err != nil {
+		return false, err
+	}
+	accountID := str(bundle["userId"])
+	if accountID == "" {
+		accountID = "legacy-" + identity
+	}
+	raw, err := json.Marshal(map[string]any{"type": "oauth", "access": string(access), "refresh": "", "expires": 0, "accountId": accountID})
+	if err != nil {
+		return false, err
+	}
+	prefix := "sub2agent-" + source.Provider
+	changed := false
+	err = plugin.EditAuth(func(entries map[string]json.RawMessage) (bool, error) {
+		for key, value := range entries {
+			if key != prefix && !strings.HasPrefix(key, prefix+"#") {
+				continue
+			}
+			var existing struct {
+				Access string `json:"access"`
+			}
+			var previous map[string]any
+			if json.Unmarshal(value, &existing) != nil || json.Unmarshal([]byte(existing.Access), &previous) != nil {
+				continue
+			}
+			if source.Provider == "codebuddy" && str(previous["accessToken"]) == str(bundle["accessToken"]) {
+				return false, nil
+			}
+			if source.Provider == "trae" && str(previous["userId"]) != "" && str(previous["userId"]) == str(bundle["userId"]) && str(previous["baseUrl"]) == str(bundle["baseUrl"]) {
+				return false, nil
+			}
+		}
+		key := prefix + "#legacy-" + identity
+		if _, exists := entries[key]; exists {
+			return false, nil
+		}
+		entries[key] = raw
+		changed = true
+		return true, nil
+	})
+	return changed, err
 }
 
 func importLegacyWorkBuddy(source legacySub2AgentSource, identity string, secret []byte) (bool, error) {

@@ -600,3 +600,11 @@ The matching CIB import retains its saved URL/key while attaching the native
 preset and icon. Unsupported, inactive or unreadable sources are not silently
 marked complete. The preview is not yet exposed in the GUI; confirmation,
 per-source outcomes and remaining subscription adapters are still required.
+
+Legacy CodeBuddy and Trae source records with valid credential references can be
+converted to the bundled plugin authentication shape, alongside WorkBuddy and
+API endpoints. A plugin that is off or absent is left unresolved and does not
+receive a credential or completion marker; importing never silently changes a
+user's plugin switch. Synthetic mixed-source tests exercise all three bundle
+shapes and repeat imports. Vendor login/refresh and actual plugin-host execution
+remain unverified; the UI needs per-source reasons and recovery before delivery.

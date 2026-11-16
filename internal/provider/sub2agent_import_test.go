@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/yetone/magpie/internal/plugin"
@@ -15,6 +16,9 @@ import (
 
 func legacyImportFixture(t *testing.T) string {
 	t.Helper()
+	previous := legacySubscriptionEnabled
+	legacySubscriptionEnabled = func(string) bool { return true }
+	t.Cleanup(func() { legacySubscriptionEnabled = previous })
 	root := t.TempDir()
 	os.MkdirAll(filepath.Join(root, "secrets"), 0700)
 	write := func(ref, secret string) {
@@ -33,6 +37,26 @@ func legacyImportFixture(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
+}
+
+func TestSub2AgentImportDoesNotClaimDisabledPluginSuccess(t *testing.T) {
+	azureHome(t)
+	root := legacyImportFixture(t)
+	legacySubscriptionEnabled = func(string) bool { return false }
+	count, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil })
+	if err == nil || count != 1 {
+		t.Fatalf("disabled plugin should remain unresolved: %d %v", count, err)
+	}
+	entries, err := plugin.AuthEntries()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatal("disabled plugin received a credential")
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(Path()), "sub2agent-import-complete.json")); !os.IsNotExist(err) {
+		t.Fatal("disabled plugin was marked complete")
+	}
 }
 
 func TestSub2AgentImportIsIdempotentAndPreservesOriginal(t *testing.T) {
@@ -194,6 +218,75 @@ func TestSub2AgentImportCIBPreservesSourceAndIcon(t *testing.T) {
 	p, err := Find("legacy-cib-fixture")
 	if err != nil || p.Name != "CIB-智汇通-APIKEY" || p.Icon != "cib-zht" || p.Preset != "cib-zht-apikey" || p.Chat != s.Endpoint.Base || p.Key != "fixture-key" {
 		t.Fatal("CIB source, icon or credential changed")
+	}
+}
+
+func TestSub2AgentImportMultipleSubscriptionKinds(t *testing.T) {
+	azureHome(t)
+	previous := legacySubscriptionEnabled
+	legacySubscriptionEnabled = func(string) bool { return true }
+	t.Cleanup(func() { legacySubscriptionEnabled = previous })
+	root := legacyImportFixture(t)
+	writeSecret := func(ref, value string) {
+		t.Helper()
+		raw, _ := json.Marshal(map[string]string{"cipherText": base64.StdEncoding.EncodeToString([]byte(value))})
+		if err := os.WriteFile(filepath.Join(root, "secrets", ref+".json"), raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeSecret("cb", "codebuddy-fixture-token")
+	writeSecret("tr", `{"token":"trae-token","refreshToken":"trae-refresh"}`)
+	file := filepath.Join(root, "proxy.json")
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatal(err)
+	}
+	desktop := data["desktop"].(map[string]any)
+	desktop["sources"] = append(desktop["sources"].([]any),
+		map[string]any{"id": "cb", "kind": "subscription", "provider": "codebuddy", "status": "ready", "secretRef": "secret:cb", "models": []string{"cb-model"}, "subscription": map[string]any{"userId": "cb-user"}},
+		map[string]any{"id": "tr", "kind": "subscription", "provider": "trae", "status": "ready", "secretRef": "secret:tr", "models": []string{"tr-model"}, "subscription": map[string]any{"userId": "tr-user", "baseUrl": "https://fixture.invalid"}})
+	raw, _ = json.Marshal(data)
+	if err := os.WriteFile(file, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil || count != 4 {
+		t.Fatalf("mixed sources: %d %v", count, err)
+	}
+	entries, err := plugin.AuthEntries()
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := map[string]bool{}
+	for key, value := range entries {
+		for _, kind := range []string{"codebuddy", "workbuddy", "trae"} {
+			if !strings.HasPrefix(key, "sub2agent-"+kind+"#") {
+				continue
+			}
+			var auth struct {
+				Access string `json:"access"`
+			}
+			var bundle map[string]any
+			if json.Unmarshal(value, &auth) != nil || json.Unmarshal([]byte(auth.Access), &bundle) != nil {
+				t.Fatal("bad auth bundle")
+			}
+			if kind == "codebuddy" && bundle["accessToken"] != "codebuddy-fixture-token" {
+				t.Fatal("CodeBuddy token missing")
+			}
+			if kind == "trae" && (bundle["refreshToken"] != "trae-refresh" || bundle["baseUrl"] != "https://fixture.invalid") {
+				t.Fatal("Trae bundle incomplete")
+			}
+			kinds[kind] = true
+		}
+	}
+	if len(kinds) != 3 {
+		t.Fatalf("subscription kinds missing: %v", kinds)
+	}
+	if count, err := importSub2AgentAuth(root, func(b []byte) ([]byte, error) { return b, nil }); err != nil || count != 0 {
+		t.Fatalf("repeat: %d %v", count, err)
 	}
 }
 
