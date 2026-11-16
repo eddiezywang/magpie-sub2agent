@@ -27,8 +27,7 @@ func legacyImportFixture(t *testing.T) string {
 	write("plan", "fixture-plan-key")
 	raw := []byte(`{"version":1,"auth_profiles":[{"id":1,"type":"client_credentials"}],"tokens":{"1":{"access_token":"fixture-other-source"}},"desktop":{"sources":[
  {"id":"source-wb","kind":"subscription","provider":"workbuddy","displayName":"WorkBuddy","status":"ready","enabled":true,"auth":{"secretRef":"secret:wb"},"models":["Enterprise Model"],"defaultModel":"Enterprise Model","subscription":{"modelMap":{"Enterprise Model":"vendor-model"}}},
- {"id":"source-plan","kind":"endpoint","provider":"direct","displayName":"Plan","status":"ready","secretRef":"secret:plan","transportPreset":"anthropic_messages","endpoint":{"baseUrl":"http://172.21.11.82/public","protocolFamily":"anthropic_messages"},"models":["fixture-model"]},
- {"id":"disabled-other","kind":"subscription","provider":"codebuddy","status":"ready","secretRef":"secret:missing"}
+ {"id":"source-plan","kind":"endpoint","provider":"direct","displayName":"Plan","status":"ready","secretRef":"secret:plan","transportPreset":"anthropic_messages","endpoint":{"baseUrl":"http://172.21.11.82/public","protocolFamily":"anthropic_messages"},"models":["fixture-model"]}
  ]}}`)
 	if err := os.WriteFile(filepath.Join(root, "proxy.json"), raw, 0600); err != nil {
 		t.Fatal(err)
@@ -103,6 +102,42 @@ func TestSub2AgentImportKeepsDifferentKeysAtSameEndpoint(t *testing.T) {
 	second, err := Find("legacy-fixture-b")
 	if err != nil || second.Key != "key-b" || len(second.Models) != 1 || second.Models[0] != "model-b" {
 		t.Fatal("second endpoint lost its key or model selection")
+	}
+}
+
+func TestSub2AgentImportCompletionAndPartialRetry(t *testing.T) {
+	azureHome(t)
+	root := legacyImportFixture(t)
+	secretFile := filepath.Join(root, "secrets", "plan.json")
+	secret, err := os.ReadFile(secretFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(secretFile); err != nil {
+		t.Fatal(err)
+	}
+	decode := func(b []byte) ([]byte, error) { return b, nil }
+	if count, err := importSub2AgentAuth(root, decode); err == nil || count != 1 {
+		t.Fatalf("partial import should retain first success and report failure: %d %v", count, err)
+	}
+	complete := filepath.Join(filepath.Dir(Path()), "sub2agent-import-complete.json")
+	if _, err := os.Stat(complete); !os.IsNotExist(err) {
+		t.Fatal("partial import was marked complete")
+	}
+	if err := os.WriteFile(secretFile, secret, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := importSub2AgentAuth(root, decode); err != nil || count != 1 {
+		t.Fatalf("retry should import only the failed source: %d %v", count, err)
+	}
+	var done struct {
+		Complete bool `json:"complete"`
+	}
+	if err := readLegacyJSON(complete, &done); err != nil || !done.Complete {
+		t.Fatal("completion not saved")
+	}
+	if count, err := importSub2AgentAuth(root, decode); err != nil || count != 0 {
+		t.Fatalf("completed import was repeated: %d %v", count, err)
 	}
 }
 

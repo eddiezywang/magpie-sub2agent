@@ -86,17 +86,36 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	if imported == nil {
 		return 0, errors.New("旧认证迁移记录无效，未覆盖现有认证")
 	}
+	completePath := filepath.Join(filepath.Dir(Path()), "sub2agent-import-complete.json")
+	var completion struct {
+		Complete *bool `json:"complete"`
+	}
+	if err := readLegacyJSON(completePath, &completion); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return 0, errors.New("旧版供应商导入完成标记无法读取，未继续导入")
+		}
+	} else {
+		if completion.Complete == nil {
+			return 0, errors.New("旧版供应商导入完成标记无效，未继续导入")
+		}
+		if *completion.Complete {
+			return 0, nil
+		}
+	}
 	count, failed := 0, false
 	for _, source := range old.Desktop.Sources {
 		if source.ID == "" || source.Status != "ready" {
+			failed = true
 			continue
 		}
 		if source.Kind != "endpoint" && source.Enabled != nil && !*source.Enabled {
+			failed = true
 			continue
 		}
 		// Legacy auth_profiles/tokens are CodeBuddy credentials, never WorkBuddy
 		// SSO or an API key. They are deliberately not mislabelled as a retained source.
 		if source.Kind != "endpoint" && source.Provider != "workbuddy" {
+			failed = true
 			continue
 		}
 		sum := sha256.Sum256([]byte(source.Kind + "\x00" + source.Provider + "\x00" + source.ID))
@@ -147,6 +166,9 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 	}
 	if failed {
 		return count, errors.New("部分旧认证无法转换，请在供应商页重新认证；原文件和现有认证均已保留")
+	}
+	if err := writePrivate(completePath, []byte("{\"complete\":true}\n")); err != nil {
+		return count, errors.New("供应商已导入，但完成标记保存失败；可安全重试")
 	}
 	return count, nil
 }

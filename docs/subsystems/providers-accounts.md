@@ -585,3 +585,10 @@ Legacy supplier import does not invoke the independent TIG repair: importing
 suppliers and credentials must not rename existing providers or rewrite route
 group members. The existing repair remains separately testable, but is not part
 of this import. TestSub2AgentImportDoesNotRepairOrRewriteRouting verifies this.
+
+Legacy supplier import records each successfully processed source separately.
+Only after all sources are handled does it write sub2agent-import-complete.json;
+partial failures keep the overall marker absent, so a retry skips prior successes.
+Unreadable or invalid completion records fail closed. This is backend-only while
+confirmation UI, status detection, per-item reporting, other subscription types
+and icon handling are still under development; startup remains non-importing.
