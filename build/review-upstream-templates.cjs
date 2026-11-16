@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {chromium, webkit} = require('playwright');
-const assets = path.resolve('internal/gui/assets');
+const assets = path.resolve(process.env.WORKSPACE_ASSETS || 'internal/gui/assets');
 const models = [
  {id:'plan/capable-flash',name:'Coding Plan Flash',providerName:'Coding Plan',icon:'generic'},
  {id:'enterprise/promotion',name:'企业模型',providerName:'企业账号',icon:'generic'},
