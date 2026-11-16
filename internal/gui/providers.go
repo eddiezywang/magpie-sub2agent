@@ -35,14 +35,15 @@ import (
 // with one key, the gateway that fronts them, and who is routed where.
 
 type modelJSON struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`              // the user's name for it, if they gave one
-	Default string   `json:"default,omitempty"` // its own name, when the user gave it another
-	Plain   string   `json:"plain,omitempty"`   // a remote magpie's model's name there alone, when Name has its provider there after it (catalog.Model's)
-	By      string   `json:"by,omitempty"`      // a remote magpie's model's provider there, the first in a chain (catalog.Model's)
-	Kept    []string `json:"kept,omitempty"`    // the reasoning levels the user keeps of Efforts, when not all
-	Efforts []string `json:"efforts,omitempty"`
-	Given   bool     `json:"given,omitempty"` // its levels aren't known: Efforts are those it can be given, Kept those it was
+	RoutingBilling *catalog.RoutingBilling `json:"routingBilling,omitempty"`
+	ID             string                  `json:"id"`
+	Name           string                  `json:"name"`              // the user's name for it, if they gave one
+	Default        string                  `json:"default,omitempty"` // its own name, when the user gave it another
+	Plain          string                  `json:"plain,omitempty"`   // a remote magpie's model's name there alone, when Name has its provider there after it (catalog.Model's)
+	By             string                  `json:"by,omitempty"`      // a remote magpie's model's provider there, the first in a chain (catalog.Model's)
+	Kept           []string                `json:"kept,omitempty"`    // the reasoning levels the user keeps of Efforts, when not all
+	Efforts        []string                `json:"efforts,omitempty"`
+	Given          bool                    `json:"given,omitempty"` // its levels aren't known: Efforts are those it can be given, Kept those it was
 	// Reasonless: the user said it takes no reasoning ask
 	// (provider.SetModelReasonless): none of Efforts is kept, and none is sent
 	Reasonless bool    `json:"reasonless,omitempty"`
@@ -1101,6 +1102,7 @@ func providerInfoWith(p provider.Provider, ls provider.Listing, agents []agentUs
 		}
 		window := p.WindowIn(m, set)
 		j := modelJSON{ID: m.ID, Name: m.Name, Efforts: provider.EffortsOf(m), On: on, Context: window, Output: provider.OutputWithin(window, p.ReplyLimitIn(m, set)), Listed: provider.ListedWindow(m), ListedOutput: provider.OutputWithin(provider.ListedWindow(m), p.ReplyLimitIn(m, settings.Settings{})), Max: m.MaxContext, Free: m.Free, Rate: m.Rate, RateWas: m.RateWas, Images: images, ImageSet: imageSet, Own: own, Best: newest[m.ID]}
+		j.RoutingBilling = routingBilling(p, m.ID)
 		list, listed, free := pricer.Prices(set, m.ID)
 		j.Zero = !m.Free && free
 		// a plugin reports a model's load by its own id, not one the user

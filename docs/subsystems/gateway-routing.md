@@ -3254,6 +3254,10 @@ source and revision). `catalog.RoutingBillingOf` reports active, expired or
 unknown; an expired exact rule never falls back to a broad free rule. Coefficients
 are not dollar prices or balance claims. A shared quota pool is unknown unless
 explicitly established; the catalog does not infer one from a MaaS model name.
+Provider model chips and routing-group members display the same typed billing
+metadata. Hover text names the rule revision and unresolved shared allowance
+scope. Template cards explain their capability/source/cost preference; these
+describe configured order, not a fabricated per-request estimate or deduction.
 
 Pricing multipliers and peak/off-peak billing rules belong on the accounting
 server. They must not change quota-rest/reset timestamps or imply remaining

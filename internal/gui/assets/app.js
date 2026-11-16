@@ -7175,6 +7175,18 @@ function countFreeField() {
 function billingWord(kind) {
   return { plan: t("Plan"), payg: t("Pay as you go"), mixed: t("Plan + pay as you go") }[kind] || "";
 }
+// Typed enterprise coefficients are not USD prices or an allowance balance.
+function routingBillingText(b) {
+  if (!b) return "";
+  if (b.state === "expired") return t("Billing rule expired");
+  if (b.state !== "active" || b.coefficient == null) return t("Billing rule unknown");
+  const unit = { POINTS: "Point coefficient {n}", PLAN_TOKENS: "Plan coefficient {n}", USD: "USD coefficient {n}" }[b.currency];
+  return unit ? [b.source, t(unit, { n: b.coefficient })].filter(Boolean).join(" · ") : t("Billing rule unknown");
+}
+function routingBillingHint(b) {
+  if (!b) return "";
+  return [routingBillingText(b), b.revision, b.pool ? t("Allowance pool: {pool}", {pool:b.pool}) : t("Shared allowance scope unknown"), t("Reference coefficient; actual usage is determined by the provider")].filter(Boolean).join("\n");
+}
 // billingField: provider.Billing, the user's word over magpie's reading
 // of its endpoints (EV_John_Liu on X)
 function billingField() {
@@ -10836,9 +10848,9 @@ function renderModels(p) {
       if (tell) c.append(tell);
       // one the plan serves at no cost to it (WorkBuddy's x0.00 credits)
       // or one its vendor names free (#185), or lists at $0
-      const free = m.free || m.zero || namedFree(m.id, m.name);
+      const free = !m.routingBilling && (m.free || m.zero || namedFree(m.id, m.name));
       if (free) c.append(el("span", "badge free", t("free")));
-      const rate = rateTag(m.rate, m.rateWas);
+      const rate = m.routingBilling ? null : rateTag(m.rate, m.rateWas);
       if (rate) c.append(rate);
       const load = loadTag(m.load);
       if (load) c.append(load);
@@ -10861,6 +10873,12 @@ function renderModels(p) {
       if (by.length) c.title = (c.title || m.id) + "\n" + t("Left out of {agents}'s model list, on the Agents page", { agents: by.join(", ") });
       const kb = !draft.unlisted && (on || served.has(m.id)) ? p.keptBy?.[m.id] || [] : [];
       if (kb.length) c.title = (c.title || m.id) + "\n" + t("Kept out of agents' lists by {groups}, a routing group listed alone", { groups: kb.join(", ") });
+      if (m.routingBilling) {
+        const billing = el("span", "badge", routingBillingText(m.routingBilling));
+        billing.title = routingBillingHint(m.routingBilling);
+        c.append(billing);
+        c.title = (c.title || m.id) + "\n" + billing.title;
+      }
       tested(c, m.id);
       menu(c, m.id);
       // a click picks it (#681); the last unpicked leaves none (#1831)

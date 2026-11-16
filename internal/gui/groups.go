@@ -12,6 +12,7 @@ import (
 
 	"github.com/yetone/magpie/internal/access"
 	"github.com/yetone/magpie/internal/agent"
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
 	"github.com/yetone/magpie/internal/settings"
@@ -143,14 +144,15 @@ type classifierFailedJSON struct {
 var classifierFailure = gateway.GroupClassifierFailure
 
 type memberJSON struct {
-	ID       string `json:"id"`
-	Ready    bool   `json:"ready"`
-	Provider string `json:"provider,omitempty"`
-	Name     string `json:"name,omitempty"` // the provider's
-	Icon     string `json:"icon,omitempty"`
-	Model    string `json:"model,omitempty"` // what the vendor is asked for
-	On       int    `json:"on"`              // its keys or accounts on
-	Group    bool   `json:"group,omitempty"` // a routing group in the group; Name is its
+	RoutingBilling *catalog.RoutingBilling `json:"routingBilling,omitempty"`
+	ID             string                  `json:"id"`
+	Ready          bool                    `json:"ready"`
+	Provider       string                  `json:"provider,omitempty"`
+	Name           string                  `json:"name,omitempty"` // the provider's
+	Icon           string                  `json:"icon,omitempty"`
+	Model          string                  `json:"model,omitempty"` // what the vendor is asked for
+	On             int                     `json:"on"`              // its keys or accounts on
+	Group          bool                    `json:"group,omitempty"` // a routing group in the group; Name is its
 	// ProviderOff: its provider is switched off, so the group skips it
 	// until it is on again; Provider, Name, Icon and Model are still said
 	ProviderOff bool `json:"providerOff,omitempty"`
@@ -198,12 +200,13 @@ type memberJSON struct {
 }
 
 type modelRef struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Provider string `json:"provider"`
-	PName    string `json:"providerName"`
-	Icon     string `json:"icon,omitempty"`
-	Context  int    `json:"context,omitempty"` // the tokens it takes, when known
+	RoutingBilling *catalog.RoutingBilling `json:"routingBilling,omitempty"`
+	ID             string                  `json:"id"`
+	Name           string                  `json:"name"`
+	Provider       string                  `json:"provider"`
+	PName          string                  `json:"providerName"`
+	Icon           string                  `json:"icon,omitempty"`
+	Context        int                     `json:"context,omitempty"` // the tokens it takes, when known
 	// Efforts: the model's reasoning levels, when known — those a group's
 	// member of it may be fixed at
 	Efforts []string `json:"efforts,omitempty"`
@@ -239,7 +242,7 @@ type modelRef struct {
 
 // servedRef is a served model as the Routing page lists it
 func servedRef(e provider.Entry, s settings.Settings) modelRef {
-	return modelRef{Free: e.Free, Zero: !e.Free && e.Provider.PricedFree(s, e.Model), ID: e.ID, Name: e.Name, Provider: e.Provider.ID, PName: e.Provider.Name, Icon: e.Provider.Icon, Context: e.Context, Efforts: e.Efforts, CanFast: provider.CanFast(e.Provider, e.Model), OwnFast: provider.OwnFast(e.Provider, e.Model), Images: seesImages(e), ImagesUnknown: imagesUnknown(e), Sub: e.Provider.Account != nil}
+	return modelRef{RoutingBilling: routingBilling(e.Provider, e.Model), Free: e.Free, Zero: !e.Free && e.Provider.PricedFree(s, e.Model), ID: e.ID, Name: e.Name, Provider: e.Provider.ID, PName: e.Provider.Name, Icon: e.Provider.Icon, Context: e.Context, Efforts: e.Efforts, CanFast: provider.CanFast(e.Provider, e.Model), OwnFast: provider.OwnFast(e.Provider, e.Model), Images: seesImages(e), ImagesUnknown: imagesUnknown(e), Sub: e.Provider.Account != nil}
 }
 
 type poolJSON struct {
@@ -474,6 +477,7 @@ func groupsState() groupsJSON {
 				}
 			}
 			if p, model, ok := provider.ResolveRoute(of); ok {
+				m.RoutingBilling = routingBilling(p, model)
 				_, who := onOf(p)
 				m.Ready, m.Provider, m.Name, m.Icon, m.Model, m.On = true, p.ID, p.Name, p.Icon, model, max(len(who), 1)
 				if m.Account != "" {
