@@ -119,9 +119,11 @@ Sub2Agent mark and pixel agent/model icons. Its height grows with displayed
 content; at most eight agents and five models per agent are shown, with a count
 for omitted entries. The underlying report is not truncated. The total is an
 API-price estimate, not a settlement.
-Admin policy edits require the existing admin Bearer token. Clients only receive
-classification boundaries, with exact/trailing-wildcard deployment matching;
-they contain no billing amounts or quota-multiplication rule.
+Admin policy edits require the existing admin Bearer token. Aggregation rules
+only expose classification boundaries. The separate routing catalog exposes
+currency and reference coefficients for model selection and explanation, with
+exact/trailing-wildcard deployment matching. Time-of-day billing factors remain
+server-side; coefficients do not claim a remaining quota or settlement amount.
 Deployment status and real production verification are recorded separately.
 Run `go test ./internal/accounting`. No tests reach a real telemetry endpoint.
 

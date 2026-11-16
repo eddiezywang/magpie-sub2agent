@@ -25,10 +25,26 @@ type managedRouting struct {
 	Models   []managedRate `json:"models"`
 }
 type managedRate struct {
-	Provider string    `json:"provider"`
-	Model    string    `json:"model"`
-	Score    float64   `json:"score"`
-	Until    time.Time `json:"valid_until,omitempty"`
+	Provider    string    `json:"provider"`
+	Model       string    `json:"model"`
+	Score       float64   `json:"score"`
+	Until       time.Time `json:"valid_until,omitempty"`
+	Currency    string    `json:"currency,omitempty"`
+	Coefficient *float64  `json:"coefficient,omitempty"`
+	Source      string    `json:"source,omitempty"`
+	Pool        string    `json:"pool,omitempty"`
+}
+
+// RoutingBilling keeps enterprise accounting distinct from USD list prices.
+// Pool is empty until the upstream's shared allowance scope is established.
+type RoutingBilling struct {
+	Currency    string   `json:"currency,omitempty"`
+	Coefficient *float64 `json:"coefficient,omitempty"`
+	Source      string   `json:"source,omitempty"`
+	Pool        string   `json:"pool,omitempty"`
+	Revision    string   `json:"revision,omitempty"`
+	State       string   `json:"state"`
+	Score       float64  `json:"-"`
 }
 
 func managedRoutingPath() string { return appdir.Join(appdir.Cache(), "routing-catalog.json") }
@@ -41,6 +57,9 @@ func parseManagedRouting(raw []byte) (managedRouting, error) {
 		return d, fmt.Errorf("invalid managed routing catalog")
 	}
 	for _, r := range d.Models {
+		if (r.Currency != "" && r.Currency != "POINTS" && r.Currency != "PLAN_TOKENS" && r.Currency != "USD") || (r.Coefficient != nil && (math.IsNaN(*r.Coefficient) || math.IsInf(*r.Coefficient, 0) || *r.Coefficient < 0)) || (r.Coefficient != nil && r.Currency == "") {
+			return d, fmt.Errorf("invalid routing billing")
+		}
 		if r.Provider == "" || r.Model == "" || math.IsNaN(r.Score) || math.IsInf(r.Score, 0) || r.Score < 0 || strings.Contains(strings.TrimSuffix(r.Provider, "*"), "*") || strings.Contains(strings.TrimSuffix(r.Model, "*"), "*") {
 			return d, fmt.Errorf("invalid managed rate")
 		}
@@ -67,22 +86,45 @@ func routingMatch(pattern, value string) bool {
 // RoutingScore is a relative scheduling weight, never a dollar price or a
 // balance claim. The server owns coefficients and promotion lifetime.
 func RoutingScore(provider, model string) (float64, bool) {
+	b := RoutingBillingOf(provider, model)
+	return b.Score, b.State == "active"
+}
+
+func RoutingBillingOf(provider, model string) RoutingBilling {
+	unknown := RoutingBilling{State: "unknown"}
 	if !distribution.Internal {
-		return 0, false
+		return unknown
 	}
 	d, err := filememo.Read("managed-routing", managedRoutingPath(), parseManagedRouting)
-	if err != nil || !time.Now().Before(d.Expires) {
-		return 0, false
+	if err != nil {
+		return unknown
 	}
+	// Exact model rules beat wildcard defaults, regardless of document order.
+	best := -1
+	var matched *managedRate
 	for _, r := range d.Models {
-		if !r.Until.IsZero() && !time.Now().Before(r.Until) {
-			continue
-		}
 		if routingMatch(r.Provider, provider) && routingMatch(routingModel(r.Model), routingModel(model)) {
-			return r.Score, true
+			specificity := len(strings.TrimSuffix(r.Provider, "*")) + len(strings.TrimSuffix(r.Model, "*"))
+			if !strings.HasSuffix(r.Model, "*") {
+				specificity += 10000
+			}
+			if specificity > best {
+				copy := r
+				matched = &copy
+				best = specificity
+			}
 		}
 	}
-	return 0, false
+	if matched == nil {
+		return unknown
+	}
+	r := matched
+	b := RoutingBilling{Currency: r.Currency, Coefficient: r.Coefficient, Source: r.Source, Pool: r.Pool, Revision: d.Revision, State: "active", Score: r.Score}
+	if !time.Now().Before(d.Expires) || (!r.Until.IsZero() && !time.Now().Before(r.Until)) {
+		b.State = "expired"
+		b.Coefficient = nil
+	}
+	return b
 }
 func refreshManagedRouting(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

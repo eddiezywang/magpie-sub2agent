@@ -3244,6 +3244,12 @@ the document expires after 24 hours and promotions can expire earlier. Expired
 scores become unknown even during an outage. Scores are relative scheduling
 weights, separate from USD prices and remaining allowance.
 
+The routing catalog also carries typed billing metadata (currency, coefficient,
+source and revision). `catalog.RoutingBillingOf` reports active, expired or
+unknown; an expired exact rule never falls back to a broad free rule. Coefficients
+are not dollar prices or balance claims. A shared quota pool is unknown unless
+explicitly established; the catalog does not infer one from a MaaS model name.
+
 Pricing multipliers and peak/off-peak billing rules belong on the accounting
 server. They must not change quota-rest/reset timestamps or imply remaining
 allowance. Existing 429 classification reads natural-language quota/rate/credit

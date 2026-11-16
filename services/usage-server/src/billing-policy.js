@@ -2,7 +2,7 @@
 const fs=require('node:fs');const path=require('node:path');const crypto=require('node:crypto');
 const initial={revision:'internal-2026-11-13-1',models:[
  {provider:'sub2agent-workbuddy*',model:'hy4free',currency:'POINTS',coefficient:0,above:[],promotion:true},
- ...Object.entries({'glm-5.3-flash-maas':1,'hy3-maas':1,'deepseek-v4-flash-maas':2,'deepseek-v4.1-flash-maas':2,'minimax-m3-maas':2.5,'glm-5.3-maas':7,'deepseek-v4-pro-maas':8.5}).map(([model,coefficient])=>({provider:'sub2agent-workbuddy*',model,currency:'POINTS',coefficient,above:[]})),
+ ...Object.entries({'glm-5.3-flash-maas':1,'hy3-maas':1,'deepseek-v4-flash-maas':2,'deepseek-v4.1-flash-maas':2,'minimax-m3-maas':2.5,'glm-5.3-maas':7,'deepseek-v4-pro-maas':8.5}).map(([model,coefficient])=>({provider:'sub2agent-workbuddy*',model,source:'MaaS',currency:'POINTS',coefficient,above:[]})),
  {provider:'sub2agent-tigcodingplan*',model:'glm-5.3-flash',currency:'PLAN_TOKENS',coefficient:1,above:[],weekday_afternoon_factor:0.5},
  {provider:'aiep-coding-plan*',model:'glm-5.3-flash',currency:'PLAN_TOKENS',coefficient:1,above:[],weekday_afternoon_factor:0.5},
  {provider:'sub2agent-tigcodingplan*',model:'glm-*',currency:'PLAN_TOKENS',coefficient:1,above:[],weekday_afternoon_factor:0.5},
@@ -19,6 +19,7 @@ function validate(raw){
   if(r.above.some((n,i)=>!Number.isSafeInteger(n)||n<=0||(i>0&&n<=r.above[i-1])))throw new Error('Invalid context boundaries');
   if(r.coefficient!==undefined&&(!Number.isFinite(r.coefficient)||r.coefficient<0))throw new Error('Invalid coefficient');
   if(r.routing_score!==undefined&&(!Number.isFinite(r.routing_score)||r.routing_score<0))throw new Error('Invalid routing score');
+  if(r.source!==undefined&&(typeof r.source!=='string'||r.source.length>64))throw new Error('Invalid billing source');
   if(r.currency&&!['POINTS','PLAN_TOKENS','USD'].includes(r.currency))throw new Error('Invalid currency');
   if(r.valid_until&&!Number.isFinite(Date.parse(r.valid_until)))throw new Error('Invalid promotion end');
   if(r.weekday_afternoon_factor!==undefined&&(!Number.isFinite(r.weekday_afternoon_factor)||r.weekday_afternoon_factor<0))throw new Error('Invalid afternoon factor');
@@ -66,6 +67,6 @@ function createBillingPolicy({dataDir,listPrice}){
   if(r.coefficient!==undefined)return {priced:true,currency:r.currency,amount:total*r.coefficient*factor,revision:current.revision,factor};
   return {priced:false,reason:'missing_rate'};
  }
- return {snapshot,set,rules,charge,routing:()=>({revision:current.revision,expires_at:new Date(Date.now()+86400000).toISOString(),models:current.models.filter(r=>r.coefficient!==undefined).map(r=>({provider:r.provider,model:r.model,score:r.routing_score??r.coefficient,valid_until:r.valid_until||undefined}))})};
+ return {snapshot,set,rules,charge,routing:()=>({revision:current.revision,expires_at:new Date(Date.now()+86400000).toISOString(),models:current.models.filter(r=>r.coefficient!==undefined).map(r=>({provider:r.provider,model:r.model,score:r.routing_score??r.coefficient,currency:r.currency,coefficient:r.coefficient,source:r.source,valid_until:r.valid_until||undefined}))})};
 }
 module.exports={createBillingPolicy,canonical,providerMatches,validate};

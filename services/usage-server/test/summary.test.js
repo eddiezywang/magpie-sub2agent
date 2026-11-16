@@ -87,7 +87,7 @@ test('real HTTP accepts explicit IDs, preserves old telemetry and generates weig
  assert.ok(Date.parse(routing.expires_at)>Date.now());
  assert.equal(routing.models.find(r=>r.model==='hy4free').score,0);
  assert.equal(routing.models.find(r=>r.model==='deepseek-v4-pro-maas').score,8.5);
- assert.ok(routing.models.every(r=>!('currency' in r)&&!('weekday_afternoon_factor' in r)));
+ assert.ok(routing.models.every(r=>typeof r.currency==='string'&&typeof r.coefficient==='number'&&!('weekday_afternoon_factor' in r)));
  const payload={schema:SCHEMA,...identity,summaries:[summary()]};
  assert.deepEqual((await post(payload)).body.accepted_ids,['fixture-summary']);
  assert.deepEqual((await post(payload)).body.duplicate_ids,['fixture-summary']);

@@ -58,3 +58,38 @@ func TestManagedRoutingRefreshPreservesCacheAndExpiresPromotions(t *testing.T) {
 		t.Fatal("expired catalog used")
 	}
 }
+
+func TestRoutingBillingExactRuleAndExpiredOverride(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	zero, seven := 0.0, 7.0
+	d := managedRouting{Revision: "points-v2", Expires: time.Now().Add(time.Hour), Models: []managedRate{
+		{Provider: "wb*", Model: "glm-*", Score: zero, Currency: "POINTS", Coefficient: &zero},
+		{Provider: "wb", Model: "glm-5-maas", Score: seven, Currency: "POINTS", Coefficient: &seven, Source: "MaaS"},
+	}}
+	write := func() {
+		t.Helper()
+		raw, _ := json.Marshal(d)
+		os.MkdirAll(filepath.Dir(managedRoutingPath()), 0700)
+		if err := os.WriteFile(managedRoutingPath(), raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+		Reset()
+	}
+	write()
+	b := RoutingBillingOf("wb", "glm-5-maas-tenant")
+	if b.State != "active" || b.Currency != "POINTS" || b.Coefficient == nil || *b.Coefficient != 7 || b.Pool != "" || b.Revision != "points-v2" {
+		t.Fatalf("wrong billing: %+v", b)
+	}
+	d.Models[1].Until = time.Now().Add(-time.Hour)
+	write()
+	b = RoutingBillingOf("wb", "glm-5-maas-tenant")
+	if b.State != "expired" || b.Coefficient != nil {
+		t.Fatalf("expired rule became free wildcard: %+v", b)
+	}
+	if _, ok := RoutingScore("wb", "glm-5-maas-tenant"); ok {
+		t.Fatal("expired score used")
+	}
+	if RoutingBillingOf("other", "glm-5").State != "unknown" {
+		t.Fatal("unknown billing inferred")
+	}
+}
