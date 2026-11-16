@@ -66,6 +66,7 @@ export function render(s) {
   row(root,"lightweight","Lightweight mode",t("A closed window frees about 100 MB after a minute; the gateway and tasks keep running, only the page reloads")).val.append(
     segs([[false,t("Off")],[true,t("On")]],s.lightweight === true,on => savePrefs({...prefsKeep(prefs),lightweight:on})));
   pathTools(row(root,"data","Data folder").val,s.dir,"settings/reveal");
+  row(root,"legacy-import","Import previous suppliers").val.append(action("Import…", () => window.legacySuppliers.open()));
   pathTools(row(root,"log","Log").val,s.log,"settings/log/reveal");
   renderCLI(row(root,"cli","Command line",t("Checking your shells…")).r);
   root.append(lanBox); renderLAN(s);

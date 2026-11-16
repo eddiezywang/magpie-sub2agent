@@ -589,17 +589,16 @@ of this import. TestSub2AgentImportDoesNotRepairOrRewriteRouting verifies this.
 Legacy supplier import records each successfully processed source separately.
 Only after all sources are handled does it write sub2agent-import-complete.json;
 partial failures keep the overall marker absent, so a retry skips prior successes.
-Unreadable or invalid completion records fail closed. This is backend-only while
-confirmation UI, status detection, per-item reporting, other subscription types
-and icon handling are still under development; startup remains non-importing.
+Unreadable or invalid completion records fail closed. The UI asks for confirmation and provides a Settings retry entry; startup
+performs detection only and never imports without user action.
 
 The legacy import preview reads source metadata without reading credentials or
 mutating either store. It supplies account-type icons and identifies TIG/CIB
 only by the documented exact origins and API paths, never by a name substring.
 The matching CIB import retains its saved URL/key while attaching the native
 preset and icon. Unsupported, inactive or unreadable sources are not silently
-marked complete. The preview is not yet exposed in the GUI; confirmation,
-per-source outcomes and remaining subscription adapters are still required.
+marked complete. The intranet GUI exposes this preview and reports processed or unresolved
+sources; account-host and vendor validation is still required before delivery.
 
 Legacy CodeBuddy and Trae source records with valid credential references can be
 converted to the bundled plugin authentication shape, alongside WorkBuddy and
@@ -607,4 +606,4 @@ API endpoints. A plugin that is off or absent is left unresolved and does not
 receive a credential or completion marker; importing never silently changes a
 user's plugin switch. Synthetic mixed-source tests exercise all three bundle
 shapes and repeat imports. Vendor login/refresh and actual plugin-host execution
-remain unverified; the UI needs per-source reasons and recovery before delivery.
+remain unverified; the UI reports unresolved sources and offers manual retry.

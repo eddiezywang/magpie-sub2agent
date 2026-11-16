@@ -7,10 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/plugin"
 )
+
+var legacyImportMu sync.Mutex
 
 // Never turn on a plugin the user has left off during a credential import.
 // Its credential must not be reported as usable until its provider is enabled.
@@ -61,6 +64,8 @@ func readLegacyJSON(path string, out any) error {
 // ImportSub2AgentAuth reads the old app's files without modifying them. Only
 // retained source kinds are imported. Authentication already in this app wins.
 func ImportSub2AgentAuth() (int, error) {
+	legacyImportMu.Lock()
+	defer legacyImportMu.Unlock()
 	if !distribution.Internal {
 		return 0, nil
 	}

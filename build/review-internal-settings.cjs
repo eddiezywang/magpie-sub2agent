@@ -4,7 +4,7 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const {chromium,webkit}=require('playwright');
 const assets=path.resolve(process.env.INTRANET_ASSETS||'internal/gui/assets');
-const ids=['gateway','version','login','lightweight','data','log','cli','remote','uninstall'];
+const ids=['gateway','version','login','lightweight','data','legacy-import','log','cli','remote','uninstall'];
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});const results=[];
  for(const engine of process.env.BROWSER?[process.env.BROWSER]:['chromium','webkit']) {

@@ -1400,5 +1400,7 @@ It exposes source names, type, icon and import/completion status without secret
 references, credential plaintext or endpoint URLs. Missing source is distinct
 from corrupt or unreadable source/markers; the latter return an error.
 TestLegacySupplierPreviewRoute covers intranet and upstream route absence.
-This read-only endpoint does not start an import; the confirmation and import
-write endpoint remain under development.
+The confirmation dialog reads this endpoint. POST /api/legacy-suppliers/import
+starts an explicit user-requested import, while /dismiss persists the later
+choice; Settings keeps a manual entry. Successful overall completion suppresses
+automatic prompts. Partial results show processed and unresolved sources.

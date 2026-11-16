@@ -14,9 +14,10 @@ import (
 
 // LegacySupplierPreview never reads credentials or changes either application.
 type LegacySupplierPreview struct {
-	Found    bool                 `json:"found"`
-	Complete bool                 `json:"complete"`
-	Sources  []LegacySupplierItem `json:"sources"`
+	Found     bool                 `json:"found"`
+	Complete  bool                 `json:"complete"`
+	Dismissed bool                 `json:"dismissed"`
+	Sources   []LegacySupplierItem `json:"sources"`
 }
 
 type LegacySupplierItem struct {
@@ -61,6 +62,18 @@ func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 		return out, errors.New("旧版配置版本无法识别")
 	}
 	out.Found = true
+	var dismissed struct {
+		Dismissed *bool `json:"dismissed"`
+	}
+	if err := readLegacyJSON(filepath.Join(filepath.Dir(Path()), "sub2agent-import-dismissed.json"), &dismissed); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return out, errors.New("导入提示状态无法读取")
+		}
+	} else if dismissed.Dismissed == nil {
+		return out, errors.New("导入提示状态无效")
+	} else {
+		out.Dismissed = *dismissed.Dismissed
+	}
 	var complete struct {
 		Complete *bool `json:"complete"`
 	}
@@ -104,6 +117,16 @@ func legacySub2AgentPreview(root string) (LegacySupplierPreview, error) {
 		out.Sources = append(out.Sources, LegacySupplierItem{ID: s.ID, Name: name, Kind: s.Kind, Icon: icon, Imported: imported[legacySourceID(s)]})
 	}
 	return out, nil
+}
+
+// DismissLegacySub2AgentImport suppresses automatic prompts; manual import remains available.
+func DismissLegacySub2AgentImport() error {
+	if !distribution.Internal {
+		return errors.New("旧版导入不可用")
+	}
+	legacyImportMu.Lock()
+	defer legacyImportMu.Unlock()
+	return writePrivate(filepath.Join(filepath.Dir(Path()), "sub2agent-import-dismissed.json"), []byte("{\"dismissed\":true}\n"))
 }
 
 // Only the documented CIB origin and API bases identify this preset.
