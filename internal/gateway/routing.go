@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/catalog"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/provider"
 	"github.com/yetone/magpie/internal/routes"
@@ -1791,6 +1792,12 @@ func (s *Server) restAfterMarked(c candidate, status int, header http.Header, bo
 	// rested the account, and its free models went nowhere). A free model
 	// the vendor refuses all the same rests on its own refusal.
 	if (why == failCredit || why == failQuota) && c.p.PaidBesideFree(c.model) {
+		id = c.restID()
+	}
+	// The private enterprise adapter has no authoritative shared-pool map.
+	// A model's credit refusal cannot establish that every MaaS/native/CIB
+	// model is spent. Rest only the refusing model until that scope is known.
+	if distribution.Internal && strings.HasPrefix(c.p.ID, "sub2agent-workbuddy") && (why == failCredit || why == failQuota) {
 		id = c.restID()
 	}
 	if remoteModelRest(c, why, header) {

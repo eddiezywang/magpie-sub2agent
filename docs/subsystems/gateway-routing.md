@@ -3265,6 +3265,11 @@ allowance. Existing 429 classification reads natural-language quota/rate/credit
 messages as well as structured error codes and reset headers. Vendor-specific
 formats still need representative sanitized responses before new parsers are
 asserted to support them.
+The private WorkBuddy enterprise and CIB adapters do not expose an authoritative
+shared-pool map. Credit/quota refusals therefore rest only the refusing model,
+not the entire enterprise account. Other models remain candidates and are tried
+on their own upstream response. This is conservative fallback, not a claim that
+their balances are separate; shared-pool exhaustion requires upstream evidence.
 
 Workspace selects an existing internal template group for one explicit Agent
 through the native primary-model save path; it creates no routing strategy and
