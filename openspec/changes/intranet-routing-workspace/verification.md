@@ -588,3 +588,15 @@ with an existing local Bun; KF could reach its internal npm metadata, but a
 first-run runtime download and real vendor credentials were not tested. The
 unrelated upstream Windows icon sizing test and several upstream provider tests
 fail in the broad test suite. No release site was changed by this verification.
+
+### Default single EXE with embedded Bun, 173834
+
+Main commit 16db12b6e built with no SingleFile flag and no DirectoryBundle flag.
+The archive contains only sub2agent.exe (119772672 bytes). ZIP SHA-256:
+d399598488a96ebc1aa8e8b4d911582f5a4bd1569206c77a9297eb0eee2f444c.
+A fresh isolated HOME/cache with no external MAGPIE_BUN passed the real
+Windows runtime script: 10 pages, provider saves, two Agent connections,
+seven loopback streaming responses and attributed throughput. Embedded Bun
+extraction/digest/reuse tests and embedded provider tests passed. Directory
+packaging now requires DirectoryBundle; WithoutBun explicitly selects network
+bootstrap. The WorkBuddy-CIB embedded LICENSE entry is accepted and verified.
