@@ -1,6 +1,7 @@
 // Keep the private provider implementation in its source checkout. The offline
 // runtime is generated locally and shipped in the portable bundle, not Git.
 import fs from 'node:fs/promises';
+import {adaptWorkBuddySource} from './workbuddy-community-source.mjs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
@@ -12,12 +13,19 @@ const {build}=require('esbuild');
 const output=path.join(repo,'build/sub2agent-runtime');
 await fs.mkdir(output,{recursive:true});
 const version=process.env.SUB2AGENT_PROVIDER_VERSION||'1.0.8';
-for(const kind of ['codebuddy','workbuddy','trae','aiep']) {
+const community=path.resolve(process.env.MAGPIE_COMMUNITY_SOURCE || path.join(repo,'../.build-tools/community-plugins'));
+const commit=execFileSync('git',['rev-parse','HEAD'],{cwd:community,encoding:'utf8'}).trim();
+if(commit!=='e90d6f011a7320372c5570600e9b267f75b34714') throw new Error('Community source does not match the reviewed commit');
+for(const kind of ['codebuddy','workbuddy','workbuddy-cib','trae','aiep']) {
   await build({entryPoints:[path.join(repo,'plugins/sub2agent/'+kind+'.mjs')],bundle:true,platform:'node',format:'esm',
     outfile:path.join(output,kind,'index.js'),banner:{js:'import {createRequire as __createRequire} from "node:module";const require=__createRequire(import.meta.url);'},
-    plugins:[{name:'private-sub2agent',setup(b){b.onResolve({filter:/^sub2agent\//},args=>({path:require.resolve(path.join(source,'src',args.path.slice(10)))}));}}]});
+    plugins:[{name:'community-workbuddy-cib',setup(b){
+      b.onResolve({filter:/^community-workbuddy-cib$/},()=>({path:path.join(community,'packages/workbuddy/index.mjs'),namespace:'cib'}));
+      b.onLoad({filter:/.*/,namespace:'cib'},async args=>({contents:adaptWorkBuddySource(await fs.readFile(args.path,'utf8')),loader:'js'}));
+    }},{name:'private-sub2agent',setup(b){b.onResolve({filter:/^sub2agent\//},args=>({path:require.resolve(path.join(source,'src',args.path.slice(10)))}));}}]});
+  if(kind==='workbuddy-cib') await fs.copyFile(path.join(community,'LICENSE'),path.join(output,kind,'LICENSE'));
   await fs.writeFile(path.join(output,kind,'package.json'),JSON.stringify({name:'@sub2agent/'+kind,version,type:'module',main:'index.js',
-    magpie:{name:kind==='workbuddy'?'WorkBuddy 企业':kind==='trae'?'Trae 企业':kind==='aiep'?'TIG Coding Plan':'CodeBuddy',icon:kind==='aiep'?'tig-color':kind==='trae'?'trae':kind+'-color',...(kind==='aiep'?{nativeProvider:{id:'aiep-coding-plan',name:'TIG Coding Plan',anthropic:'http://172.21.11.82/public',keysUrl:'https://aiep.weoa.com',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV'}}:{})}}));
+    magpie:{name:kind==='workbuddy-cib'?'WorkBuddy CIB':kind==='workbuddy'?'WorkBuddy 企业':kind==='trae'?'Trae 企业':kind==='aiep'?'TIG Coding Plan':'CodeBuddy',icon:kind==='workbuddy-cib'?'workbuddy-cib':kind==='aiep'?'tig-color':kind==='trae'?'trae':kind+'-color',...(kind==='aiep'?{nativeProvider:{id:'aiep-coding-plan',name:'TIG Coding Plan',anthropic:'http://172.21.11.82/public',keysUrl:'https://aiep.weoa.com',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV'}}:{})}}));
 }
 // The switch gates native Magpie presets; inference stays in the Go gateway.
 const nativeDir=path.join(output,'native-api');
@@ -26,9 +34,6 @@ await fs.writeFile(path.join(nativeDir,'index.js'),'export default async () => (
 await fs.writeFile(path.join(nativeDir,'package.json'),JSON.stringify({name:'@sub2agent/native-api',version:'1.0.0',type:'module',main:'index.js',description:'Enable Magpie native API provider presets',magpie:{name:'Magpie API 供应商',icon:'openai',nativeProviderGroup:'magpie-presets'}},null,2));
 // The community packages retired from Magpie's core are bundled from a pinned
 // checkout so both the portable baseline and marketplace use identical code.
-const community=path.resolve(process.env.MAGPIE_COMMUNITY_SOURCE || path.join(repo,'../.build-tools/community-plugins'));
-const commit=execFileSync('git',['rev-parse','HEAD'],{cwd:community,encoding:'utf8'}).trim();
-if(commit!=='e90d6f011a7320372c5570600e9b267f75b34714') throw new Error('Community source does not match the reviewed commit');
 for(const kind of ['antigravity','commandcode','cursor','devin','factory','grok','kiro','mimo','qoder','workbuddy','zcode','zed']) {
  const dir=path.join(community,'packages',kind), target=path.join(output,'community-'+kind);
  const manifest=JSON.parse(await fs.readFile(path.join(dir,'package.json'),'utf8'));

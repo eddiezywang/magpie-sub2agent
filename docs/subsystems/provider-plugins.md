@@ -713,3 +713,37 @@ Default Claude Code/Codex compact thresholds are 224,000 for MaaS and groups
 containing it, leaving room for turn growth and summary overhead. Existing
 user windows/thresholds and full-context preferences retain their precedence.
 The compact-413 hy4free rescue remains a separate second layer.
+
+## WorkBuddy CIB
+
+`@sub2agent/workbuddy-cib` is a separate enabled intranet provider, including
+its pixel icon and offline bundle. It reuses the pinned MIT community WorkBuddy
+factory for browser sign-in, host-owned credential persistence, rotating token
+refresh and streaming inference. The build adapter exposes the factory and
+allows a site-owned catalog without changing the community WorkBuddy package.
+CIB uses `https://webankcib.copilot.qq.com`, platform `workbuddycib`, and a separate
+provider/account namespace. Desktop credential import and public API key login
+are not offered for this enterprise environment.
+
+The maintained ten-model catalog in `plugins/sub2agent/workbuddy-cib.mjs`
+puts `glm-5.3-flash` first. Missing models and `auto`, `default`, `default-model`
+requests resolve to it; explicitly selected model IDs remain unchanged.
+`deepseek-v4.1-flash` is included as agreed, without another live probe;
+`hy4free` and `deepseek-v4` are excluded. Listing and requests do not trigger
+model probes or `/v3/config` discovery. The screenshot multipliers are reference
+metadata, not live prices. No night discount interval, capacity or image support
+is inferred from the empty configuration responses.
+
+Balance uses POST `/v2/billing/meter/get-enterprise-user-usage` with the signed
+enterprise headers. `credit` is consumed credits, `limitNum` is the total, and
+the display includes remaining credits and the vendor reset text. The unzoned
+reset string is not turned into an assumed timestamp. Missing data or query
+failure shows unknown/error instead of a fabricated zero. An HTTP 401 uses the
+community refresh path and retries once. Existing Go usage accounting consumes
+per-response `usage.credit` and token fields; reference model multipliers are
+never used to estimate actual charges.
+
+Verify offline with `node build/sub2agent-providers.mjs` followed by
+`node --test plugins/sub2agent/workbuddy-cib.test.mjs`, and intranet shipped
+provider tests. Fixtures cover browser callback fields, fixed listing, default
+routing, signed streaming and enterprise balance; they never call the vendor.
