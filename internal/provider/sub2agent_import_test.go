@@ -427,22 +427,18 @@ func TestSub2AgentImportRepairsAlreadyImportedTIG(t *testing.T) {
 	if err := store(f); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := repairImportedCodingPlans(); err != nil {
+	if _, err := RepairImportedCodingPlans(); err != nil {
 		t.Fatal(err)
 	}
-	fixed, err := Find("sub2agent-tigcodingplan")
+	fixed, err := Find("legacy-fixture")
 	if err != nil || fixed.Preset != "aiep-coding-plan" || fixed.Key != "newer-key" || !fixed.Off || len(fixed.Models) != 1 {
 		t.Fatal("already imported TIG was not repaired with preferences intact")
 	}
-	old, err := Find("legacy-fixture")
-	if err != nil || old.ID != fixed.ID {
-		t.Fatal("old model references no longer resolve")
-	}
 	f, _ = read()
-	if f.Groups[0].Members[0] != "sub2agent-tigcodingplan/glm-5.3-flash-zp" {
-		t.Fatal("group reference not moved")
+	if f.Groups[0].Members[0] != "legacy-fixture/glm-5.3-flash-zp" {
+		t.Fatal("group reference changed")
 	}
-	if n, err := repairImportedCodingPlans(); err != nil || n != 0 {
+	if n, err := RepairImportedCodingPlans(); err != nil || n != 0 {
 		t.Fatal("repair is not idempotent")
 	}
 }

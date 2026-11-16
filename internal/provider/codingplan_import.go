@@ -23,8 +23,8 @@ func knownCodingPlanEndpoint(raw string) bool {
 
 // Revisit imports made by older builds even when the old application is no
 // longer installed or its one-shot import marker has already been written.
-// Rename moves group/settings references and retains Was for running agents.
-func repairImportedCodingPlans() (int, error) {
+// Keep IDs and routing references unchanged when correcting their identity.
+func RepairImportedCodingPlans() (int, error) {
 	if !distribution.Internal {
 		return 0, nil
 	}
@@ -44,30 +44,16 @@ func repairImportedCodingPlans() (int, error) {
 			continue
 		}
 		changed := false
-		if strings.HasPrefix(p.ID, "legacy-") {
-			to := FreeID("sub2agent-tigcodingplan")
-			if err := Rename(p.ID, to); err != nil {
-				return count, err
-			}
-			// Re-read the record after Rename: preserve its alias and any other
-			// fields changed by the shared migration, including old routing IDs.
-			next, err := read()
-			if err != nil {
-				return count, err
-			}
-			for _, saved := range next.Providers {
-				if saved.ID == to {
-					p = saved
-					break
-				}
-			}
+		if p.Preset != codingPlanPreset.ID {
+			p.Preset = codingPlanPreset.ID
 			changed = true
 		}
-		if p.Preset != codingPlanPreset.ID || p.Name != "TIG Coding Plan" || p.Icon != codingPlanPreset.Icon || p.AuthHeader != AuthBearer {
-			p.Preset = codingPlanPreset.ID
-			p.Name = "TIG Coding Plan"
+		if p.Name == "我的 API" || p.Name == "API" || p.Name == "Sub2Agent 来源" {
+			p.Name = "TIG-Coding-Plan"
+			changed = true
+		}
+		if p.Icon == "" || p.Icon == "generic" {
 			p.Icon = codingPlanPreset.Icon
-			p.AuthHeader = AuthBearer
 			changed = true
 		}
 		if changed {
