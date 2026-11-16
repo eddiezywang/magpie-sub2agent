@@ -268,6 +268,17 @@ func TestLegacySupplierAliases(t *testing.T) {
 	}
 }
 
+func TestLegacyEndpointNestedModelsAndTopLevelBase(t *testing.T) {
+	var source legacySub2AgentSource
+	if err := json.Unmarshal([]byte(`{"id":"old","kind":"endpoint","base_url":"https://fixture.invalid/v1","endpoint":{"models":["m1","m2"],"default_model":"m2"}}`), &source); err != nil {
+		t.Fatal(err)
+	}
+	source = normalizeLegacySupplier(source)
+	if source.Endpoint.Base != "https://fixture.invalid/v1" || source.DefaultModel != "m2" || len(source.Models) != 2 || source.Models[1] != "m2" {
+		t.Fatalf("legacy endpoint fields lost: %+v", source)
+	}
+}
+
 func TestSub2AgentImportCIBPreservesSourceAndIcon(t *testing.T) {
 	azureHome(t)
 	s := legacySub2AgentSource{ID: "cib", Kind: "endpoint", Name: "old name", Models: []string{"model-a"}}

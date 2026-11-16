@@ -45,13 +45,18 @@ type legacySub2AgentSource struct {
 	Models          []string       `json:"models"`
 	DefaultModel    string         `json:"defaultModel"`
 	OldDefaultModel string         `json:"default_model"`
+	Base            string         `json:"baseUrl"`
+	OldBase         string         `json:"base_url"`
 	Subscription    map[string]any `json:"subscription"`
 	ModelCredits    map[string]any `json:"modelCredits"`
 	Endpoint        struct {
-		Base        string `json:"baseUrl"`
-		OldBase     string `json:"base_url"`
-		Protocol    string `json:"protocolFamily"`
-		OldProtocol string `json:"protocol_family"`
+		Base            string   `json:"baseUrl"`
+		OldBase         string   `json:"base_url"`
+		Protocol        string   `json:"protocolFamily"`
+		OldProtocol     string   `json:"protocol_family"`
+		Models          []string `json:"models"`
+		DefaultModel    string   `json:"defaultModel"`
+		OldDefaultModel string   `json:"default_model"`
 	} `json:"endpoint"`
 	Transport    string `json:"transportPreset"`
 	OldTransport string `json:"transport_preset"`
@@ -83,11 +88,26 @@ func normalizeLegacySupplier(s legacySub2AgentSource) legacySub2AgentSource {
 	if s.DefaultModel == "" {
 		s.DefaultModel = s.OldDefaultModel
 	}
+	if s.DefaultModel == "" {
+		s.DefaultModel = s.Endpoint.DefaultModel
+	}
+	if s.DefaultModel == "" {
+		s.DefaultModel = s.Endpoint.OldDefaultModel
+	}
+	if s.Models == nil {
+		s.Models = s.Endpoint.Models
+	}
 	if len(s.Models) == 0 && s.DefaultModel != "" {
 		s.Models = []string{s.DefaultModel}
 	}
 	if s.Endpoint.Base == "" {
 		s.Endpoint.Base = s.Endpoint.OldBase
+	}
+	if s.Endpoint.Base == "" {
+		s.Endpoint.Base = s.Base
+	}
+	if s.Endpoint.Base == "" {
+		s.Endpoint.Base = s.OldBase
 	}
 	if s.Endpoint.Protocol == "" {
 		s.Endpoint.Protocol = s.Endpoint.OldProtocol
