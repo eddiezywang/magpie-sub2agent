@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -118,8 +116,7 @@ func importSub2AgentAuth(root string, unprotect func([]byte) ([]byte, error)) (i
 			failed = true
 			continue
 		}
-		sum := sha256.Sum256([]byte(source.Kind + "\x00" + source.Provider + "\x00" + source.ID))
-		identity := hex.EncodeToString(sum[:16])
+		identity := legacySourceID(source)
 		if imported[identity] {
 			continue
 		}
@@ -250,9 +247,12 @@ func importLegacyEndpoint(s legacySub2AgentSource, identity, key string) (bool, 
 	}
 	if knownCodingPlanEndpoint(s.Endpoint.Base) {
 		p.Preset = codingPlanPreset.ID
-		p.Name = "TIG Coding Plan"
+		p.Name = "TIG-Coding-Plan"
 		p.Icon = codingPlanPreset.Icon
 		p.AuthHeader = AuthBearer
+	}
+	if knownCIBEndpoint(s.Endpoint.Base) {
+		p.Preset, p.Name, p.Icon = zhtPreset.ID, zhtPreset.Name, zhtPreset.Icon
 	}
 	// The same endpoint may have several independent credentials and model
 	// selections. Only an already saved credential is a duplicate.

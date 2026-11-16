@@ -592,3 +592,11 @@ partial failures keep the overall marker absent, so a retry skips prior successe
 Unreadable or invalid completion records fail closed. This is backend-only while
 confirmation UI, status detection, per-item reporting, other subscription types
 and icon handling are still under development; startup remains non-importing.
+
+The legacy import preview reads source metadata without reading credentials or
+mutating either store. It supplies account-type icons and identifies TIG/CIB
+only by the documented exact origins and API paths, never by a name substring.
+The matching CIB import retains its saved URL/key while attaching the native
+preset and icon. Unsupported, inactive or unreadable sources are not silently
+marked complete. The preview is not yet exposed in the GUI; confirmation,
+per-source outcomes and remaining subscription adapters are still required.

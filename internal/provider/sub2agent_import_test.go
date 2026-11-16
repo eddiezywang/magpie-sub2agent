@@ -141,6 +141,62 @@ func TestSub2AgentImportCompletionAndPartialRetry(t *testing.T) {
 	}
 }
 
+func TestSub2AgentPreviewIsReadOnlyAndIdentifiesIcons(t *testing.T) {
+	azureHome(t)
+	root := legacyImportFixture(t)
+	file := filepath.Join(root, "proxy.json")
+	before, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var old map[string]any
+	if err := json.Unmarshal(before, &old); err != nil {
+		t.Fatal(err)
+	}
+	desktop := old["desktop"].(map[string]any)
+	desktop["sources"] = append(desktop["sources"].([]any), map[string]any{"id": "cib", "kind": "endpoint", "provider": "direct", "displayName": "CIB", "status": "ready", "secretRef": "secret:private", "endpoint": map[string]any{"baseUrl": "http://10.32.33.46:11288/efllmas-agw/v1"}})
+	before, _ = json.Marshal(old)
+	if err := os.WriteFile(file, before, 0600); err != nil {
+		t.Fatal(err)
+	}
+	p, err := legacySub2AgentPreview(root)
+	if err != nil || !p.Found || p.Complete || len(p.Sources) != 3 {
+		t.Fatalf("preview: %+v %v", p, err)
+	}
+	if p.Sources[0].Icon != "workbuddy-color" || p.Sources[1].Icon != "tig-color" || p.Sources[1].Name != "TIG-Coding-Plan" || p.Sources[2].Icon != "cib-zht" {
+		t.Fatalf("wrong icons: %+v", p.Sources)
+	}
+	data, _ := json.Marshal(p)
+	if bytes.Contains(data, []byte("secret:")) || bytes.Contains(data, []byte("fixture-access")) {
+		t.Fatal("preview exposed credentials")
+	}
+	after, _ := os.ReadFile(file)
+	if !bytes.Equal(before, after) {
+		t.Fatal("preview changed old config")
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(Path()), "sub2agent-import-complete.json")); !os.IsNotExist(err) {
+		t.Fatal("preview wrote completion marker")
+	}
+	for _, raw := range []string{"http://10.32.33.46:11288.evil/efllmas-agw/v1", "http://user@10.32.33.46:11288/efllmas-agw/v1", "http://10.32.33.46:11288/other"} {
+		if knownCIBEndpoint(raw) {
+			t.Errorf("misclassified %s", raw)
+		}
+	}
+}
+
+func TestSub2AgentImportCIBPreservesSourceAndIcon(t *testing.T) {
+	azureHome(t)
+	s := legacySub2AgentSource{ID: "cib", Kind: "endpoint", Name: "old name", Models: []string{"model-a"}}
+	s.Endpoint.Base, s.Endpoint.Protocol = "http://10.32.33.46:11288/efllmas-agw/v1", "openai_chat"
+	if changed, err := importLegacyEndpoint(s, "cib-fixture", "fixture-key"); err != nil || !changed {
+		t.Fatalf("import: %v %v", changed, err)
+	}
+	p, err := Find("legacy-cib-fixture")
+	if err != nil || p.Name != "CIB-智汇通-APIKEY" || p.Icon != "cib-zht" || p.Preset != "cib-zht-apikey" || p.Chat != s.Endpoint.Base || p.Key != "fixture-key" {
+		t.Fatal("CIB source, icon or credential changed")
+	}
+}
+
 func TestSub2AgentImportKeepsCurrentCredentialsAndRejectsCorruption(t *testing.T) {
 	azureHome(t)
 	root := legacyImportFixture(t)
@@ -180,7 +236,7 @@ func TestSub2AgentImportRecognizesOpenAITIG(t *testing.T) {
 		t.Fatal(err)
 	}
 	p, err := Find("sub2agent-tigcodingplan")
-	if err != nil || p.Preset != "aiep-coding-plan" || p.Name != "TIG Coding Plan" || p.Chat != "http://172.21.11.82/public/v1" || p.Key != "fixture-plan-key" {
+	if err != nil || p.Preset != "aiep-coding-plan" || p.Name != "TIG-Coding-Plan" || p.Chat != "http://172.21.11.82/public/v1" || p.Key != "fixture-plan-key" {
 		t.Fatal("OpenAI TIG imported as a generic endpoint")
 	}
 }
