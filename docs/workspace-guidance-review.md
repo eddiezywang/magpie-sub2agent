@@ -33,3 +33,39 @@ by the guided menu acceptance suite; native-workflow assertions remain.
 Full repository tests, live vendor requests, packaged application installation
 and KF rollout were not performed in this step. The model tier registry is
 explicit: unrecognized models remain selectable manually, without guessed tiers.
+
+
+## Impeccable interaction review, 2026-11-17
+
+Two isolated assessments reviewed the packed interface with synthetic APIs.
+The independent design assessment scored 29/40 before fixes. System status,
+real-world match, user control, recognition, efficiency, minimalism and help
+scored 3 each; consistency scored 4; prevention and recovery scored 2 each.
+The technical assessment scored 15/20 (accessibility 2, performance 3, theming
+4, responsive 3, integrity 3). The static detector returned no findings.
+The incumbent beige dotted surface, pixel icons, original provider controls
+and original routing diagram remain the visual authority.
+
+Confirmed findings and fixes: background Agent redraws retain guide and next
+button focus; disabled/unready saved templates are unavailable in the picker
+and default CTA; failed policy recovery says Refresh status; unknown connection
+checks offer explicit rechecking; narrow DOM reading order starts with providers
+and desktop CSS keeps providers on the right. The native menu's optional
+expanded-state enhancement remains outside this change.
+
+Regression acceptance fails on the old client with `reading order starts with
+providers`, and passes with the fixed client in Chromium and WebKit. Native
+workspace and focus suites also pass both engines; four i18n checks pass.
+Physical touch, packaged WebView2, live detector overlay (browser PNA blocked
+loopback), full contrast scanning and the full cross-platform Go suite were
+not verified in this frontend refinement.
+
+Interactive synthetic preview:
+http://124.220.199.224:8805/workspace-live-20261117/?view=workspace
+Export it with `build/export-workspace-preview.cjs`; no real vendor credentials
+or live account requests are used. Policy changes and Agent controls operate on
+in-memory sample data; vendor sign-in and unsupported edits explicitly refuse.
+Published-page Playwright verification covers policy writes, Agent expansion,
+no console errors and 390px overflow; milestone screenshots are captured.
+
+Questions skipped: the user already authorized refinement and public publication.

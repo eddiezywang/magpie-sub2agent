@@ -7,7 +7,7 @@
   magpie.plugin('workspace',ctx=>ctx.slots.add('page',{
     key:'workspace',title:'Workspace',loads:'providers',
     html:`<nav id="ws-guide" aria-label="Workspace setup"></nav><div id="ws-next" role="status"></div><div class="ws-grid"><div class="ws-primary"><details id="ws-agents"><summary><b data-t>Agent connections</b><span id="ws-agent-counts"></span><span class="ws-fold"></span></summary><div id="ws-agent-host"></div></details><section><h2 data-t>Routing policy</h2><div id="ws-route-controls"></div><div id="ws-route-members"></div><div id="ws-routing-host"></div></section></div><aside class="ws-providers"><h2 data-t>Providers</h2><div id="ws-provider-host"></div></aside></div>`,
-    mount(node){main=node;},
+    mount(node){main=node;const grid=main.querySelector('.ws-grid');grid.prepend(grid.querySelector('.ws-providers'));},
     async open(){
       active=true;generation++;routeStamp='';routeData=null;main.querySelector('#ws-guide').setAttribute('aria-label',t('Workspace setup'));
       for(const [id,host] of [['agents','agent'],['routing','routing'],['providers','provider']]){
@@ -42,14 +42,19 @@
   function guide(){
     if(!active)return;
     const ps=(providers?.providers||[]).filter(p=>!p.off&&p.ready!==false&&((p.exposed||0)>0||p.models?.some(m=>m.on&&!m.noAPI))),a=target(),g=selected(a);
+    const focusedNext=main.querySelector('#ws-next').contains(document.activeElement)?document.activeElement.dataset.action:null;
+    const focusedStep=main.querySelector('#ws-guide').contains(document.activeElement)?document.activeElement.closest('[data-step]')?.dataset.step:null;
     const done=[ps.length>0,eligible().length>0,!!g?.ready&&!g.disabled],first=done.findIndex(x=>!x),box=main.querySelector('#ws-guide');box.replaceChildren();
     ['Providers','Agent connections','Routing policy'].forEach((name,i)=>{const b=button(name,()=>step(i));b.classList.add('ws-step');b.dataset.step=i;if(first===i)b.setAttribute('aria-current','step');b.classList.toggle('done',done[i]);b.prepend(el('span','ws-step-number',String(i+1)));b.append(el('span','ws-step-state',i===0?t('{n} ready',{n:ps.length}):i===1?t('{n} connected',{n:eligible().length}):(g&&t(g.name))||t('Not applied')));box.append(b);});
+    if(focusedStep)box.querySelector(`[data-step="${focusedStep}"]`)?.focus({preventScroll:true});
     const next=main.querySelector('#ws-next');next.replaceChildren();
     if(!providers||!routeData){next.append(el('span','note',t('Checking workspace configuration…')));return;}
     if(first<0){next.append(el('span','note',t('Ready · Requests will appear below')));return;}
-    const text=['Add or enable a provider with credentials and usable models','Connect an Agent to use your configured models',field(a)?.value?'Current model is kept. You can switch to Flash first here.':'Flash first is recommended; apply it to this Agent'][first];next.append(el('span','',t(text)));
-    if(first===2){const tp=routeData.templates?.find(tp=>tp.kind==='flash-first'),b=button('Use Flash first',()=>apply('flash-first'),true);b.disabled=saving||!tp||!!tp.need;next.append(b);if(tp?.need)next.append(el('span','note',t('No recognized model in this tier; choose members in Routing groups')));}
-    else next.append(button(first===0?'Configure providers':'View Agents',()=>step(first),true));
+    const unknown=(state?.agents||[]).some(a=>!a.hidden&&window.agentConnectionStatus?.(a.id)==='unknown');
+    const text=['Add or enable a provider with credentials and usable models',unknown?'Agent connection status is unknown; check again before connecting':'Connect an Agent to use your configured models',field(a)?.value?'Current model is kept. You can switch to Flash first here.':'Flash first is recommended; apply it to this Agent'][first];next.append(el('span','',t(text)));
+    if(first===2){const tp=routeData.templates?.find(tp=>tp.kind==='flash-first'),b=button('Use Flash first',()=>apply('flash-first'),true);const saved=routeData.groups?.find(g=>g.templateKind==='flash-first');b.disabled=saving||!tp||!!tp.need||!!saved?.disabled||!!saved&&!saved.ready;b.dataset.action='flash';next.append(b);if(tp?.need)next.append(el('span','note',t('No recognized model in this tier; choose members in Routing groups')));}
+    else {const recheck=first===1&&unknown,b=button(recheck?'Refresh status':first===0?'Configure providers':'View Agents',recheck?async()=>{b.disabled=true;try{await (await import('../../agentconnections.js')).refresh();}catch(err){statusErr(err);}}:()=>step(first),true);b.dataset.action=recheck?'refresh':String(first);next.append(b);}
+    if(focusedNext)next.querySelector(`[data-action="${focusedNext}"]`)?.focus({preventScroll:true});
   }
   function paint(){
     if(!active)return;
@@ -59,12 +64,12 @@
     if(menu===agentMenu)closeAgentMenu();else if(menu)closeProtoMenu();box.replaceChildren();
     const a=target();if(!a){if(focus)main.querySelector('#ws-agents summary').focus({preventScroll:true});box.textContent=t('Connect an Agent to choose a routing group');main.querySelector('#ws-route-members').replaceChildren();return;}
     main.dataset.agent=a.id;const f=field(a),g=selected(a),choose=magpie.ui.menu(eligible().map(a=>({v:a.id,name:a.name})),a.id,'Agent',id=>{main.dataset.agent=id;paint();guide();});choose.dataset.wsFocus='agent';choose.disabled=saving;
-    const pick=button('Routing policy',e=>{e.stopPropagation();const items=(routeData?.templates||[]).map(tp=>({name:t(kinds[tp.kind]||tp.group.name),off:!!tp.need,why:tp.need?t(tp.need==='model'?'No recognized model in this tier; choose members in Routing groups':'Template prerequisites are not met; check Routing groups'):'',tip:tp.group.members.map(id=>routeData.models?.find(m=>m.id===id)?.name||id).join('\n'),run:()=>apply(tp.kind)}));for(const group of routeData?.groups||[])if(!group.templateKind||!kinds[group.templateKind])items.push({name:group.name,off:!group.ready||!!group.disabled,run:()=>applySaved(group)});openRowMenu(pick,items);});
+    const pick=button('Routing policy',e=>{e.stopPropagation();const items=(routeData?.templates||[]).map(tp=>{const saved=routeData.groups?.find(g=>g.templateKind===tp.kind),reason=saved?.disabled?'Routing group is disabled':saved&&!saved.ready?'Routing group has no available members':tp.need?tp.need==='model'?'No recognized model in this tier; choose members in Routing groups':'Template prerequisites are not met; check Routing groups':'';return {name:t(kinds[tp.kind]||tp.group.name),off:!!reason,why:reason?t(reason):'',tip:tp.group.members.map(id=>routeData.models?.find(m=>m.id===id)?.name||id).join('\n'),run:()=>apply(tp.kind)};});for(const group of routeData?.groups||[])if(!group.templateKind||!kinds[group.templateKind])items.push({name:group.name,off:!group.ready||!!group.disabled,run:()=>applySaved(group)});openRowMenu(pick,items);});
     pick.textContent=(g&&t(g.name))||optionFor(f,f.value)?.label||f.value||t('Not applied');pick.append(svg('M4 6l4 4 4-4',12,1.6));pick.dataset.wsFocus='strategy';pick.setAttribute('aria-haspopup','menu');pick.disabled=saving||!routeData;
     const edit=button('Edit routing groups',()=>{show('groups');if(g)requestAnimationFrame(()=>document.querySelector(`.rt-group[data-id="${CSS.escape(g.id)}"]`)?.scrollIntoView({block:'nearest'}));});edit.dataset.wsFocus='edit';edit.disabled=saving;
     box.append(el('span','note',t('Applies to')),choose,pick,edit);
     if(saving)box.append(el('span','note',t('Applying routing policy…')));
-    if(routeError){const n=el('span','ws-route-error',routeError);n.setAttribute('role','alert');box.append(n);const retry=button('Try again',async()=>{try{state=await api('state');routeError='';renderAgents();await routeControls();}catch(err){statusErr(err);}});retry.disabled=saving;box.append(retry);}
+    if(routeError){const n=el('span','ws-route-error',routeError);n.setAttribute('role','alert');box.append(n);const retry=button('Refresh status',async()=>{try{state=await api('state');routeError='';renderAgents();await routeControls();}catch(err){statusErr(err);}});retry.disabled=saving;box.append(retry);}
     const info=main.querySelector('#ws-route-members');info.replaceChildren();
     if(g){info.append(el('span','note',(g.members||[]).map(id=>{const m=routeData.models?.find(m=>m.id===id);return [m?.providerName,m?.name||id,routingBillingText(m?.routingBilling)].filter(Boolean).join(' · ');}).join(' / ')));if(!g.ready||g.disabled)info.append(el('span','note',t('Routing group has no available members')));}
     else info.append(el('span','note',t('Direct model selection is preserved until you change the policy')));

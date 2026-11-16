@@ -1,6 +1,8 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["Refresh status", "刷新状态", "重新整理狀態", "状態を更新", "Status aktualisieren"],
+    ["Agent connection status is unknown; check again before connecting", "Agent 接入状态未知，请先展开并重新检查", "Agent 接入狀態未知，請先展開並重新檢查", "Agent の接続状態が不明です。展開して再確認してください", "Agent-Verbindungsstatus unbekannt; öffnen und erneut prüfen"],
     ["Workspace setup", "工作台配置", "工作台設定", "ワークスペース設定", "Arbeitsbereich einrichten"],
     ["{n} ready", "已就绪 {n}", "已就緒 {n}", "利用可能 {n}", "{n} bereit"],
     ["{n} connected", "已接入 {n}", "已接入 {n}", "接続済み {n}", "{n} verbunden"],

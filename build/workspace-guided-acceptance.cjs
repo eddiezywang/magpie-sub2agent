@@ -35,6 +35,15 @@ async function test(browser,engine){
   assert.equal(await page.evaluate(()=>guidanceQA.writes),0,'read never changes policy');
   assert.equal(await page.locator('#ws-agents').getAttribute('open'),null);
   assert.equal(await page.locator('#ws-guide .ws-step').count(),3);
+  assert.equal(await page.locator('.ws-grid > :first-child').getAttribute('class'),'ws-providers','reading order starts with providers');
+  await page.locator('#ws-guide [data-step="1"]').focus();
+  await page.evaluate(()=>renderAgents());
+  await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(()=>document.activeElement.dataset.step),'1','Agent redraw preserves guide focus');
+  await page.locator('#ws-next button').focus();
+  await page.evaluate(()=>renderAgents());
+  await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(()=>document.activeElement.dataset.action),'flash','Agent redraw preserves next action focus');
   await page.locator('#ws-guide [data-step="1"]').click();
   assert.notEqual(await page.locator('#ws-agents').getAttribute('open'),null);
   await page.locator('#ws-agents summary').click();
@@ -53,6 +62,11 @@ async function test(browser,engine){
   await page.evaluate(()=>guidanceQA.fail=false);
   await policy.click();await page.getByRole('menuitem',{name:'旗舰模型优先',exact:true}).click();
   await policy.getByText('旗舰模型优先',{exact:true}).waitFor();
+  await page.evaluate(()=>{const original=window.fetch;window.fetch=async(...args)=>{const r=await original(...args);if(new URL(String(args[0]),location.href).pathname==='/api/groups'){const d=await r.json();d.groups.find(g=>g.templateKind==='steady').disabled=true;return Response.json(d);}return r;};magpie.call('workspace','render');});
+  await page.waitForTimeout(150);
+  await policy.click();
+  assert.equal(await page.getByRole('menuitem',{name:/永不卡住/}).isDisabled(),true,'disabled saved templates cannot be selected');
+  await page.keyboard.press('Escape');
   await page.locator('#addProvider').click();await page.locator('#addSheet').waitFor({state:'visible'});
   await page.locator('#addSheet').getByText('TIG-Coding-Plan',{exact:true}).waitFor();
   await page.evaluate(()=>closeAddSheet());
@@ -72,8 +86,14 @@ async function test(browser,engine){
   await page.evaluate(()=>{providers.providers.forEach(p=>p.off=false);state.agents.forEach(a=>a.wired=false);renderAgents()});
   await page.waitForFunction(()=>document.querySelector('#ws-guide [aria-current=step]')?.dataset.step==='1');
   assert.equal(await page.locator('#ws-route-controls [data-ws-focus=strategy]').count(),0,'no policy write target until connected');
+  await page.evaluate(async()=>{qa.connectionReadFails=true;await (await import('./agentconnections.js')).refresh()});
+  await page.locator('#ws-next [data-action=refresh]').waitFor();
+  await page.evaluate(()=>qa.connectionReadFails=false);
+  await page.locator('#ws-next').getByRole('button',{name:'刷新状态',exact:true}).click();
+  await page.waitForFunction(()=>!document.querySelector('#ws-agent-counts').textContent.includes('未知'));
   assert.deepEqual(errors,[]);console.log(engine+': guided steps, native providers, pending/failure/retry, target isolation, retained pages and responsive themes passed');
  }catch(err){console.error('Browser errors:',errors);await page.screenshot({path:path.join(out,engine+'-failure.png'),fullPage:true});throw err;}finally{await page.close();}
 }
-(async()=>{await fs.mkdir(out,{recursive:true});for(const [name,type]of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(name==='chromium'?{channel:'chrome'}:{});try{await test(browser,name)}finally{await browser.close();}}})().catch(e=>{console.error(e);process.exitCode=1;});
+module.exports={setup};
+if(require.main===module)(async()=>{await fs.mkdir(out,{recursive:true});for(const [name,type]of [['chromium',chromium],['webkit',webkit]]){const browser=await type.launch(name==='chromium'?{channel:'chrome'}:{});try{await test(browser,name)}finally{await browser.close();}}})().catch(e=>{console.error(e);process.exitCode=1;});
 
