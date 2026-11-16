@@ -4,6 +4,8 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+    "Vendor multiplier {n}×": "上游倍率 {n}×",
+    "Vendor display multiplier; not comparable to a per-token point coefficient": "上游展示倍率，不能与按 Token 计算的积分系数直接比较",
     "Billing rule expired": "计费规则已过期",
     "Billing rule unknown": "计费规则未知",
     "Point coefficient {n}": "积分系数 {n}",
@@ -5201,6 +5203,8 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "这份报告已经不在了：magpie 只保留最近 5 份。",
   },
   "zh-TW": {
+    "Vendor multiplier {n}×": "上游倍率 {n}×",
+    "Vendor display multiplier; not comparable to a per-token point coefficient": "上游顯示倍率，不能與按 Token 計算的積分係數直接比較",
     "Billing rule expired": "計費規則已過期",
     "Billing rule unknown": "計費規則未知",
     "Point coefficient {n}": "積分係數 {n}",
@@ -10362,6 +10366,8 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "這份報告已經不在了：magpie 只保留最近 5 份。",
   },
   ja: {
+    "Vendor multiplier {n}×": "提供元の倍率 {n}×",
+    "Vendor display multiplier; not comparable to a per-token point coefficient": "提供元の表示倍率。トークンごとのポイント係数とは直接比較できません",
     "Billing rule expired": "課金ルール期限切れ",
     "Billing rule unknown": "課金ルール不明",
     "Point coefficient {n}": "ポイント係数 {n}",
@@ -15525,6 +15531,8 @@ const I18N = {
     "This report is no longer kept: magpie keeps the last 5.": "このレポートはもう残っていません。magpie は最新の 5 件だけを保存します。",
   },
   de: {
+    "Vendor multiplier {n}×": "Anbietermultiplikator {n}×",
+    "Vendor display multiplier; not comparable to a per-token point coefficient": "Angezeigter Anbieterfaktor; nicht mit dem Punktefaktor pro Token vergleichbar",
     "Billing rule expired": "Abrechnungsregel abgelaufen",
     "Billing rule unknown": "Abrechnungsregel unbekannt",
     "Point coefficient {n}": "Punktefaktor {n}",

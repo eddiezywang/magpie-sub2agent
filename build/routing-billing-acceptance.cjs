@@ -16,7 +16,7 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
      const response=await original(input,init),url=new URL(String(input),location.href);
      if(!['/api/providers','/api/groups'].includes(url.pathname))return response;
      const data=await response.json(),billing={state:'active',currency:'POINTS',source:'MaaS',coefficient:7,revision:'synthetic-v1'};
-     if(data.providers)for(const p of data.providers)for(const m of p.models)m.routingBilling=m.id==='model-a'?billing:{state:'expired',currency:'POINTS',revision:'synthetic-v0'};
+     if(data.providers)for(const p of data.providers)for(const m of p.models){m.routingBilling=m.id==='model-a'?billing:{state:'expired',currency:'POINTS',revision:'synthetic-v0'};m.rate=0.34;}
      if(data.models)for(const m of data.models)m.routingBilling=billing;
      if(data.groups)for(const g of data.groups)for(const m of g.memberInfo)m.routingBilling=billing;
      return Response.json(data);
@@ -26,6 +26,7 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
    await page.evaluate(()=>openProvider('workbuddy'));
    const chip=page.locator('.mchip').filter({hasText:'示例模型 A'});
    await chip.getByText('MaaS · 积分系数 7',{exact:true}).waitFor();
+   await chip.getByText('上游倍率 0.34×',{exact:true}).waitFor();
    assert.match(await chip.getAttribute('title'),/共享额度范围未确认/);
    assert.match(await chip.getAttribute('title'),/synthetic-v1/);
    await page.locator('.mchip').filter({hasText:'示例模型 B'}).getByText('计费规则已过期',{exact:true}).waitFor();
@@ -39,6 +40,10 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
    const note=page.getByText('成本偏好：确认免费 → 套餐额度 → 积分 → 按量付费 → 未知',{exact:true});
    assert.match(await note.getAttribute('title'),/MaaS · 积分系数 7/);
    await page.screenshot({animations:"disabled",path:path.join(output,engine+'-points-groups.png')});
+   for(const view of ['workspace','agents','providers','routing','groups','gateway','usage','sessions','plugins','settings']){
+    await page.evaluate(view=>show(view),view);
+    await page.locator('#view-'+view).waitFor({state:'visible'});
+   }
    assert.deepEqual(errors,[]);await page.close();
    console.log(engine+': native billing chips, expired rules, pool uncertainty, restart, group explanations and narrow layout passed');
   }finally{await browser.close();}

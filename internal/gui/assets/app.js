@@ -10850,7 +10850,10 @@ function renderModels(p) {
       // or one its vendor names free (#185), or lists at $0
       const free = !m.routingBilling && (m.free || m.zero || namedFree(m.id, m.name));
       if (free) c.append(el("span", "badge free", t("free")));
-      const rate = m.routingBilling ? null : rateTag(m.rate, m.rateWas);
+      const rate = m.routingBilling
+        ? (m.rate > 0 ? el("span", "badge rate", t("Vendor multiplier {n}×", {n:m.rate})) : null)
+        : rateTag(m.rate, m.rateWas);
+      if (rate && m.routingBilling) rate.title = t("Vendor display multiplier; not comparable to a per-token point coefficient");
       if (rate) c.append(rate);
       const load = loadTag(m.load);
       if (load) c.append(load);

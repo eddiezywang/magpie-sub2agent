@@ -29,7 +29,10 @@ export function workBuddyModelSet(bundle, ids) {
       limit.output=Math.min(limit.output || 32000,32000);
       metadata.limit=limit;
     }
-    return [id,{name:id,...metadata}];
+    // Preserve the vendor's displayed multiplier separately from token-point
+    // accounting. A zero multiplier does not establish eligibility or a pool.
+    const rate=bundle.modelCredits?.[id];
+    return [id,{name:id,...metadata,...(typeof rate==='number'&&Number.isFinite(rate)&&rate>0?{rate}:{})}];
   }));
 }
 

@@ -3258,6 +3258,11 @@ Provider model chips and routing-group members display the same typed billing
 metadata. Hover text names the rule revision and unresolved shared allowance
 scope. Template cards explain their capability/source/cost preference; these
 describe configured order, not a fabricated per-request estimate or deduction.
+WorkBuddy discovery's `modelCredits` is retained as the vendor display multiplier
+on the plugin model (`rate`), distinct from server token-point coefficients. It
+is displayed with its own unit explanation and is not used as a USD price, free
+eligibility, per-token coefficient or shared-pool declaration. CIB screenshot
+multipliers remain reference values until their live metering basis is known.
 
 Pricing multipliers and peak/off-peak billing rules belong on the accounting
 server. They must not change quota-rest/reset timestamps or imply remaining

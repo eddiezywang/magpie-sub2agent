@@ -132,6 +132,16 @@ test('WorkBuddy unavailable discovery retains known metadata without writing cre
  assert.equal(a['auto-maas-fixture'].limit,undefined);
 });
 
+test('WorkBuddy preserves official multipliers without inventing token cost or free eligibility',async()=>{
+ const auth={access:JSON.stringify({userId:'u',enterpriseId:'e',models:['native','zero','unknown'],modelCredits:{native:0.34,zero:0,unknown:-1}})};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{fetchImpl:async()=>{throw new Error('offline fixture');}});
+ const listed=await plugin.provider.models({models:{}},{auth});
+ assert.equal(listed.native.rate,0.34);
+ assert.equal(listed.native.cost,undefined);
+ assert.equal(listed.zero.free,undefined,'zero multiplier is not permission to spend');
+ assert.equal(listed.unknown.rate,undefined);
+});
+
 test('WorkBuddy manual callback validates vendor and session while automatic login continues',async()=>{
  let ready=false,polls=0;
  const adapter={requestLoginLink:async()=>({url:'https://login.example.invalid',state:'fixture-state'}),
