@@ -12,7 +12,7 @@ const require=createRequire(path.join(source,'package.json'));
 const {build}=require('esbuild');
 const output=path.join(repo,'build/sub2agent-runtime');
 await fs.mkdir(output,{recursive:true});
-const version=process.env.SUB2AGENT_PROVIDER_VERSION||'1.0.8';
+const versionFor=kind=>process.env.SUB2AGENT_PROVIDER_VERSION||(['workbuddy','workbuddy-cib'].includes(kind)?'1.0.9':'1.0.8');
 const community=path.resolve(process.env.MAGPIE_COMMUNITY_SOURCE || path.join(repo,'../.build-tools/community-plugins'));
 const commit=execFileSync('git',['rev-parse','HEAD'],{cwd:community,encoding:'utf8'}).trim();
 if(commit!=='e90d6f011a7320372c5570600e9b267f75b34714') throw new Error('Community source does not match the reviewed commit');
@@ -24,7 +24,7 @@ for(const kind of ['codebuddy','workbuddy','workbuddy-cib','trae','aiep']) {
       b.onLoad({filter:/.*/,namespace:'cib'},async args=>({contents:adaptWorkBuddySource(await fs.readFile(args.path,'utf8')),loader:'js'}));
     }},{name:'private-sub2agent',setup(b){b.onResolve({filter:/^sub2agent\//},args=>({path:require.resolve(path.join(source,'src',args.path.slice(10)))}));}}]});
   if(kind==='workbuddy-cib') await fs.copyFile(path.join(community,'LICENSE'),path.join(output,kind,'LICENSE'));
-  await fs.writeFile(path.join(output,kind,'package.json'),JSON.stringify({name:'@sub2agent/'+kind,version,type:'module',main:'index.js',
+  await fs.writeFile(path.join(output,kind,'package.json'),JSON.stringify({name:'@sub2agent/'+kind,version:versionFor(kind),type:'module',main:'index.js',
     magpie:{name:kind==='workbuddy-cib'?'WorkBuddy CIB':kind==='workbuddy'?'WorkBuddy 企业':kind==='trae'?'Trae 企业':kind==='aiep'?'TIG Coding Plan':'CodeBuddy',icon:kind==='workbuddy-cib'?'workbuddy-cib':kind==='aiep'?'tig-color':kind==='trae'?'trae':kind+'-color',...(kind==='aiep'?{nativeProvider:{id:'aiep-coding-plan',name:'TIG Coding Plan',anthropic:'http://172.21.11.82/public',keysUrl:'https://aiep.weoa.com',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV'}}:{})}}));
 }
 // The switch gates native Magpie presets; inference stays in the Go gateway.

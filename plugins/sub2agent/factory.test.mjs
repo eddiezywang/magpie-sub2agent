@@ -7,6 +7,28 @@ const client={auth:{set:async()=>{throw new Error('Unexpected credential write')
 const models={models:['Enterprise Model'],defaultModel:'Enterprise Model',modelMap:{'Enterprise Model':'vendor-model'}};
 const sse=()=>new Response('data: {"id":"test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
 
+test('bundled enterprise WorkBuddy maps Codex and keeps persistent 413 channel failures distinct from size', async () => {
+ const sent=[];
+ const auth={type:'oauth',access:JSON.stringify({...models,accessToken:'fixture',expiresAt:Date.now()+3600000,userId:'u',enterpriseId:'e'})};
+ const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:{},fetchImpl:async(_url,init)=>{
+  sent.push(JSON.parse(init.body));
+  return Response.json({code:11128,msg:'Illegal API invocation from an unapproved channel'},{status:413});
+ }});
+ const loader=await plugin.auth.loader(async()=>auth);
+ const response=await loader.fetch('',{body:JSON.stringify({model:'Enterprise Model',stream:true,messages:[
+  {role:'system',content:'Codex CLI is an open source project led by OpenAI.\nKeep project instructions.'},
+  {role:'user',content:'hello'},
+ ]})});
+ assert.equal(sent.length,1,'no unchanged retry for an unknown fingerprint');
+ assert.match(sent[0].messages[0].content,/The Codex CLI/);
+ assert.match(sent[0].messages[0].content,/Keep project instructions/);
+ assert.equal(response.status,400);
+ assert.equal(response.headers.get('X-Sub2Agent-Upstream-Status'),'413');
+ const error=(await response.json()).error;
+ assert.equal(error.type,'prompt_refused');
+ assert.equal(error.upstream_status,413);
+});
+
 test('legacy CodeBuddy and Trae bundles reach their configured private paths',async()=>{
  for(const [kind,bundle,expected] of [
   ['codebuddy',{accessToken:'fixture-cb',userId:'u',enterpriseId:'e',domain:'fixture.copilot.qq.com',path:'/cb-custom',models:['m'],defaultModel:'m'},'/cb-custom'],
