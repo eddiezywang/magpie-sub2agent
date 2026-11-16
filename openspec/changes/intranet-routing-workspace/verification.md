@@ -574,3 +574,17 @@ http://124.220.199.224:8805/workspace-review-20261116/legacy-import-actual.png
 This runtime used an explicitly supplied local Bun executable. It did not test
 first-run Bun download, real vendor authentication or CodeBuddy/Trae plugin
 execution. The old sources and QA data are local and were not uploaded.
+
+### Single-file legacy import verification 154816
+
+Clean source 382bdfb25 was built as 0.6.1 with -SingleFile. The archive
+contains one executable; ZIP SHA-256 is
+7b578925f38fe3861bfd714b905c561abe6c8c6255b878a2cbaabaa3e3ebf109.
+Using isolated synthetic Windows DPAPI data, the real executable imported three
+sources, retained the original proxy.json byte-for-byte, and suppressed the
+prompt after completion. Focused intranet import tests and Chromium/WebKit
+confirmation, dismissal, retry and mobile tests passed. The runtime was supplied
+with an existing local Bun; KF could reach its internal npm metadata, but a
+first-run runtime download and real vendor credentials were not tested. The
+unrelated upstream Windows icon sizing test and several upstream provider tests
+fail in the broad test suite. No release site was changed by this verification.
