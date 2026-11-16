@@ -1,5 +1,32 @@
 # Provider and plugin ownership
 
+WorkBuddy enterprise and WorkBuddy CIB 1.0.9 share the private checkout's
+`core/workbuddy-prompt-compat.js` for known Claude/Codex template mappings.
+Mappings run at the provider boundary before serialization/signing/compression;
+system/developer/assistant text is mapped, tool payloads and user quotes are
+preserved, except Claude's exact line-leading main-branch metadata template.
+The private resolver also ensures the first message is system. Existing
+provider-specific DeepSeek Harness handling remains separate.
+
+Explicit `unapproved channel` / `illegal api invocation` failures on HTTP
+400/413/422/500/502 permit at most one additional comma rewrite of a harness
+opening. Instructions retain their system role; the CIB source adapter disables
+the community system-as-user fallback. A persistent refusal is HTTP 400 with
+`error.type=prompt_refused`, `code=workbuddy_channel_refused`, and its original
+status in `error.upstream_status` and `X-Sub2Agent-Upstream-Status`. The gateway's
+existing prompt-refusal classifier sees the preserved refusal words. Business
+11128 alone, authentication/rate failures, and genuine byte-cap errors do not
+trigger this retry. Each enterprise resend checks the final UTF-8 size; CIB
+reuses its signed/compressed community send path. Cancellation stops retries.
+No successful streaming response is read for this classification.
+
+The CIB adapter applies guarded edits to the pinned community source at build
+time and fails if its seams change. Both provider manifests advance to 1.0.9,
+so an older verified marketplace cache cannot mask the bundled fix. Check with
+`test/workbuddy-prompt-compat.test.js` in the private checkout and
+`build/workbuddy-community-source.test.mjs`, `plugins/sub2agent/factory.test.mjs`
+and `plugins/sub2agent/workbuddy-cib.test.mjs` after generating the runtime.
+
 Internal marketplace packages override the embedded baseline after manifest
 verification, provided their version is at least the embedded version. An older
 cached package cannot mask fixes shipped in an application update; newer valid
