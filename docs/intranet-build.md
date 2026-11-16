@@ -1,5 +1,7 @@
 # Internal offline build
 
+The current distribution and default build version are `0.6.1`.
+
 This fork's `intranet` build tag selects a separate internal distribution;
 ordinary upstream builds retain their original behavior. The executable keeps
 the upstream provider UI, local gateway, routing, accounts, agent wiring and
