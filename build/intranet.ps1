@@ -5,7 +5,8 @@ param(
     [string]$Sub2AgentSource = '',
     [string]$BillingKeyFile = '',
     [switch]$WithoutBun,
-    [switch]$SingleFile
+    [switch]$SingleFile,
+    [switch]$DirectoryBundle
 )
 $ErrorActionPreference = 'Stop'
 if (!$BillingKeyFile) { $BillingKeyFile = Join-Path (Split-Path -Parent $PSScriptRoot) '..\.build-tools\sub2agent-billing-key\report-key.txt' }
@@ -18,12 +19,13 @@ $OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
 $bundleName = 'sub2agent-windows-x64-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 $bundle = Join-Path $OutputRoot $bundleName
 if (Test-Path -LiteralPath $bundle) { throw "Output already exists: $bundle" }
-if ($SingleFile) { $WithoutBun = $true }
+if ($DirectoryBundle -and $SingleFile) { throw 'Use DirectoryBundle or SingleFile, not both' }
+$SingleFile = !$DirectoryBundle
 if (!$WithoutBun -and (!$BunArchive -or (Get-FileHash -LiteralPath $BunArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '78c221c2376f79731ccf4e4af0b3bb46d81fefa3296c5abee09ad8a1b21e68c6')) {
     throw 'Expected the verified Bun 1.4.2 Windows x64 baseline archive'
 }
 New-Item -ItemType Directory -Path $bundle -Force | Out-Null
-if (!$WithoutBun) { New-Item -ItemType Directory -Path (Join-Path $bundle 'runtime') | Out-Null }
+if (!$WithoutBun -and !$SingleFile) { New-Item -ItemType Directory -Path (Join-Path $bundle 'runtime') | Out-Null }
 Push-Location $repoRoot
 try {
     $sourceCommit = git rev-parse HEAD
@@ -37,6 +39,10 @@ try {
         go run ./build/providerpack build/sub2agent-runtime internal/plugin/baseline.zip
         if ($LASTEXITCODE -ne 0) { throw 'Provider embedding failed' }
         $buildTags += ',embeddedproviders'
+        if (!$WithoutBun) {
+            Copy-Item -LiteralPath $BunArchive -Destination internal/plugin/bun-runtime.zip -Force
+            $buildTags += ',embeddedbun'
+        }
     }
     go run -tags intranet ./build/assetpack internal/gui/assets internal/gui/assets.zip
     if ($LASTEXITCODE -ne 0) { throw 'Asset packing failed' }
@@ -80,6 +86,11 @@ try {
     $archive = $bundle + '.zip'
     [IO.Compression.ZipFile]::CreateFromDirectory($bundle, $archive, [IO.Compression.CompressionLevel]::Optimal, !$SingleFile)
     $exe = Get-Item -LiteralPath (Join-Path $bundle 'sub2agent.exe')
-    $runtimeBytes = if ($WithoutBun) { 0 } else { (Get-Item -LiteralPath (Join-Path $bundle 'runtime\bun.exe')).Length }
+    $runtimeBytes = 0
+    if (!$WithoutBun) {
+        $runtimeArchive = [IO.Compression.ZipFile]::OpenRead([IO.Path]::GetFullPath($BunArchive))
+        try { $runtimeBytes = ($runtimeArchive.Entries | Where-Object FullName -eq 'bun-windows-x64-baseline/bun.exe').Length }
+        finally { $runtimeArchive.Dispose() }
+    }
     [ordered]@{ bundle = $bundle; archive = $archive; exeBytes = $exe.Length; bunBytes = $runtimeBytes; unpackedBytes = (Get-ChildItem -LiteralPath $bundle -Recurse -File | Measure-Object Length -Sum).Sum; zipBytes = (Get-Item -LiteralPath $archive).Length; zipSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $OutputRoot ($bundleName + '.sizes.json'))
 } finally { Pop-Location }

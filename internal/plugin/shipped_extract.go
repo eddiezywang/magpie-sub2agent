@@ -35,7 +35,7 @@ func materializeProviders(payload []byte, cache string) (string, error) {
 		return root, nil
 	}
 	zr, err := zip.NewReader(bytes.NewReader(payload), int64(len(payload)))
-	if err != nil || len(zr.File) != len(shippedKinds)*2 {
+	if err != nil || len(zr.File) < len(shippedKinds)*2 || len(zr.File) > len(shippedKinds)*3 {
 		return "", fmt.Errorf("invalid embedded provider archive")
 	}
 	if err = os.MkdirAll(cache, 0700); err != nil {
@@ -54,7 +54,7 @@ func materializeProviders(payload []byte, cache string) (string, error) {
 			return "", fmt.Errorf("unsafe embedded provider entry")
 		}
 		kind, name := parts[0], parts[1]
-		if shippedKind(shippedPackage(kind)) == "" || name != "index.js" && name != "package.json" {
+		if shippedKind(shippedPackage(kind)) == "" || name != "index.js" && name != "package.json" && !(kind == "workbuddy-cib" && name == "LICENSE") {
 			return "", fmt.Errorf("unexpected embedded provider entry")
 		}
 		seen[file.Name] = true
@@ -91,7 +91,7 @@ func materializeProviders(payload []byte, cache string) (string, error) {
 	}
 	for _, kind := range shippedKinds {
 		entry := receipts[kind]
-		if entry.Version == "" || len(entry.Files) != 2 {
+		if entry.Version == "" || entry.Files["index.js"] == "" || entry.Files["package.json"] == "" {
 			return "", fmt.Errorf("incomplete embedded provider")
 		}
 		raw, err := json.Marshal(entry)

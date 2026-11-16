@@ -11,6 +11,7 @@
 /.overlay/
 /build/sub2agent-runtime/
 /internal/plugin/baseline.zip
+/internal/plugin/bun-runtime.zip
 
 # Local MCP configuration, shell shims and font exploration artifacts.
 /.mcp.json

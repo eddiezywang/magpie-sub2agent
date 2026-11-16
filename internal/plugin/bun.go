@@ -259,6 +259,9 @@ func Bun(ctx context.Context) (string, error) {
 		if fi, err := os.Stat(bundled); err == nil && !fi.IsDir() {
 			return bundled, nil
 		}
+		if embeddedBunAvailable {
+			return materializeEmbeddedBun()
+		}
 		return internalNPMBun(ctx)
 	}
 
@@ -281,6 +284,9 @@ func Bun(ctx context.Context) (string, error) {
 // HasBun is whether a Bun is at hand without a download.
 func HasBun() bool {
 	if distribution.Internal {
+		if embeddedBunAvailable {
+			return true
+		}
 		if b := os.Getenv("MAGPIE_BUN"); filepath.IsAbs(b) {
 			if fi, err := os.Stat(b); err == nil && !fi.IsDir() {
 				return true

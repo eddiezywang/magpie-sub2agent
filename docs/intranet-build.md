@@ -7,10 +7,13 @@ local usage reporting. The full portable package includes Bun, not WebView2.
 `build/intranet.ps1 -WithoutBun` produces a light package: Windows x64 downloads
 the pinned Bun from the managed internal npm mirror on first plugin startup,
 then reuses the validated cache offline. Neither package includes WebView2.
-`build/intranet.ps1 -SingleFile` additionally embeds the four private provider
-baselines and license texts, distributes only the EXE, and keeps build metadata
-outside the user archive. This mode does not require a Bun archive on the build
-command line. Internal builds share `~/.sub2agent` and no longer ship a
+`build/intranet.ps1` defaults to a single EXE with embedded providers, licenses
+and Bun. Supply the verified `-BunArchive`; the runtime is extracted to the user
+cache on first use without a download. `-SingleFile` remains a compatibility
+alias. Only explicit `-DirectoryBundle` produces a directory package.
+`-WithoutBun` explicitly opts into a smaller package requiring the managed
+runtime download. Build metadata stays outside the single-EXE archive.
+Internal builds share `~/.sub2agent` and no longer ship a
 `.portable` marker. Previous configuration directories are copied on first
 use as described in [GUI app shell](subsystems/gui-shell.md).
 Sessions is retained, including its navigation, assets, history consent,
