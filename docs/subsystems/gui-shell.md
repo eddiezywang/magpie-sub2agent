@@ -1394,3 +1394,11 @@ uses one request at a time, aborts on background/leave and ignores stale visits;
 these paths and native provider draft guards are covered by the packed workspace
 acceptance suite. A failed query retains last values with an interruption/time
 status; unavailable data is never painted as a fresh zero.
+
+GUI GET /api/legacy-suppliers is registered only in the intranet distribution.
+It exposes source names, type, icon and import/completion status without secret
+references, credential plaintext or endpoint URLs. Missing source is distinct
+from corrupt or unreadable source/markers; the latter return an error.
+TestLegacySupplierPreviewRoute covers intranet and upstream route absence.
+This read-only endpoint does not start an import; the confirmation and import
+write endpoint remain under development.

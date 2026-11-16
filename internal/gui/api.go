@@ -1133,6 +1133,7 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		webPage.Store(true)
 	}
 	mux := http.NewServeMux()
+	legacySupplierPreviewRoutes(mux)
 	mux.Handle("/", devPage(revalidated(http.FileServer(http.FS(staticFS())))))
 	devRoutes(mux)
 	pluginPageRoutes(mux, isWeb(w))
