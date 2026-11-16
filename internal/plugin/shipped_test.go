@@ -19,7 +19,7 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 	was := shippedDirectory
 	shippedDirectory = func() string { return root }
 	t.Cleanup(func() { shippedDirectory = was; UseCached(nil) })
-	for _, kind := range []string{"codebuddy", "workbuddy", "trae", "aiep"} {
+	for _, kind := range []string{"codebuddy", "workbuddy", "workbuddy-cib", "trae", "aiep"} {
 		dir := filepath.Join(root, kind)
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			t.Fatal(err)
@@ -30,7 +30,7 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 		}
 	}
 	entries := Load().Plugins
-	if len(entries) != 4 {
+	if len(entries) != 5 {
 		t.Fatalf("loaded %d bundled entries", len(entries))
 	}
 	var ps []Provider
@@ -38,7 +38,7 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 		ps = append(ps, Provider{ID: "sub2agent-" + e.Bundled, Spec: e.Spec})
 	}
 	UseCached(ps)
-	if got := len(Cached()); got != 2 {
+	if got := len(Cached()); got != 3 {
 		t.Fatalf("picker must expose enabled providers, got %d", got)
 	}
 	for _, kind := range []string{"codebuddy", "trae"} {
@@ -46,7 +46,7 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got := len(Cached()); got != 4 {
+	if got := len(Cached()); got != 5 {
 		t.Fatalf("enabled providers not visible: %d", got)
 	}
 	// An older file could contain an apparently enabled entry, though the old
@@ -61,12 +61,12 @@ func TestIntranetShippedProvidersRemainVisibleWithoutPluginsFile(t *testing.T) {
 	if err := SetOff("@sub2agent/codebuddy", false); err != nil {
 		t.Fatal(err)
 	}
-	if len(Cached()) != 4 {
+	if len(Cached()) != 5 {
 		t.Fatal("explicit enablement did not persist")
 	}
 	// A moved portable bundle follows its current executable, retaining Off.
 	l := shipped(List{Plugins: []Entry{{Spec: "old/path", Bundled: "workbuddy", Off: true}}})
-	if len(l.Plugins) != 4 || l.Plugins[0].Spec != "@sub2agent/workbuddy" || !l.Plugins[0].Off {
+	if len(l.Plugins) != 5 || l.Plugins[0].Spec != "@sub2agent/workbuddy" || !l.Plugins[0].Off {
 		t.Fatalf("relocation lost settings: %+v", l.Plugins)
 	}
 }

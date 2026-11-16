@@ -366,7 +366,7 @@ function toneCheck(img) {
     swap();
   }, { once: true });
 }
-const pngIcons = new Set(["cib-zht", "crush", "zcode", "alma", "hanako", "cindy", "lody", "typesafe", "atomcode", "snow", "mlx-serve", "gpustack", "mothx", "zoo-code", "kimi-code-desktop", "openbot", "avibe", "kun"]);
+const pngIcons = new Set(["workbuddy-cib", "cib-zht", "crush", "zcode", "alma", "hanako", "cindy", "lody", "typesafe", "atomcode", "snow", "mlx-serve", "gpustack", "mothx", "zoo-code", "kimi-code-desktop", "openbot", "avibe", "kun"]);
 
 // lazy: a picture in a long list (Plugins' rows) is asked for near the
 // screen: each SVG an <img> draws is a ~0.6 MB webview document, kept (#909)
@@ -11586,7 +11586,7 @@ function renderModels(p) {
     };
     head.append(el("b", "", t("Model settings")), fold);
     names.append(head);
-    if (intranet && p.id.startsWith("sub2agent-workbuddy") && p.models.some((m) => /-maas(?:-|$)/i.test(m.id))) {
+    if (intranet && /^sub2agent-workbuddy(?:$|#)/.test(p.id) && p.models.some((m) => /-maas(?:-|$)/i.test(m.id))) {
       names.append(el("p", "hint", "MaaS 标称容量来自供应商或模型资料；实际可用长度还受单次请求约 1 MiB 的大小限制。请保留自动压缩，图片、工具定义和工具结果也会占用请求空间。"));
     }
     const ids = servedIds(p);
@@ -12016,7 +12016,7 @@ function renderModels(p) {
     };
     bulk.append(freeOn);
   }
-  if (intranet && p.id.startsWith("sub2agent-workbuddy")) {
+  if (intranet && /^sub2agent-workbuddy(?:$|#)/.test(p.id)) {
     const maasOn = el("button", "text action", t("MaaS only"));
     maasOn.title = t("Pick only MaaS models, unpicking the others");
     maasOn.onclick = () => {
