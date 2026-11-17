@@ -34,3 +34,5 @@
  .ws-providers{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 }
 @media(max-width:900px){#view-workspace{overflow-y:auto}.ws-primary{overflow:visible}}
+
+#ws-guide[hidden],#ws-next[hidden]{display:none}#ws-route-controls>[data-ws-focus=agent],.ws-fold{display:inline-flex;align-items:center;gap:10px;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}

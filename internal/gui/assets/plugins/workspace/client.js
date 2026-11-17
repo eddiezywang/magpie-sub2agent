@@ -46,7 +46,7 @@
   const selected=a=>{const f=field(a),ref=(f&&optionFor(f,f.value)?.ref)||f?.value;return routeData?.groups?.find(g=>[g.ref,'group/'+g.id].includes(ref));};
   const button=(name,run,primary=false)=>{const b=el('button','text'+(primary?' primary':''),t(name));b.type='button';b.onclick=run;return b;};
   function step(i){
-    if(i===0){const host=main.querySelector('#ws-provider-host');host.scrollIntoView({block:'nearest'});if(!providers?.providers.length)document.querySelector('#addProvider')?.click();else document.querySelector('#pvQ')?.focus({preventScroll:true});}
+    if(i===0){const host=main.querySelector('#ws-provider-host');host.scrollIntoView({block:'nearest'});if(!adding)document.querySelector('#addProvider')?.click();requestAnimationFrame(()=>document.querySelector('#addSheet input')?.focus({preventScroll:true}));}
     else if(i===1){const d=main.querySelector('#ws-agents');d.open=true;d.querySelector('summary').focus({preventScroll:true});d.scrollIntoView({block:'nearest'});}
     else main.querySelector('[data-ws-focus=strategy]')?.focus({preventScroll:true});
   }
@@ -58,9 +58,9 @@
     const done=[ps.length>0,eligible().length>0,!!g?.ready&&!g.disabled],first=done.findIndex(x=>!x),box=main.querySelector('#ws-guide');box.replaceChildren();
     ['Providers','Agent connections','Routing policy'].forEach((name,i)=>{const b=button(name,()=>step(i));b.classList.add('ws-step');b.dataset.step=i;if(first===i)b.setAttribute('aria-current','step');b.classList.toggle('done',done[i]);b.prepend(el('span','ws-step-number',String(i+1)));b.append(el('span','ws-step-state',i===0?t('{n} ready',{n:ps.length}):i===1?t('{n} connected',{n:eligible().length}):(g&&t(g.name))||t('Not applied')));box.append(b);});
     if(focusedStep)box.querySelector(`[data-step="${focusedStep}"]`)?.focus({preventScroll:true});
-    const next=main.querySelector('#ws-next');next.replaceChildren();
+    const next=main.querySelector('#ws-next');next.replaceChildren();box.hidden=first<0&&!!providers&&!!routeData;next.hidden=box.hidden;
     if(!providers||!routeData){next.append(el('span','note',t('Checking workspace configuration…')));return;}
-    if(first<0){next.append(el('span','note',t('Ready · Requests will appear below')));return;}
+    if(first<0)return;
     const unknown=(state?.agents||[]).some(a=>!a.hidden&&window.agentConnectionStatus?.(a.id)==='unknown');
     const text=['Add or enable a provider with credentials and usable models',unknown?'Agent connection status is unknown; check again before connecting':'Connect an Agent to use your configured models',field(a)?.value?'Current model is kept. You can switch to Flash first here.':'Flash first is recommended; apply it to this Agent'][first];next.append(el('span','',t(text)));
     if(first===2){const tp=routeData.templates?.find(tp=>tp.kind==='flash-first'),b=button('Use Flash first',()=>apply('flash-first'),true);const saved=routeData.groups?.find(g=>g.templateKind==='flash-first');b.disabled=saving||!tp||!!tp.need||!!saved?.disabled||!!saved&&!saved.ready;b.dataset.action='flash';next.append(b);if(tp?.need)next.append(el('span','note',t('No recognized model in this tier; choose members in Routing groups')));}
@@ -74,7 +74,7 @@
     const focus=box.contains(document.activeElement)?document.activeElement.dataset.wsFocus:menu?.box.contains(document.activeElement)?menu.anchor.dataset.wsFocus:null;
     if(menu===agentMenu)closeAgentMenu();else if(menu)closeProtoMenu();box.replaceChildren();
     const a=target();if(!a){if(focus)main.querySelector('#ws-agents summary').focus({preventScroll:true});box.textContent=t('Connect an Agent to choose a routing group');main.querySelector('#ws-route-members').replaceChildren();return;}
-    main.dataset.agent=a.id;const f=field(a),g=selected(a),choose=magpie.ui.menu(eligible().map(a=>({v:a.id,name:a.name})),a.id,'Agent',id=>{main.dataset.agent=id;paint();guide();});choose.dataset.wsFocus='agent';choose.disabled=saving;
+    main.dataset.agent=a.id;const f=field(a),g=selected(a),choose=button('Agent',e=>{e.stopPropagation();openRowMenu(choose,eligible().map(agent=>({name:agent.name,run:()=>{main.dataset.agent=agent.id;paint();guide();}})));});choose.textContent=a.name;choose.append(svg('M4 6l4 4 4-4',12,1.6));choose.setAttribute('aria-haspopup','menu');choose.dataset.wsFocus='agent';choose.disabled=saving;
     const pick=button('Routing policy',e=>{e.stopPropagation();const items=(routeData?.templates||[]).map(tp=>{const saved=routeData.groups?.find(g=>g.templateKind===tp.kind),reason=saved?.disabled?'Routing group is disabled':saved&&!saved.ready?'Routing group has no available members':tp.need?tp.need==='model'?'No recognized model in this tier; choose members in Routing groups':'Template prerequisites are not met; check Routing groups':'';return {name:t(kinds[tp.kind]||tp.group.name),off:!!reason,why:reason?t(reason):'',tip:tp.group.members.map(id=>routeData.models?.find(m=>m.id===id)?.name||id).join('\n'),run:()=>apply(tp.kind)};});for(const group of routeData?.groups||[])if(!group.templateKind||!kinds[group.templateKind])items.push({name:group.name,off:!group.ready||!!group.disabled,run:()=>applySaved(group)});openRowMenu(pick,items);});
     pick.textContent=(g&&t(g.name))||optionFor(f,f.value)?.label||f.value||t('Not applied');pick.append(svg('M4 6l4 4 4-4',12,1.6));pick.dataset.wsFocus='strategy';pick.setAttribute('aria-haspopup','menu');pick.disabled=saving||!routeData;
     const edit=button('Edit routing groups',()=>{show('groups');if(g)requestAnimationFrame(()=>document.querySelector(`.rt-group[data-id="${CSS.escape(g.id)}"]`)?.scrollIntoView({block:'nearest'}));});edit.dataset.wsFocus='edit';edit.disabled=saving;

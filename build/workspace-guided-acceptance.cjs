@@ -54,6 +54,11 @@ async function test(browser,engine){
   assert.equal(await policy.isDisabled(),true,'save remains pending until server confirms');
   await page.waitForFunction(()=>state.agents.find(a=>a.id==='opencode').fields[0].value==='group/flash-first');
   await policy.getByText('Flash 优先',{exact:true}).waitFor();
+  assert.equal(await page.locator('#ws-guide').isVisible(),false,'completed setup hides guide');
+  assert.equal(await page.locator('#ws-next').isVisible(),false,'completed setup hides status');
+  await page.locator('[data-ws-focus=agent]').click();
+  await page.getByRole('menuitem',{name:'Pi',exact:true}).waitFor();
+  await page.keyboard.press('Escape');
   assert.equal(await page.evaluate(()=>state.agents.find(a=>a.id==='pi').fields[0].value),'workbuddy/model-a','only selected Agent changes');
   await page.evaluate(()=>{guidanceQA.fail=true;guidanceQA.delay=0});
   await policy.click();await page.getByRole('menuitem',{name:'旗舰模型优先',exact:true}).click();
@@ -83,6 +88,8 @@ async function test(browser,engine){
   await page.setViewportSize({width:1440,height:1000});
   await page.evaluate(()=>{providers.providers.forEach(p=>p.off=true);magpie.call('workspace','render')});
   assert.equal(await page.locator('#ws-guide [aria-current=step]').getAttribute('data-step'),'0','disabled providers require configuration first');
+  await page.locator('#ws-next [data-action="0"]').click();
+  await page.locator('#addSheet').waitFor({state:'visible'});
   await page.evaluate(()=>{providers.providers.forEach(p=>p.off=false);state.agents.forEach(a=>a.wired=false);renderAgents()});
   await page.waitForFunction(()=>document.querySelector('#ws-guide [aria-current=step]')?.dataset.step==='1');
   assert.equal(await page.locator('#ws-route-controls [data-ws-focus=strategy]').count(),0,'no policy write target until connected');
