@@ -12,7 +12,7 @@ const require=createRequire(path.join(source,'package.json'));
 const {build}=require('esbuild');
 const output=path.join(repo,'build/sub2agent-runtime');
 await fs.mkdir(output,{recursive:true});
-const versionFor=kind=>process.env.SUB2AGENT_PROVIDER_VERSION||(kind==='workbuddy'?'1.0.10':kind==='workbuddy-cib'?'1.0.9':'1.0.8');
+const versionFor=kind=>process.env.SUB2AGENT_PROVIDER_VERSION||(kind==='workbuddy'?'1.0.11':kind==='workbuddy-cib'?'1.0.9':'1.0.8');
 const community=path.resolve(process.env.MAGPIE_COMMUNITY_SOURCE || path.join(repo,'../.build-tools/community-plugins'));
 const commit=execFileSync('git',['rev-parse','HEAD'],{cwd:community,encoding:'utf8'}).trim();
 if(commit!=='e90d6f011a7320372c5570600e9b267f75b34714') throw new Error('Community source does not match the reviewed commit');

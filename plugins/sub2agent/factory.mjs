@@ -62,7 +62,7 @@ export async function createSub2AgentPlugin(kind, input, deps = {}) {
   // The enterprise list omits this supported model. Offer it for signed-in
   // accounts, without inventing a permanent free price or changing auth.
   const modelsFor = bundle => kind === 'workbuddy'
-    ? [...new Set([...(bundle.models || []),'hy4free'])] : bundle.models;
+    ? [...new Set([...(bundle.models || []),'hy4flash-free'])] : bundle.models;
   const rawFetch = deps.fetchImpl || globalThis.fetch;
   // Private resolvers replace credentials after a 401 using canonical header
   // names; the protocol executor may already have lowercased them. HTTP names

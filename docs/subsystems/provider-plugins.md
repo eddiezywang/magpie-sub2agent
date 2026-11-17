@@ -694,11 +694,12 @@ gateway credentials were exercised.
 
 ### Internal WorkBuddy model discovery
 
-The internal WorkBuddy plugin adds the supported `hy4free` ID when a signed-in
+The internal WorkBuddy plugin adds the `hy4flash-free` ID when a signed-in
 account's model discovery omits it, deduplicating the list. The same list reaches
 the private resolver so requests use that upstream ID. This does not assign a
 permanent zero price: promotions and their end date belong to the server price
-catalog. Model discovery alone does not establish tenant access; upstream errors
+catalog. The expired `hy4free` is no longer automatically added; an explicitly
+discovered model remains available. Discovery alone does not establish tenant access; upstream errors
 continue through the existing fallback path.
 
 ### WorkBuddy MaaS usage fallback
