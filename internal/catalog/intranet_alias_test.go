@@ -42,3 +42,24 @@ func TestInternalDeploymentSuffixesPreserveExplicitVariant(t *testing.T) {
 		t.Fatal("explicit variant price overwritten")
 	}
 }
+
+func TestInternalGLM53DeploymentKeepsZhipuIdentity(t *testing.T) {
+	writeCatalog(t, `{"zhipuai":{"models":{"glm-5.3":{"id":"glm-5.3","name":"GLM-5.3","modalities":{"input":["text","image"]},"limit":{"context":204800,"output":65536},"cost":{"input":4,"output":8},"reasoning_options":[{"type":"effort","values":["low","high","max"]}]},"glm-5.3-flash":{"id":"glm-5.3-flash","limit":{"context":1024000},"cost":{"input":1,"output":2}}}}}`)
+	for _, id := range []string{"glm-5.3-zp", "glm-5.3-zp-openai", "tig/glm-5.3-zp", "glm-5.3-maas-user"} {
+		if NameOf(id) != "GLM-5.3" || Spelling(id) != "glm-5.3" {
+			t.Errorf("canonical name missing for %s: name=%q spelling=%q", id, NameOf(id), Spelling(id))
+		}
+		if SameModel(id) != SameModel("glm-5.3") || SameModel(id) == SameModel("glm-5.3-flash") {
+			t.Errorf("identity lost for %s", id)
+		}
+		if ContextOf(id) != 204800 || !SeesImages(id) || OutputOf(id) != 65536 {
+			t.Errorf("capabilities lost for %s: context=%d output=%d", id, ContextOf(id), OutputOf(id))
+		}
+		if p, ok := PricedBy([]string{"zhipuai"}, id); !ok || p.Input != 4 {
+			t.Errorf("wrong model price for %s: %+v %v", id, p, ok)
+		}
+		if got := EffortsOf(id); len(got) != 3 || got[0] != "low" || got[2] != "max" {
+			t.Errorf("reasoning levels lost for %s: %v", id, got)
+		}
+	}
+}
