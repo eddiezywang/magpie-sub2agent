@@ -124,7 +124,7 @@ test('WorkBuddy keeps model capacity separate from transport size and coalesces 
  assert.deepEqual(a['glm-5.3-flash-maas-fixture'].limit,{context:256000,input:256000,output:32000});
  assert.equal(a['GLM-5.0-Turbo'].limit.input,180000);
  assert.equal(a['hy4flash-free'].limit,undefined);
- 
+
  assert.equal(a['auto-maas-fixture'].limit,undefined,'a byte limit does not establish Auto token capacity');
  assert.equal(a['hy4flash-free'].cost,undefined,'vendor discovery must not replace server pricing');
  const other={access:JSON.stringify({...readBundle(auth),enterpriseId:'other'})};
