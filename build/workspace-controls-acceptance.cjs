@@ -14,6 +14,7 @@ async function run(type,name){
   const dimensions=await Promise.all([agent,policy,page.locator('.ws-fold')].map(x=>x.evaluate(e=>{const s=getComputedStyle(e);return {height:e.getBoundingClientRect().height,border:s.borderTopWidth,radius:s.borderTopLeftRadius}})));
   assert.deepEqual(dimensions[0],dimensions[1],'agent and policy controls share the same visual frame');
   assert.deepEqual(dimensions[1],dimensions[2],'agent disclosure shares the same visual frame');
+  assert.equal(dimensions[0].border,'0px','workspace triggers have no outline');
   await policy.click();assert.equal(await policy.getAttribute('aria-expanded'),'true');assert.equal(await page.locator('.row-menu[role=menu]').count(),1);
   await policy.click();assert.equal(await policy.getAttribute('aria-expanded'),'false');assert.equal(await page.locator('.row-menu[role=menu]').count(),0,'same control closes the menu');
   await policy.click();await agent.click();assert.equal(await page.locator('.row-menu[role=menu]').count(),1,'switching menus leaves only one');
@@ -25,6 +26,14 @@ await page.evaluate(()=>magpie.call('workspace','render'));await page.waitForTim
   await policy.click();assert.equal(await page.locator('.row-menu').count(),0);
   assert.equal(await page.locator('#ws-agents').getAttribute('open'),null);await summary.click();assert.notEqual(await page.locator('#ws-agents').getAttribute('open'),null);await page.locator('.ws-fold').getByText(/收起|Collapse/).waitFor();
   await summary.click();assert.equal(await page.locator('#ws-agents').getAttribute('open'),null);await page.locator('.ws-fold').getByText(/查看全部|Show all/).waitFor();
+  const throughput=page.locator('#ws-throughput'),throughputLabel=throughput.locator('.ws-expand-label');
+  await throughputLabel.scrollIntoViewIfNeeded();
+  assert.equal(await throughputLabel.evaluate(e=>getComputedStyle(e).borderTopWidth),'0px','throughput trigger has no outline');
+  await throughputLabel.click();assert.notEqual(await throughput.getAttribute('open'),null);await throughputLabel.getByText(/收起|Collapse/).waitFor();
+  await page.waitForTimeout(1100);assert.notEqual(await throughput.getAttribute('open'),null,'telemetry refresh keeps dimensions open');
+  await throughputLabel.click();assert.equal(await throughput.getAttribute('open'),null);await throughputLabel.getByText(/按维度查看|View throughput/).waitFor();
+  await throughput.locator('summary').focus();await page.keyboard.press('Enter');assert.notEqual(await throughput.getAttribute('open'),null,'keyboard opens dimensions');
+  await page.keyboard.press('Enter');assert.equal(await throughput.getAttribute('open'),null,'keyboard closes dimensions');
   await policy.click();await page.screenshot({path:path.join(out,`${name}-open.png`),animations:'disabled'});await policy.click();await page.screenshot({path:path.join(out,`${name}-closed.png`),animations:'disabled'});
   assert.deepEqual(errors,[]);console.log(name+': matching controls, toggle, switch, outside, Escape and refresh passed');
  }finally{await browser.close();}

@@ -1471,8 +1471,8 @@ its target matches this distribution's saved shortcut state; another app's
 shortcut and registry entries remain. A deleted shortcut stays deleted.
 See `internal/shortcut/shortcut_windows.go` and `TestInternalWindowsIdentityAndMigration`.
 
-The intranet workspace uses matching compact controls for the Agent selector,
-policy selector and Agent disclosure. Both menus toggle on their anchor, close
+The intranet workspace uses matching unoutlined controls for the Agent selector,
+policy selector, Agent disclosure and throughput dimensions. Both menus toggle on their anchor, close
 on outside click or Escape, retain their anchor through workspace refresh and
 follow workspace scrolling. A pending refresh is painted after dismissal.
 See `plugins/workspace/client.js`, `openRowMenu`, and

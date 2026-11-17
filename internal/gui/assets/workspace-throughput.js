@@ -11,14 +11,14 @@
   if(node)return;node=document.createElement('details');node.id='ws-throughput';
   node.innerHTML='<summary><span class="ws-metrics"><span><b id="ws-current">—</b><small data-t>Current throughput</small></span><span><b id="ws-peak">—</b><small data-t>Peak throughput</small></span></span><span id="ws-total-curve"></span><span class="ws-expand-label"></span></summary><div class="ws-dimension-tabs" role="group"></div><div id="ws-throughput-rows"></div><p class="ws-telemetry-note" data-t>Estimated output token/s · Updated every second · Last 5 seconds average · Last 180 seconds · Peak since gateway start or series reset</p><p id="ws-throughput-status" role="status"></p>';
   for(const [id,name]of [['providers','Providers'],['models','Models'],['sessions','Sessions']]){const b=document.createElement('button');b.className='text';b.dataset.t='';b.dataset.en=name;b.textContent=t(name);b.dataset.dimension=id;b.onclick=()=>{dimension=id;paint()};node.querySelector('.ws-dimension-tabs').append(b)}
-  node.ontoggle=()=>{node.querySelector('.ws-expand-label').textContent=t(node.open?'Collapse throughput details':'View throughput dimensions')+(node.open?'⌃':'⌄');paint()};
+  node.ontoggle=()=>{node.querySelector('.ws-expand-label').textContent=t(node.open?'Collapse throughput details':'View throughput dimensions');paint()};
   document.querySelector('#rt').append(node);
   node.querySelector('.ws-dimension-tabs').setAttribute('aria-label',t('Throughput dimensions'));
   translateStatic();node.ontoggle();
  }
  function paint(){
   if(!last||!node)return;
-  node.querySelector('.ws-expand-label').textContent=t(node.open?'Collapse throughput details':'View throughput dimensions')+(node.open?'⌃':'⌄');
+  node.querySelector('.ws-expand-label').textContent=t(node.open?'Collapse throughput details':'View throughput dimensions');
   node.querySelector('.ws-dimension-tabs').setAttribute('aria-label',t('Throughput dimensions'));
   for(const [id,key]of [['ws-current','current'],['ws-peak','peak']])node.querySelector('#'+id).textContent=numeric(last.total[key])+(last.total[key]===null?'':' token/s');
   const curve=node.querySelector('#ws-total-curve');curve.replaceChildren(spark(last.total.points,t('Total throughput over the last 180 seconds')));
