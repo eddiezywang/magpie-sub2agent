@@ -31,6 +31,7 @@ const path = require('node:path');
 const { createUsageStore } = require('./store');
 const {SCHEMA: summarySchema,createSummaryStore,withSummaries}=require('./summary-store');
 const {createBillingPolicy}=require('./billing-policy');
+const {createPlanConfig}=require('./tig-plans');
 const {createReportCurrency}=require('./report-currency');
 const { createTelemetryStore, MAX_JSON_BYTES } = require('./telemetry-store');
 const { createDailyLogger } = require('./daily-logger');
@@ -83,6 +84,7 @@ function createUsageServer(options = {}) {
   const reportCurrency = createReportCurrency({dataDir});
   const listPrice=(g,minute)=>pricing.costFor(g.model,{...g,_summary:g,ts:minute,cache_write_tokens:g.cache_write_5m_tokens+g.cache_write_1h_tokens});
   const billing = createBillingPolicy({dataDir,listPrice});
+  const tigPlans = createPlanConfig({dataDir});
   const telemetry = createTelemetryStore({
     dataDir,
     keepDays: telemetryKeepDays,
@@ -387,12 +389,18 @@ function createUsageServer(options = {}) {
       });
       return;
     }
-    if(pathname==='/usage/routing-catalog'&&req.method==='GET'){sendJson(res,200,billing.routing());return;}
+    if(pathname==='/usage/routing-catalog'&&req.method==='GET'){sendJson(res,200,{...billing.routing(),tig_plans:tigPlans.get()});return;}
     if(pathname==='/usage/aggregation-rules'&&req.method==='GET'){sendJson(res,200,billing.rules());return;}
     if(pathname==='/admin/report-currency'){
       if(!authorizeAdmin(req)){sendJson(res,401,{error:'unauthorized'});return;}
       if(req.method==='GET'){sendJson(res,200,reportCurrency.get());return;}
       if(req.method==='PUT'){try{sendJson(res,200,reportCurrency.set(JSON.parse(await readBody(req))));}catch{sendJson(res,400,{error:'invalid_report_currency'});}return;}
+      sendJson(res,405,{error:'method_not_allowed'});return;
+    }
+    if(pathname==='/admin/tig-plan-config'){
+      if(!authorizeAdmin(req)){sendJson(res,adminToken?401:403,{error:'unauthorized'});return;}
+      if(req.method==='GET'){sendJson(res,200,tigPlans.get());return;}
+      if(req.method==='PUT'){try{sendJson(res,200,tigPlans.set(JSON.parse(await readBody(req))));}catch{sendJson(res,400,{error:'invalid_tig_plan_config'});}return;}
       sendJson(res,405,{error:'method_not_allowed'});return;
     }
     if(pathname==='/admin/billing-policy'){

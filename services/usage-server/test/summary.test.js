@@ -103,6 +103,12 @@ test('real HTTP accepts explicit IDs, preserves old telemetry and generates weig
  const bad=summary('bad');bad.groups[0].input_tokens=-1;assert.deepEqual((await post({...payload,summaries:[bad]})).body.rejected_ids,['bad']);
  assert.equal((await post({...payload,summaries:[summary(),summary()]})).status,400);
  assert.equal((await fetch(base+'/admin/billing-policy')).status,401);
+ assert.equal((await fetch(base+'/admin/tig-plan-config')).status,401);
+ const cfg=await fetch(base+'/admin/tig-plan-config',{headers:{authorization:'Bearer fixture-admin'}}).then(r=>r.json());
+ assert.equal(cfg.plans.zp.windows[0].limit,35000);assert.equal(routing.tig_plans.plans.hs.windows[0].limit,200000);
+ cfg.plans.hs.windows[0].limit=150000;
+ const changed=await fetch(base+'/admin/tig-plan-config',{method:'PUT',headers:{authorization:'Bearer fixture-admin','content-type':'application/json'},body:JSON.stringify(cfg)});assert.equal(changed.status,200);
+ assert.equal((await fetch(base+'/usage/routing-catalog').then(r=>r.json())).tig_plans.plans.hs.windows[0].limit,150000);
 });
 
 test('legacy minute totals use maker prices by exact model and managed deployment suffix, without a context revision',t=>{

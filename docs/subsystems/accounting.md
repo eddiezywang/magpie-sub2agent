@@ -186,3 +186,13 @@ Protocol aliases such as `-openai-zp` and `-zp-openai` identify the same
 channel and model; the original request ID is kept. Default model exposure
 collapses aliases within a TIG channel, preserving explicit selections and
 separate ZP, Tencent, and Volcengine channels.
+
+
+TIG reference plan limits live in the server-managed `tig-plan-config.json`,
+editable through the authenticated `/admin/tig-plan-config` endpoint and
+published with the routing catalog. The current defaults are the requested
+team advanced Zhipu reference (35,000/5h and 155,000/week), 200,000 AFP/month,
+and 600,000,000 Tencent reference units/week. They are assumptions, not
+proof of entitlements, pool ownership or renewal dates. Model suffix detection
+accepts multiple channels; a failed list stays unknown. Weekly and monthly
+periods require confirmed anchors. See `tig-plans.js` and its tests.
