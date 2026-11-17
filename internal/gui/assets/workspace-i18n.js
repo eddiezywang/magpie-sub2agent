@@ -1,6 +1,7 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["Rolling usage is near the reference limit; the actual reset date is unknown.", "滚动用量接近参考额度，实际重置时间未知。", "滾動用量接近參考額度，實際重置時間未知。", "直近の使用量が参考上限に近づいています。実際の更新日は不明です。", "Die Nutzung im rollierenden Zeitraum liegt nahe am Referenzlimit; das tatsächliche Reset-Datum ist unbekannt."],
     ["TIG plan usage", "TIG 套餐用量", "TIG 套餐用量", "TIG プラン使用量", "TIG-Tarifnutzung"],
     ["TIG plan detection unavailable", "TIG 套餐识别暂不可用", "TIG 套餐識別暫不可用", "TIG プランを検出できません", "TIG-Tariferkennung nicht verfügbar"],
     ["Detected from available model IDs; entitlement and balance are not confirmed.", "根据可用模型名称推测线路，套餐权限和余额尚未确认。", "根據可用模型名稱推測線路，套餐權限和餘額尚未確認。", "モデル ID から推定。契約と残高は未確認です。", "Aus Modell-IDs geschätzt; Berechtigung und Guthaben sind unbestätigt."],

@@ -27,7 +27,11 @@
     if(!plan||!usage){info.append(text('p',t('Usage unavailable; waiting for the billing service'),'note'));line.append(info);row.append(line);continue;}
     const win=plan.windows||[], five=win.find(w=>w.id==='rolling_5h');
     if(five){const pct=usage.rolling_5h/five.limit;info.append(text('p',t('Last 5 hours: {used} / {limit} (estimated)',{used:fmt(usage.rolling_5h),limit:fmt(five.limit)}),'note'));if(pct>=(data.warning_thresholds?.[0]??.8))info.append(text('p',t('Estimated usage is near the reference limit; actual balance is unknown.'),'tig-plan-alert'));}
-    for(const w of win.filter(w=>w.id!=='rolling_5h'))info.append(text('p',t(w.id==='month'?'Reference limit: {limit} per month':'Reference limit: {limit} per subscription week',{limit:fmt(w.limit)}),'note'));
+    for(const w of win.filter(w=>w.id!=='rolling_5h')){
+     info.append(text('p',t(w.id==='month'?'Reference limit: {limit} per month':'Reference limit: {limit} per subscription week',{limit:fmt(w.limit)}),'note'));
+     const observed=w.id==='month'?usage.rolling_30d:usage.rolling_7d;
+     if(observed/w.limit>=(data.warning_thresholds?.[0]??.8))info.append(text('p',t('Rolling usage is near the reference limit; the actual reset date is unknown.'),'tig-plan-alert'));
+    }
     info.append(text('p',t('Observed last 7 / 30 days: {week} / {month}',{week:fmt(usage.rolling_7d),month:fmt(usage.rolling_30d)}),'note'));
     if(usage.unpriced)info.append(text('p',t('{n} attempts could not be priced',{n:usage.unpriced}),'tig-plan-alert'));
     const rates=[...new Map((data.rates||[]).filter(x=>x.deployment===id&&[source.id,source.preset].some(v=>v&&String(v).startsWith(String(x.provider||'').replace(/\*$/,'')))).map(x=>[String(x.model).toLowerCase(),x])).values()];
