@@ -13,11 +13,12 @@ import (
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/yetone/magpie/internal/appdir"
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 // appPath is where Win+R and `start magpie` look magpie.exe up: the user's
 // own, no administrator needed. A var so the test writes a key of its own.
-var appPath = `Software\Microsoft\Windows\CurrentVersion\App Paths\magpie.exe`
+var appPath = registryPath(`App Paths`, "magpie.exe", "sub2agent.exe")
 
 func registerAppPath(exe string) {
 	if k, _, err := registry.CreateKey(registry.CURRENT_USER, appPath, registry.SET_VALUE); err == nil {
@@ -35,7 +36,14 @@ func registerAppPath(exe string) {
 // gateway that was gone (Jevik_AI on X). Its Uninstall runs magpie's own
 // (UninstallCommand), which puts every agent back first. A var so the
 // test writes a key of its own.
-var uninstallKey = `Software\Microsoft\Windows\CurrentVersion\Uninstall\magpie`
+var uninstallKey = registryPath(`Uninstall`, "magpie", "sub2agent")
+
+func registryPath(section, upstream, internal string) string {
+	if distribution.Internal {
+		upstream = internal
+	}
+	return `Software\Microsoft\Windows\CurrentVersion\` + section + `\` + upstream
+}
 
 // registerUninstall writes the entry for exe, at every start, so it
 // follows an exe that was moved.
@@ -51,13 +59,20 @@ func registerUninstall(exe string) {
 		"Publisher":       Name,
 		"InstallLocation": filepath.Dir(exe),
 		"UninstallString": UninstallCommand(exe),
-		"URLInfoAbout":    "https://usemagpie.ai",
+		"URLInfoAbout":    aboutURL(),
 	} {
 		_ = k.SetStringValue(name, v)
 	}
 	// Uninstall is the one button: there is nothing to modify or repair
 	_ = k.SetDWordValue("NoModify", 1)
 	_ = k.SetDWordValue("NoRepair", 1)
+}
+
+func aboutURL() string {
+	if distribution.Internal {
+		return "https://sub2agent.com"
+	}
+	return "https://usemagpie.ai"
 }
 
 // unregisterUninstall takes the entry out while it is exe's, or its exe
@@ -155,7 +170,7 @@ func write(lnk, exe string) (bool, error) {
 		defer p.Clear()
 		return p.ToString()
 	}
-	if !Stale(prop("TargetPath"), prop("WorkingDirectory"), exe) {
+	if !Stale(prop("TargetPath"), prop("WorkingDirectory"), exe) && prop("Description") == Name {
 		return false, nil
 	}
 	for name, val := range map[string]any{
@@ -190,4 +205,96 @@ func unregisterAppPath(exe string) error {
 		}
 	}
 	return errors.Join(uerr, registry.DeleteKey(registry.CURRENT_USER, appPath))
+}
+
+// migrateLegacy replaces only the old shortcut that this installation recorded
+// and whose target still points to its executable. Other installations are untouched.
+func migrateLegacy(exe, state, link string) error {
+	if !distribution.Internal {
+		return nil
+	}
+	saved, err := os.ReadFile(state)
+	if err != nil {
+		return nil
+	}
+	legacyExe := Target(strings.TrimSpace(string(saved)))
+	if !filepath.IsAbs(legacyExe) {
+		return nil
+	}
+	removeOwnedLegacyRegistry(legacyExe)
+	old := filepath.Join(filepath.Dir(link), "Magpie.lnk")
+	if _, err := os.Stat(old); err != nil {
+		return nil
+	}
+	target, err := readShortcutTarget(old)
+	if err != nil || !strings.EqualFold(filepath.Clean(target), filepath.Clean(legacyExe)) {
+		return err
+	}
+	if _, err := os.Stat(link); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	if _, err := writeShortcut(link, exe); err != nil {
+		return err
+	}
+	return os.Remove(old)
+}
+
+func readShortcutTarget(path string) (string, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {
+		var oe *ole.OleError
+		if !errors.As(err, &oe) || (oe.Code() != 1 && oe.Code() != 0x80010106) {
+			return "", err
+		}
+		if oe.Code() == 1 {
+			defer ole.CoUninitialize()
+		}
+	} else {
+		defer ole.CoUninitialize()
+	}
+	unk, err := oleutil.CreateObject("WScript.Shell")
+	if err != nil {
+		return "", err
+	}
+	defer unk.Release()
+	shell, err := unk.QueryInterface(ole.IID_IDispatch)
+	if err != nil {
+		return "", err
+	}
+	defer shell.Release()
+	v, err := oleutil.CallMethod(shell, "CreateShortcut", path)
+	if err != nil {
+		return "", err
+	}
+	sc := v.ToIDispatch()
+	defer sc.Release()
+	prop, err := oleutil.GetProperty(sc, "TargetPath")
+	if err != nil {
+		return "", err
+	}
+	defer prop.Clear()
+	return prop.ToString(), nil
+}
+
+// Old releases wrote upstream registry paths; remove only entries that still
+// name this exact executable, never an entry belonging to another installation.
+func removeOwnedLegacyRegistry(exe string) {
+	for _, entry := range []struct{ path, value string }{
+		{`Software\Microsoft\Windows\CurrentVersion\App Paths\magpie.exe`, ""},
+		{`Software\Microsoft\Windows\CurrentVersion\Uninstall\magpie`, "DisplayIcon"},
+	} {
+		k, err := registry.OpenKey(registry.CURRENT_USER, entry.path, registry.QUERY_VALUE)
+		if err != nil {
+			continue
+		}
+		value, _, err := k.GetStringValue(entry.value)
+		k.Close()
+		value = strings.TrimSuffix(value, ",0")
+		if err == nil && value != "" && strings.EqualFold(filepath.Clean(value), filepath.Clean(exe)) {
+			_ = registry.DeleteKey(registry.CURRENT_USER, entry.path)
+		}
+	}
 }

@@ -1463,3 +1463,10 @@ Show to expose the WebView2 controller; placement alone does not set Wails'
 logical visibility. The one-shot restore listener is removed after showing.
 The native restart regression seeds saved normal/maximised dimensions and
 checks that a fresh shown window starts maximised only in internal builds.
+
+On Windows, the intranet distribution uses a `Sub2Agent` Start menu shortcut
+and independent `sub2agent.exe` App Paths and `sub2agent` uninstall entries.
+On upgrade, `shortcut.migrateLegacy` migrates an old `Magpie.lnk` only when
+its target matches this distribution's saved shortcut state; another app's
+shortcut and registry entries remain. A deleted shortcut stays deleted.
+See `internal/shortcut/shortcut_windows.go` and `TestInternalWindowsIdentityAndMigration`.

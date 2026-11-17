@@ -11,3 +11,5 @@ func registerAppPath(string) {}
 func registeredAppPath() bool { return false }
 
 func unregisterAppPath(string) error { return nil }
+
+func migrateLegacy(string, string, string) error { return nil }

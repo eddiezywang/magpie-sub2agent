@@ -21,7 +21,7 @@ import (
 )
 
 // Name is what the shortcut is called, and what Windows search finds.
-const Name = "Magpie"
+var Name = shortcutName()
 
 // StateName is the file in magpie's folder recording that the shortcut was
 // made, and for which exe.
@@ -78,6 +78,9 @@ func ensure(exe, portable, state string) error {
 	before := registered()
 	register(exe)
 	if err != nil {
+		return err
+	}
+	if err := migrateLegacy(exe, state, lnk); err != nil {
 		return err
 	}
 	_, gone := os.Stat(lnk)
