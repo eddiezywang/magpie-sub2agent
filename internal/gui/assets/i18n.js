@@ -20966,7 +20966,7 @@ function dateFmt(opts) {
 
 function brandText(s) {
   return window.bootPrefs?.intranet && typeof s === "string"
-    ? s.replace(/sub2agent[- ]magpie/gi, "Sub2Agent").replace(/(?<![\w./\\:{-])magpie\.(cmd|com)(?![\w./\\:}-])/gi, "sub2agent.$1").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "Sub2Agent").replace(/\bmagpies\b/gi, "Sub2Agent") : s;
+    ? s.replace(/\bmagpie-(?=Modell(?:e|en|s)?\b)/gi, "Sub2Agent-").replace(/sub2agent[- ]magpie/gi, "Sub2Agent").replace(/(?<![\w./\\:{-])magpie\.(cmd|com)(?![\w./\\:}-])/gi, "sub2agent.$1").replace(/(?<![\w./:{-])magpie(?![\w./:}-])/gi, "Sub2Agent").replace(/\bmagpies\b/gi, "Sub2Agent") : s;
 }
 function t(s, vars) {
   let out = I18N[locale]?.[s] ?? s;
