@@ -255,7 +255,7 @@ func TestAstrBot(t *testing.T) {
 			t.Fatalf("the user's entry changed or moved:\n%s\nin\n%s", own, b)
 		}
 	}
-	if bk, err := os.ReadFile(path + ".before-magpie"); err != nil || string(bk) != astrbotConfig {
+	if bk, err := os.ReadFile(backupPath(path)); err != nil || string(bk) != astrbotConfig {
 		t.Fatalf("backup: %v\n%s", err, bk)
 	}
 
@@ -264,7 +264,7 @@ func TestAstrBot(t *testing.T) {
 	if err := a.Pick("model", "magpie/kimi/k2-vision"); err != nil {
 		t.Fatal(err)
 	}
-	if bk, _ := os.ReadFile(path + ".before-magpie"); string(bk) != astrbotConfig {
+	if bk, _ := os.ReadFile(backupPath(path)); string(bk) != astrbotConfig {
 		t.Fatalf("the backup was written over:\n%s", bk)
 	}
 	if err := a.Disconnect(); err != nil {

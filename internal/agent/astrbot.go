@@ -114,7 +114,7 @@ func astrbotAt(at place) *Agent {
 	root := astrbotRoot(at)
 	data := filepath.Join(root, "data")
 	path := filepath.Join(data, "cmd_config.json")
-	backup := path + ".before-magpie"
+	backup := backupPath(path)
 	// keyPick is the default chat model AstrBot was on before magpie's
 	keyPick := at.key("astrbot.provider_id")
 	key := func() string { return agentKeyAt("astrbot", at.gw()) }

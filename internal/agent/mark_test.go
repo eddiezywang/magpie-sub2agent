@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/gateway"
 )
@@ -111,7 +112,7 @@ func TestMarkedLinesEveryAgent(t *testing.T) {
 			}
 			for p, b := range agentFiles(t, home) {
 				for _, l := range strings.Split(b, "\n") {
-					if strings.Contains(l, "# "+edit.MarkTag) && !strings.Contains(l, "Codex threads started on magpie") {
+					if strings.Contains(l, "# "+edit.MarkTag) && !strings.Contains(l, "Codex threads started on ") {
 						t.Errorf("%s: a note outlived Disconnect: %q", p, l)
 					}
 				}
@@ -140,6 +141,14 @@ func TestCodexMarkedLines(t *testing.T) {
 		"# magpie: magpie's model list for Codex; " + undo + ", or delete this line\nmodel_catalog_json = ",
 		"# magpie: for Codex threads started on magpie; unused while model_provider doesn't name magpie\nbase_url = \"" + gateway.URL() + "/v1\"\n",
 	} {
+		if distribution.Internal {
+			want = strings.ReplaceAll(want, "unused while model_provider doesn't name magpie", "used only by the configured provider")
+			want = strings.ReplaceAll(want, "`magpie uninstall`", "`sub2agent uninstall`")
+			want = strings.ReplaceAll(want, "# magpie: ", "# sub2agent: ")
+			parts := strings.SplitN(want, "\n", 2)
+			parts[0] = strings.ReplaceAll(parts[0], "magpie", "Sub2Agent")
+			want = strings.Join(parts, "\n")
+		}
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in:\n%s", want, got)
 		}

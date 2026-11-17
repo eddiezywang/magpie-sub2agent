@@ -3,6 +3,8 @@ package edit
 import (
 	"strings"
 
+	"github.com/yetone/magpie/internal/distribution"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,9 +27,14 @@ var Mark func(table, key, value string) string
 
 // MarkTag starts every note: a comment line that starts with it is
 // magpie's, and is written again, or taken out, with the line under it.
-const MarkTag = "magpie: "
+var MarkTag = func() string {
+	if distribution.Internal {
+		return "sub2agent: "
+	}
+	return "magpie: "
+}()
 
-const markComment = "# " + MarkTag
+var markComment = "# " + MarkTag
 
 func noteOf(table, key, value string) string {
 	if Mark == nil {
@@ -38,7 +45,7 @@ func noteOf(table, key, value string) string {
 
 // IsNote says whether line is one of magpie's notes.
 func IsNote(line string) bool {
-	return strings.HasPrefix(strings.TrimSpace(line), markComment)
+	return strings.HasPrefix(strings.TrimSpace(line), markComment) || distribution.Internal && strings.HasPrefix(strings.TrimSpace(line), "# magpie: ")
 }
 
 // withoutNotes is lines without magpie's notes.

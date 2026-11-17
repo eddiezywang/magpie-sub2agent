@@ -272,7 +272,7 @@ func TestMothX(t *testing.T) {
 	if b := readFile(path); b != user {
 		t.Fatalf("settings.json not as it was:\n%s", b)
 	}
-	if _, err := os.Stat(path + ".before-magpie"); !os.IsNotExist(err) {
+	if _, err := os.Stat(backupPath(path)); !os.IsNotExist(err) {
 		t.Fatalf("the copy from before is left: %v", err)
 	}
 }
@@ -294,7 +294,7 @@ func TestMothXRoundTripNoFile(t *testing.T) {
 		if err := a.Disconnect(); err != nil {
 			t.Fatal(err)
 		}
-		for _, f := range []string{"settings.json", "settings.json.before-magpie"} {
+		for _, f := range []string{"settings.json", filepath.Base(backupPath("settings.json"))} {
 			if _, err := os.Stat(filepath.Join(a.Dir, f)); !os.IsNotExist(err) {
 				t.Fatalf("round %d: %s left: %v", i, f, err)
 			}

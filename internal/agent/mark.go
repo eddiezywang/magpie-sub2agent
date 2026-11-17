@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/gateway"
 )
@@ -22,6 +23,16 @@ const undo = "Disconnect in magpie or `magpie uninstall` undoes it"
 // magpie's: a URL on the gateway's port, and Codex's own keys that name
 // magpie.
 func lineNote(table, key, value string) string {
+	note := upstreamLineNote(table, key, value)
+	if distribution.Internal {
+		note = strings.ReplaceAll(note, "`magpie uninstall`", "`sub2agent uninstall`")
+		note = strings.ReplaceAll(note, "unused while model_provider doesn't name magpie", "used only by the configured provider")
+		return strings.ReplaceAll(note, "magpie", "Sub2Agent")
+	}
+	return note
+}
+
+func upstreamLineNote(table, key, value string) string {
 	switch {
 	case table == "" && key == "model_provider" && value == magpieID:
 		return "Codex on magpie's local gateway; " + undo + ", or delete this line and the model line"

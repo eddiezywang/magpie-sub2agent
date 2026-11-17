@@ -141,7 +141,7 @@ func TestPrimeAgentRoundTrip(t *testing.T) {
 			t.Fatalf("round %d:\n%s", i, b)
 		}
 		// models.json wasn't there, and isn't again; nor is a copy left
-		for _, f := range []string{"models.json", "models.json.before-magpie", "settings.json.before-magpie"} {
+		for _, f := range []string{"models.json", filepath.Base(backupPath("models.json")), filepath.Base(backupPath("settings.json"))} {
 			if _, err := os.Stat(filepath.Join(dir, f)); !os.IsNotExist(err) {
 				t.Fatalf("round %d: %s left: %v", i, f, err)
 			}
@@ -171,7 +171,7 @@ func TestPrimeAgentKeepsWhatChangedWhileConnected(t *testing.T) {
 			t.Fatalf("%s = %q:\n%s", k, v, readFile(settings))
 		}
 	}
-	if _, err := os.Stat(settings + ".before-magpie"); !os.IsNotExist(err) {
+	if _, err := os.Stat(backupPath(settings)); !os.IsNotExist(err) {
 		t.Fatalf("copy left: %v", err)
 	}
 }
@@ -225,7 +225,7 @@ func TestPrimeAgentRoundTripWithBOM(t *testing.T) {
 	if b, _ := os.ReadFile(a.Path); !bytes.Equal(b, userSettings) {
 		t.Fatalf("not put back:\n%q", b)
 	}
-	if _, err := os.Stat(a.Path + ".before-magpie"); !os.IsNotExist(err) {
+	if _, err := os.Stat(backupPath(a.Path)); !os.IsNotExist(err) {
 		t.Fatalf("the copy from before is left: %v", err)
 	}
 }

@@ -33,8 +33,8 @@ func TestMarkTOML(t *testing.T) {
 	}
 	got := read(t, p)
 	for _, want := range []string{
-		"# magpie: N\nopenai_base_url = \"http://127.0.0.1:3425/backend-api/codex\"\n",
-		"# magpie: T model_providers.magpie\nbase_url = \"http://127.0.0.1:3425/v1\"\n",
+		"# " + MarkTag + "N\nopenai_base_url = \"http://127.0.0.1:3425/backend-api/codex\"\n",
+		"# " + MarkTag + "T model_providers.magpie\nbase_url = \"http://127.0.0.1:3425/v1\"\n",
 		"\nname = \"magpie\"\n",
 		"model = \"gpt-5\"\n",
 		// a line of the user's own, which magpie didn't write, gets none,
@@ -49,7 +49,7 @@ func TestMarkTOML(t *testing.T) {
 	if err := SetTOMLTopPreserving(p, KV{Path: "openai_base_url", Value: "http://127.0.0.1:3425/backend-api/codex"}); err != nil {
 		t.Fatal(err)
 	}
-	if n := strings.Count(read(t, p), "# magpie: N"); n != 1 {
+	if n := strings.Count(read(t, p), "# "+MarkTag+"N"); n != 1 {
 		t.Fatalf("%d notes on openai_base_url:\n%s", n, read(t, p))
 	}
 	// a value of the user's put in its place, its spacing kept: the note goes
@@ -77,7 +77,7 @@ func TestMarkTOMLKeepsCRLF(t *testing.T) {
 	if err := SetTOMLTop(p, KV{Path: "openai_base_url", Value: "http://127.0.0.1:3425/x"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := read(t, p); got != "model = \"gpt-5\"\r\n# magpie: N\r\nopenai_base_url = \"http://127.0.0.1:3425/x\"\r\n" {
+	if got := read(t, p); got != "model = \"gpt-5\"\r\n# "+MarkTag+"N\r\nopenai_base_url = \"http://127.0.0.1:3425/x\"\r\n" {
 		t.Fatalf("got %q", got)
 	}
 }
@@ -99,13 +99,13 @@ func TestMarkYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := read(t, p)
-	if !strings.Contains(got, "  # magpie: T model\n  base_url: http://127.0.0.1:3425/v1\n") {
+	if !strings.Contains(got, "  # "+MarkTag+"T model\n  base_url: http://127.0.0.1:3425/v1\n") {
 		t.Fatalf("got:\n%s", got)
 	}
 	if err := SetYAML(p, KV{Path: "model.base_url", Value: "https://api.example/v1"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := read(t, p); strings.Contains(got, "magpie:") {
+	if got := read(t, p); strings.Contains(got, strings.TrimSpace(MarkTag)) {
 		t.Fatalf("note kept on the user's value:\n%s", got)
 	}
 }
@@ -117,7 +117,7 @@ func TestMarkYAMLTop(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := read(t, p)
-	if got != "GOOSE_MODEL: gpt-5 # mine\n# magpie: N\nOPENAI_HOST: \"http://127.0.0.1:3425\"\n" {
+	if got != "GOOSE_MODEL: gpt-5 # mine\n# "+MarkTag+"N\nOPENAI_HOST: \"http://127.0.0.1:3425\"\n" {
 		t.Fatalf("got %q", got)
 	}
 	if v, _ := GetYAMLTop(p, "OPENAI_HOST"); v != "http://127.0.0.1:3425" {
@@ -126,7 +126,7 @@ func TestMarkYAMLTop(t *testing.T) {
 	if err := SetYAMLTop(p, KV{Path: "OPENAI_HOST", Value: "http://127.0.0.1:3425"}); err != nil {
 		t.Fatal(err)
 	}
-	if n := strings.Count(read(t, p), "magpie: N"); n != 1 {
+	if n := strings.Count(read(t, p), MarkTag+"N"); n != 1 {
 		t.Fatalf("%d notes:\n%s", n, read(t, p))
 	}
 	if err := DelYAMLTop(p, "OPENAI_HOST"); err != nil {
@@ -143,7 +143,7 @@ func TestMarkEnv(t *testing.T) {
 	if err := SetEnvFile(p, KV{Path: "GOOGLE_GEMINI_BASE_URL", Value: "http://127.0.0.1:3425"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := read(t, p); got != "# my keys\nGEMINI_API_KEY=abc\n# magpie: N\nGOOGLE_GEMINI_BASE_URL=http://127.0.0.1:3425\n" {
+	if got := read(t, p); got != "# my keys\nGEMINI_API_KEY=abc\n# "+MarkTag+"N\nGOOGLE_GEMINI_BASE_URL=http://127.0.0.1:3425\n" {
 		t.Fatalf("got %q", got)
 	}
 	if v, _ := GetEnvFile(p, "GOOGLE_GEMINI_BASE_URL"); v != "http://127.0.0.1:3425" {
@@ -152,7 +152,7 @@ func TestMarkEnv(t *testing.T) {
 	if err := SetEnvFile(p, KV{Path: "GOOGLE_GEMINI_BASE_URL", Value: "http://127.0.0.1:3425"}); err != nil {
 		t.Fatal(err)
 	}
-	if n := strings.Count(read(t, p), "magpie: N"); n != 1 {
+	if n := strings.Count(read(t, p), MarkTag+"N"); n != 1 {
 		t.Fatalf("%d notes:\n%s", n, read(t, p))
 	}
 	// the user's comment above their own key is never taken
@@ -194,7 +194,7 @@ func TestMarkOnlyWhatMagpieWrites(t *testing.T) {
 	if err := SetTOMLTop(p, KV{Path: "model", Value: "gpt-5"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := read(t, p); strings.Contains(got, "magpie:") {
+	if got := read(t, p); strings.Contains(got, strings.TrimSpace(MarkTag)) {
 		t.Fatalf("a note on the user's own line:\n%s", got)
 	}
 	if err := SetTOMLTop(p, KV{Path: "openai_base_url", Value: "http://127.0.0.1:3425/x"}); err != nil {
@@ -203,7 +203,7 @@ func TestMarkOnlyWhatMagpieWrites(t *testing.T) {
 	if err := SetTOMLTop(p, KV{Path: "model", Value: "gpt-5.5"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := read(t, p); strings.Count(got, "# magpie: ") != 1 || !strings.Contains(got, "# magpie: N\nopenai_base_url") {
+	if got := read(t, p); strings.Count(got, "# "+MarkTag+"") != 1 || !strings.Contains(got, "# "+MarkTag+"N\nopenai_base_url") {
 		t.Fatalf("got:\n%s", got)
 	}
 }
@@ -221,7 +221,7 @@ func TestMarkNeverSharesTheValuesLine(t *testing.T) {
 			t.Fatalf("a note beside the value: %q", l)
 		}
 	}
-	if !strings.Contains(read(t, p), "# magpie: T providers.magpie\nbase_url") {
+	if !strings.Contains(read(t, p), "# "+MarkTag+"T providers.magpie\nbase_url") {
 		t.Fatalf("got:\n%s", read(t, p))
 	}
 }

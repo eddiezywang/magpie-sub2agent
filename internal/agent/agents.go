@@ -17,6 +17,7 @@ import (
 
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/catalog"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/filememo"
 	"github.com/yetone/magpie/internal/gateway"
@@ -1431,6 +1432,14 @@ func homeDir(home, d string) string {
 	return filepath.Clean(d)
 }
 
+// backupPath keeps the internal distribution backup separate from upstream.
+func backupPath(path string) string {
+	if distribution.Internal {
+		return path + ".before-sub2agent"
+	}
+	return path + ".before-magpie"
+}
+
 // beforeMagpie is a copy of an agent's own files taken before magpie first
 // writes them (file.before-magpie beside each), which Disconnect puts back
 // byte for byte when what it left says the same as the copy: the same
@@ -1451,14 +1460,14 @@ func (b beforeMagpie) take() {
 		raw, err := os.ReadFile(f)
 		switch {
 		case err == nil:
-			if edit.WriteAtomic(f+".before-magpie", raw) != nil {
-				os.Remove(f + ".before-magpie")
+			if edit.WriteAtomic(backupPath(f), raw) != nil {
+				os.Remove(backupPath(f))
 			}
 		case errors.Is(err, fs.ErrNotExist):
-			os.Remove(f + ".before-magpie")
+			os.Remove(backupPath(f))
 			gone = append(gone, filepath.Base(f))
 		default:
-			os.Remove(f + ".before-magpie")
+			os.Remove(backupPath(f))
 		}
 	}
 	stash(map[string]string{b.absent: strings.Join(gone, "\n")})
@@ -1470,21 +1479,21 @@ func (b beforeMagpie) restore() error {
 	for _, f := range b.files {
 		cur, err := os.ReadFile(f)
 		if err != nil {
-			os.Remove(f + ".before-magpie")
+			os.Remove(backupPath(f))
 			continue
 		}
 		var now any
 		if json.Unmarshal(edit.TrimBOM(cur), &now) != nil { // a BOM is the user's own (#1534)
 			continue
 		}
-		if was, err := os.ReadFile(f + ".before-magpie"); err == nil {
+		if was, err := os.ReadFile(backupPath(f)); err == nil {
 			var then any
 			if json.Unmarshal(edit.TrimBOM(was), &then) == nil && reflect.DeepEqual(now, then) && !bytes.Equal(cur, was) {
 				if err := edit.WriteAtomic(f, was); err != nil {
 					return err
 				}
 			}
-			os.Remove(f + ".before-magpie")
+			os.Remove(backupPath(f))
 			continue
 		}
 		if slices.Contains(gone, filepath.Base(f)) && emptyJSON(now) {

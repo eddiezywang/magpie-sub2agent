@@ -494,3 +494,10 @@ lists finish their native saves before a single connect retry. Leaving stops
 subsequent writes. A failed list read remains a failed connection, not a user
 cancellation. The native menu follows toolbar redraws while it is open.
 build/workspace-bulk-models-acceptance.cjs checks these paths in both engines.
+
+Internal builds write agent file snapshots with the `.before-sub2agent` suffix,
+separate from upstream's `.before-magpie`. Existing old-suffix snapshots are
+left untouched and are not restored automatically, because they cannot be
+attributed safely to either distribution. Internal config notes use the
+Sub2Agent name; the editor recognizes both new and legacy note markers when
+rewriting managed lines. See `backupPath`, `beforeMagpie` and `edit.IsNote`.
