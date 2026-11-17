@@ -9,8 +9,9 @@
 #ws-guide .ws-step:not(:last-child)::after{content:"";width:30px;height:2px;margin:0 18px;background:repeating-linear-gradient(90deg,var(--line) 0 4px,transparent 4px 7px);flex:none}
 .ws-step-number{box-sizing:border-box;display:grid;place-items:center;width:24px;height:24px;flex:none;border:2px solid var(--muted);border-radius:0;background:var(--card);box-shadow:2px 2px 0 var(--line);font:700 12px/1 monospace;color:var(--muted)}
 .ws-step-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.ws-step-title{font-size:12px;line-height:1.2}.ws-step-state{font-size:11px;line-height:1.2;color:var(--muted)}
-#ws-guide [aria-current=step] .ws-step-number{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:2px 2px 0 var(--fg)}
-#ws-guide .done .ws-step-number{border-color:var(--green);color:var(--green)}#ws-guide .done .ws-step-state,.ws-next-message.is-positive{color:var(--green)}
+#ws-guide .ws-step:not(.done) .ws-step-title{color:var(--muted)}
+#ws-guide .done .ws-step-number{border:0;background:var(--green);color:#fff;box-shadow:2px 2px 0 var(--line)}
+#ws-guide .done .ws-step-title,#ws-guide .done .ws-step-state,.ws-next-message.is-positive{color:var(--green)}
 #ws-guide .ws-step:hover .ws-step-title{text-decoration:underline;text-underline-offset:3px}
 @media(max-width:650px){#ws-guide .ws-step:not(:last-child)::after{width:12px;margin:0 8px}}
 #ws-next{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:36px;margin-bottom:20px;font-size:12px}

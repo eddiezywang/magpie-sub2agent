@@ -41,6 +41,11 @@ async function test(browser,engine){
   assert.equal(await page.locator('#ws-guide .ws-step').count(),3);
   const guideColors=await page.evaluate(()=>{const ref=document.createElement('span');ref.style.color='var(--green)';document.body.append(ref);const green=getComputedStyle(ref).color;ref.remove();return {green,states:[...document.querySelectorAll('#ws-guide .ws-step-state')].map(e=>getComputedStyle(e).color),positive:getComputedStyle(document.querySelector('.ws-next-message')).color,shape:getComputedStyle(document.querySelector('.ws-step-number')).borderRadius}});
   assert.equal(guideColors.shape,'0px','step markers are square pixels');
+  const pixels=await page.evaluate(()=>{const ref=document.createElement('span');ref.style.color='var(--muted)';document.body.append(ref);const gray=getComputedStyle(ref).color;ref.remove();return {gray,steps:[...document.querySelectorAll('#ws-guide .ws-step')].map(step=>({title:getComputedStyle(step.querySelector('.ws-step-title')).color,state:getComputedStyle(step.querySelector('.ws-step-state')).color,fill:getComputedStyle(step.querySelector('.ws-step-number')).backgroundColor,border:getComputedStyle(step.querySelector('.ws-step-number')).borderTopWidth}))};});
+  for(const step of pixels.steps.slice(0,2)){assert.equal(step.fill,guideColors.green,'completed marker is filled green');assert.equal(step.border,'0px','completed marker has no outline');assert.equal(step.title,guideColors.green,'completed title is green');}
+  assert.equal(pixels.steps[2].title,pixels.gray,'unapplied policy title is gray');
+  assert.equal(pixels.steps[2].state,pixels.gray,'unapplied policy status is gray');
+  assert.notEqual(pixels.steps[2].fill,'rgb(38, 95, 231)','unapplied policy marker is not blue');
   assert.equal(guideColors.states[0],guideColors.green,'ready provider status is green');
   assert.equal(guideColors.states[1],guideColors.green,'connected Agent status is green');
   assert.notEqual(guideColors.states[2],guideColors.green,'unapplied policy is not green');
