@@ -35,7 +35,15 @@
 }
 @media(max-width:900px){#view-workspace{overflow-y:auto}.ws-primary{overflow:visible}}
 
-#ws-guide[hidden],#ws-next[hidden]{display:none}#ws-route-controls>[data-ws-focus=agent],.ws-fold{display:inline-flex;align-items:center;gap:10px;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+#ws-guide[hidden],#ws-next[hidden]{display:none}
+#ws-route-controls>.ws-control,#ws-agents>summary .ws-fold{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg);font:inherit;font-size:12px;line-height:20px;box-shadow:none}
+#ws-route-controls>.ws-control{max-width:100%;white-space:normal}
+#ws-route-controls>.ws-control:hover,#ws-agents>summary:hover .ws-fold{background:var(--pill)}
+#ws-route-controls>.ws-control svg{flex:none;transition:transform .15s ease}
+#ws-route-controls>.ws-control[aria-expanded=true] svg{transform:rotate(180deg)}
+#ws-agents>summary .ws-fold::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s ease}
+#ws-agents[open]>summary .ws-fold::after{transform:rotate(225deg) translate(-1px,-1px)}
+@media(prefers-reduced-motion:reduce){#ws-route-controls>.ws-control svg,#ws-agents>summary .ws-fold::after{transition:none}}
 
 /* The workspace uses the same compact control for each disclosure. */
 .ws-expand-label,.ws-account-activity>summary {display:inline-flex;align-items:center;gap:10px;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}

@@ -155,7 +155,7 @@ async function test(browser,engine){
   assert.equal(await connections.locator('#agents .connection-check').count(),0);
   await connections.evaluate(async()=>{qa.connectionReadFails=true;await import('/agentconnections.js').then(m=>m.refresh())});
   await connections.locator('#ws-agent-counts').getByText('已接入 0 · 未接入 0 · 未知 10',{exact:true}).waitFor();
-  await connections.getByText('接入 Agent 后可选择路由组',{exact:true}).waitFor();
+  await connections.getByText('接入 Agent 后可选择路由策略',{exact:true}).waitFor();
   assert.equal(await connections.locator('#agents .ag-st.on').count(),0,'unknown state has no connected green indicator');
   assert.equal(await connections.getByRole('button',{name:'一键全部接入（0）',exact:true}).isDisabled(),true);
   const failedReadCount=await connections.evaluate(()=>qa.connectionReads);
@@ -193,7 +193,7 @@ async function test(browser,engine){
   await drafts.locator('#nav button[data-view=workspace]').click();
   await drafts.waitForFunction(()=>view==='workspace'&&document.querySelectorAll('#view-workspace #view-agents,#view-workspace #view-routing,#view-workspace #view-providers').length===3);
   for(const id of ['agents','routing','providers'])assert.equal(await drafts.locator('#view-workspace #view-'+id).count(),1);
-  await drafts.locator('#ws-route-controls').getByRole('button',{name:'编辑路由组',exact:true}).click();
+  await drafts.locator('#ws-route-controls').getByRole('button',{name:'编辑路由策略',exact:true}).click();
   await drafts.waitForFunction(()=>view==='groups');
   await drafts.locator('#nav button[data-view=workspace]').click();
   await drafts.locator('[data-ws-focus=strategy]').waitFor();

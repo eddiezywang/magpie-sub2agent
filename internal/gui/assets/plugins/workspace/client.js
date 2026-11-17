@@ -13,7 +13,7 @@
   window.workspaceScrollRoot=()=>active ? (matchMedia('(min-width:901px)').matches ? main.querySelector('.ws-primary') : main) : null;
   const layout=()=>document.dispatchEvent(new Event('workspace-layout'));
   addEventListener('resize',()=>{if(active)layout();});
-  let main, homes=[], active=false, observer, generation=0, routeRequest=0, routeStamp='', routeData=null, saving=false, routeError='';
+  let main, homes=[], active=false, observer, generation=0, routeRequest=0, routeStamp='', routeData=null, saving=false, routeError='', pendingPaint=false;
   magpie.plugin('workspace',ctx=>ctx.slots.add('page',{
     key:'workspace',title:'Workspace',loads:'providers',
     html:`<nav id="ws-guide" aria-label="Workspace setup"></nav><div id="ws-next" role="status"></div><div class="ws-grid"><div class="ws-primary"><details id="ws-agents"><summary><b data-t>Agent connections</b><span id="ws-agent-counts"></span><span class="ws-fold"></span></summary><div id="ws-agent-host"></div></details><section><h2 data-t>Routing policy</h2><div id="ws-route-controls"></div><div id="ws-route-members"></div><div id="ws-routing-host"></div></section></div><aside class="ws-providers"><h2 data-t>Providers</h2><div id="ws-provider-host"></div></aside></div>`,
@@ -27,13 +27,13 @@
       }
       document.body.classList.add('workspace-active');
       layout();
-      const details=main.querySelector('#ws-agents');details.ontoggle=()=>{details.querySelector('.ws-fold').textContent=t(details.open?'Collapse agents':'Show all agents')+(details.open?'⌃':'⌄');};details.ontoggle();
+      const details=main.querySelector('#ws-agents');details.ontoggle=()=>{details.querySelector('.ws-fold').textContent=t(details.open?'Collapse agents':'Show all agents');};details.ontoggle();
       observer?.disconnect();observer=new MutationObserver(counts);observer.observe(document.querySelector('#agents'),{childList:true,subtree:true});
       renderAgents();counts();if(providers)renderProviders();
       import('../../agentconnections.js').then(m=>m.enter(),statusErr);
       window.workspaceThroughput?.start();
     },
-    leave(){active=false;generation++;observer?.disconnect();window.workspaceThroughput?.stop();for(const h of homes){h.parent.insertBefore(h.page,h.next?.parentNode===h.parent?h.next:null);h.page.hidden=true;}document.body.classList.remove('workspace-active');},
+    leave(){active=false;pendingPaint=false;if(agentMenu&&main.contains(agentMenu.anchor))closeAgentMenu();generation++;observer?.disconnect();window.workspaceThroughput?.stop();for(const h of homes){h.parent.insertBefore(h.page,h.next?.parentNode===h.parent?h.next:null);h.page.hidden=true;}document.body.classList.remove('workspace-active');},
     render(){if(active&&providers){renderProviders();counts();main.querySelector('#ws-agents').ontoggle();routeControls();}},
     draft(){if(active&&providers)renderProviders();},
     loading(){if(active)renderProvidersLoading();}
@@ -67,6 +67,11 @@
     else {const recheck=first===1&&unknown,b=button(recheck?'Refresh status':first===0?'Configure providers':'View Agents',recheck?async()=>{b.disabled=true;try{await (await import('../../agentconnections.js')).refresh();}catch(err){statusErr(err);}}:()=>step(first),true);b.dataset.action=recheck?'refresh':String(first);next.append(b);}
     if(focusedNext)next.querySelector(`[data-action="${focusedNext}"]`)?.focus({preventScroll:true});
   }
+  function toggleMenu(anchor,items){
+    const same=agentMenu?.anchor===anchor;closeAgentMenu();closeProtoMenu();
+    if(same)return;
+    openRowMenu(anchor,items,undefined,()=>queueMicrotask(()=>{if(active&&pendingPaint&&!agentMenu){pendingPaint=false;paint();guide();}}),true);
+  }
   function paint(){
     if(!active)return;
     const box=main.querySelector('#ws-route-controls');
@@ -74,11 +79,11 @@
     const focus=box.contains(document.activeElement)?document.activeElement.dataset.wsFocus:menu?.box.contains(document.activeElement)?menu.anchor.dataset.wsFocus:null;
     // Keep the open menu usable while an asynchronous refresh arrives.
     // Selecting an item repaints from the latest state; later refreshes do too.
-    if(menu)return;box.replaceChildren();
+    if(menu){pendingPaint=true;return;}pendingPaint=false;box.replaceChildren();
     const a=target();if(!a){if(focus)main.querySelector('#ws-agents summary').focus({preventScroll:true});box.textContent=t('Connect an Agent to choose a routing group');main.querySelector('#ws-route-members').replaceChildren();return;}
-    main.dataset.agent=a.id;const f=field(a),g=selected(a),choose=button('Agent',e=>{e.stopPropagation();openRowMenu(choose,eligible().map(agent=>({name:agent.name,run:()=>{main.dataset.agent=agent.id;paint();guide();}})));});choose.textContent=a.name;choose.append(svg('M4 6l4 4 4-4',12,1.6));choose.setAttribute('aria-haspopup','menu');choose.dataset.wsFocus='agent';choose.disabled=saving;
-    const pick=button('Routing policy',e=>{e.stopPropagation();const items=(routeData?.templates||[]).map(tp=>{const saved=routeData.groups?.find(g=>g.templateKind===tp.kind),reason=saved?.disabled?'Routing group is disabled':saved&&!saved.ready?'Routing group has no available members':tp.need?tp.need==='model'?'No recognized model in this tier; choose members in Routing groups':'Template prerequisites are not met; check Routing groups':'';return {name:t(kinds[tp.kind]||tp.group.name),off:!!reason,why:reason?t(reason):'',tip:tp.group.members.map(id=>routeData.models?.find(m=>m.id===id)?.name||id).join('\n'),run:()=>apply(tp.kind)};});for(const group of routeData?.groups||[])if(!group.templateKind||!kinds[group.templateKind])items.push({name:group.name,off:!group.ready||!!group.disabled,run:()=>applySaved(group)});openRowMenu(pick,items);});
-    pick.textContent=(g&&t(g.name))||optionFor(f,f.value)?.label||f.value||t('Not applied');pick.append(svg('M4 6l4 4 4-4',12,1.6));pick.dataset.wsFocus='strategy';pick.setAttribute('aria-haspopup','menu');pick.disabled=saving||!routeData;
+    main.dataset.agent=a.id;const f=field(a),g=selected(a),choose=button('Agent',e=>{e.stopPropagation();toggleMenu(choose,eligible().map(agent=>({name:agent.name,run:()=>{main.dataset.agent=agent.id;paint();guide();}})));});choose.textContent=a.name;choose.append(svg('M4 6l4 4 4-4',12,1.6));choose.setAttribute('aria-haspopup','menu');choose.setAttribute('aria-expanded','false');choose.classList.add('ws-control');choose.dataset.wsFocus='agent';choose.disabled=saving;
+    const pick=button('Routing policy',e=>{e.stopPropagation();const items=(routeData?.templates||[]).map(tp=>{const saved=routeData.groups?.find(g=>g.templateKind===tp.kind),reason=saved?.disabled?'Routing group is disabled':saved&&!saved.ready?'Routing group has no available members':tp.need?tp.need==='model'?'No recognized model in this tier; choose members in Routing groups':'Template prerequisites are not met; check Routing groups':'';return {name:t(kinds[tp.kind]||tp.group.name),off:!!reason,why:reason?t(reason):'',tip:tp.group.members.map(id=>routeData.models?.find(m=>m.id===id)?.name||id).join('\n'),run:()=>apply(tp.kind)};});for(const group of routeData?.groups||[])if(!group.templateKind||!kinds[group.templateKind])items.push({name:group.name,off:!group.ready||!!group.disabled,run:()=>applySaved(group)});toggleMenu(pick,items);});
+    pick.textContent=(g&&t(g.name))||optionFor(f,f.value)?.label||f.value||t('Not applied');pick.append(svg('M4 6l4 4 4-4',12,1.6));pick.dataset.wsFocus='strategy';pick.setAttribute('aria-haspopup','menu');pick.setAttribute('aria-expanded','false');pick.classList.add('ws-control');pick.disabled=saving||!routeData;
     const edit=button('Edit routing groups',()=>{show('groups');if(g)requestAnimationFrame(()=>document.querySelector(`.rt-group[data-id="${CSS.escape(g.id)}"]`)?.scrollIntoView({block:'nearest'}));});edit.dataset.wsFocus='edit';edit.disabled=saving;
     box.append(el('span','note',t('Applies to')),choose,pick,edit);
     if(saving)box.append(el('span','note',t('Applying routing policy…')));

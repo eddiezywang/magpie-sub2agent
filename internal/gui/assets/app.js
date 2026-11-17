@@ -3227,12 +3227,15 @@ let agentMenu = null;
 function closeAgentMenu() {
   if (!agentMenu) return;
   agentMenu.anchor.classList.remove("open");
+  if (agentMenu.anchor.hasAttribute("aria-expanded")) agentMenu.anchor.setAttribute("aria-expanded", "false");
   agentMenu.box.remove();
   document.removeEventListener("mousedown", agentMenu.outside, true);
   document.removeEventListener("keydown", agentMenu.keys, true);
   document.removeEventListener("scroll", agentMenu.scroll, true);
   removeEventListener("resize", closeAgentMenu);
+  const onClose = agentMenu.onClose;
   agentMenu = null;
+  onClose?.();
 }
 function openAgentMenu(anchor, a, inFold, at) {
   if (!anchor) return;
@@ -3268,7 +3271,7 @@ function openAgentMenu(anchor, a, inFold, at) {
 }
 // openRowMenu: a small menu of acts under anchor, the one an agent row's
 // right-click opens, and a model chip's
-function openRowMenu(anchor, acts, at) {
+function openRowMenu(anchor, acts, at, onClose, followScroll = false) {
   const box = el("div", "pop row-menu");
   box.setAttribute("role", "menu");
   const items = [];
@@ -3294,9 +3297,17 @@ function openRowMenu(anchor, acts, at) {
   document.body.append(box);
   placeMenu(box, anchor, "left", -4, at);
   anchor.classList.add("open");
+  if (anchor.hasAttribute("aria-expanded")) anchor.setAttribute("aria-expanded", "true");
   const outside = (e) => { if (!box.contains(e.target) && !anchor.contains(e.target)) closeAgentMenu(); };
   // a long menu scrolls inside itself; only a scroll outside it closes it
-  const scroll = (e) => { if (scrollCloses(box, e)) closeAgentMenu(); };
+  const scroll = (e) => {
+    if (!scrollCloses(box, e)) return;
+    if (!followScroll || !anchor.isConnected) return closeAgentMenu();
+    const r = anchor.getBoundingClientRect();
+    if (r.bottom <= 0 || r.top >= innerHeight) return closeAgentMenu();
+    box.style.maxHeight = ""; box.classList.remove("up");
+    placeMenu(box, anchor, "left", -4);
+  };
   const keys = (e) => {
     const k = items.indexOf(document.activeElement);
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeAgentMenu(); anchor.focus(NO_SCROLL); }
@@ -3309,7 +3320,7 @@ function openRowMenu(anchor, acts, at) {
   document.addEventListener("keydown", keys, true);
   document.addEventListener("scroll", scroll, true);
   addEventListener("resize", closeAgentMenu);
-  agentMenu = { box, anchor, outside, keys, scroll };
+  agentMenu = { box, anchor, outside, keys, scroll, onClose };
   items[0]?.focus(NO_SCROLL);
 }
 
