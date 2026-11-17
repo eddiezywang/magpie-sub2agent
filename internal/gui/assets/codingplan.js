@@ -17,16 +17,59 @@ export function notice(editor, preset) {
     paragraph.textContent = text;
     box.append(paragraph);
   }
-  for (const [label, url] of [
-    ["AIEP · 申请密钥 / 剩余额度", "https://aiep.weoa.com"],
-    ["查看使用说明 ↗", "http://docs.weoa.com/docs/47kgJOEB8WTo77qV"],
-  ]) {
-    const link = document.createElement("button");
-    link.type = "button";
-    link.className = "link";
-    link.textContent = label;
-    link.onclick = () => api("open", {url});
-    box.append(link);
-  }
+  editor.querySelector('.ehead .site')?.remove();
   editor.querySelector(".ehead").after(box);
+  const rules = document.createElement('section');
+  rules.className = 'coding-plan-notice';
+  const heading = document.createElement('strong'); heading.textContent = t('TIG plan usage'); rules.append(heading);
+  const link = document.createElement('button'); link.type = 'button'; link.className = 'link';
+  link.textContent = t('TIG usage guide'); link.onclick = () => api('open', {url:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV'}); rules.append(link);
+  const content = document.createElement('div'); content.textContent = t('Usage unavailable; waiting for the billing service'); rules.append(content); box.after(rules);
+  fetch('/api/accounting/tig-plans').then(r => { if (!r.ok) throw Error('unavailable'); return r.json(); }).then(data => {
+    if (!rules.isConnected) return;
+    content.replaceChildren();
+    const names = {zp:t('Zhipu · team advanced (estimated)'),hs:t('Volcengine · AFP'),tc:t('Tencent · TIG reference')};
+    for (const id of ['zp','hs','tc']) {
+      const plan = data.config?.plans?.[id]; if (!plan) continue;
+      const row = document.createElement('p'); row.textContent = names[id] + ' · ' + plan.windows.map(w => `${windowName(w.id)} ${Number(w.limit).toLocaleString()} ${plan.unit}`).join(' / '); content.append(row);
+    }
+    const details = document.createElement('details'), summary = document.createElement('summary'); summary.textContent = t('Model coefficients'); details.append(summary);
+    const explanation = document.createElement('p'); explanation.textContent = t('Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.'); details.append(explanation);
+    const seen = new Set();
+    for (const rate of data.rates || []) {
+      const key = rate.model + ':' + rate.deployment; if (seen.has(key)) continue; seen.add(key);
+      const row = document.createElement('p'); const c = rate.credit_rates;
+      row.textContent = `${rate.model} · ${c ? `${c.input} / ${c.cache_read} / ${c.output}` : rate.coefficient} ${rate.currency || ''}`; details.append(row);
+    }
+    content.append(details);
+  }).catch(() => {});
+}
+
+function windowName(id) { return id === 'rolling_5h' ? t('5 hours') : id === 'month' ? t('Month') : t('Week'); }
+
+// Uses the managed plan report; never substitutes hard-coded limits on failure.
+export async function models(box, provider) {
+  const suffix = id => /(?:-openai)?-(zp|hs|tc)(?:-openai)?$/i.exec(String(id || '').split('/').pop())?.[1]?.toLowerCase();
+  const ids = [...new Set((provider.models || []).map(m => suffix(m.id)).filter(Boolean))];
+  if (!ids.length) return;
+  const line = document.createElement('div');
+  line.className = 'hint billing-legend';
+  line.textContent = t('Detected from available model IDs; entitlement and balance are not confirmed.');
+  box.querySelector('.mchips')?.before(line);
+  try {
+    const response = await fetch('/api/accounting/tig-plans');
+    if (!response.ok) return;
+    const report = (await response.json()).config;
+    if (!line.isConnected) return;
+    const names = {zp: t('Zhipu · team advanced (estimated)'), hs: t('Volcengine · AFP'), tc: t('Tencent · TIG reference')};
+    const descriptions = ids.flatMap(id => {
+      const windows = report.plans?.[id]?.windows;
+      if (!Array.isArray(windows)) return [];
+      return [names[id] + ' · ' + windows.map(w => {
+        const name = windowName(w.id);
+        return name + ' ' + Number(w.limit).toLocaleString();
+      }).join(' / ')];
+    });
+    if (descriptions.length) line.textContent += '  ' + descriptions.join('　');
+  } catch { /* unavailable is distinct from a zero limit */ }
 }

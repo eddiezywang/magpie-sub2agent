@@ -15,6 +15,7 @@ import (
 
 	"github.com/yetone/magpie/internal/accounting"
 	"github.com/yetone/magpie/internal/agent"
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/gateway"
@@ -104,6 +105,15 @@ func requestContent(agent, session string, from, to, at time.Time) contentJSON {
 
 func usageRoutes(mux *http.ServeMux, w Windows) {
 	if distribution.Internal {
+		mux.HandleFunc("GET /api/accounting/tig-plans", func(rw http.ResponseWriter, r *http.Request) {
+			plans, err := catalog.ManagedTIGPlans()
+			if err != nil {
+				http.Error(rw, "TIG plans unavailable", http.StatusServiceUnavailable)
+				return
+			}
+			rw.Header().Set("Cache-Control", "no-store")
+			writeJSON(rw, plans)
+		})
 		mux.HandleFunc("GET /api/accounting/report", func(rw http.ResponseWriter, r *http.Request) {
 			q := r.URL.Query()
 			body, ct, err := accounting.BillingReport(r.Context(), q.Get("period"), q.Get("format"), q.Get("date"))

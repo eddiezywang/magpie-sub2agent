@@ -20,10 +20,31 @@ import (
 var managedRoutingURL = "http://172.21.0.177:17890/usage/routing-catalog"
 
 type managedRouting struct {
-	Revision string        `json:"revision"`
-	Expires  time.Time     `json:"expires_at"`
-	Models   []managedRate `json:"models"`
+	Revision string          `json:"revision"`
+	Expires  time.Time       `json:"expires_at"`
+	Models   []managedRate   `json:"models"`
+	TIGPlans json.RawMessage `json:"tig_plans,omitempty"`
 }
+
+// ManagedTIGPlans returns the unexpired server-managed reference configuration.
+func ManagedTIGPlans() (map[string]any, error) {
+	d, err := filememo.Read("managed-routing", managedRoutingPath(), parseManagedRouting)
+	if err != nil || !time.Now().Before(d.Expires) || len(d.TIGPlans) == 0 || string(d.TIGPlans) == "null" {
+		return nil, fmt.Errorf("TIG plan configuration unavailable")
+	}
+	var plans any
+	if err := json.Unmarshal(d.TIGPlans, &plans); err != nil {
+		return nil, err
+	}
+	rates := make([]managedRate, 0)
+	for _, rate := range d.Models {
+		if rate.Deployment == "zp" || rate.Deployment == "hs" || rate.Deployment == "tc" {
+			rates = append(rates, rate)
+		}
+	}
+	return map[string]any{"config": plans, "rates": rates, "revision": d.Revision}, nil
+}
+
 type creditRates struct {
 	Input     float64 `json:"input"`
 	CacheRead float64 `json:"cache_read"`

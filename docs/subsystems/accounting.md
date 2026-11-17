@@ -220,3 +220,10 @@ reference. A warning is not proof of exhaustion. A missing report remains
 unavailable; account-level attribution and actual subscription resets are not
 inferred. The overview refreshes while open, and stops polling on leave. See
 `assets/tig-plan-usage.js` and `build/tig-plan-acceptance.cjs`.
+
+The provider editor shows the server-managed plan overview and model badges at
+the model selection controls. The local `/api/accounting/tig-plans` endpoint
+exposes only the unexpired managed plan configuration and channel rates; if
+the catalog is unavailable the editor does not invent limits. The overview
+combines detected channels across providers and displays each user-wide total
+once. Model consumption is separately available for the trailing 30 days.

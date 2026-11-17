@@ -11414,6 +11414,7 @@ function renderModels(p) {
     box.append(bulk);
   }
   box.append(chips, fold, names);
+  if (p.preset === "aiep-coding-plan" || /^(sub2agent-tigcodingplan|aiep-coding-plan)/.test(p.id)) import("./codingplan.js").then(m => m.models(box, p), statusErr);
   if (p.id.includes("workbuddy") && p.models.some(m => m.routingBilling)) box.append(el("div", "hint billing-legend", t("Official points ≠ MaaS (300M/week). Separate pools; never multiply factors. Unknown ≠ free.")));
   const foot = el("div", "mfoot");
   // a model the list leaves out, added by its id (Tom on X)

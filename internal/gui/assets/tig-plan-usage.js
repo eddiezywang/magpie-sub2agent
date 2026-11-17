@@ -16,10 +16,11 @@
   box.hidden=false;box.replaceChildren(text('h2',t('TIG plan usage')));
   box.append(text('p',t('Detected from available model IDs; entitlement and balance are not confirmed.'),'note'));
   const data=r.status==='fulfilled'?r.value:null;
-  for(const source of sources){
-   const row=text('div','', 'tig-plan-source');row.append(text('strong',source.name||source.id));
-   if(!Array.isArray(source.models)){row.append(text('p',t('Model list unavailable'),'note'));box.append(row);continue;}
-   const channels=[...new Set(source.models.map(m=>ch(typeof m==='string'?m:m?.id)).filter(Boolean))].sort();
+  {
+   const row=text('div','', 'tig-plan-source');
+   const available=sources.filter(source=>Array.isArray(source.models));
+   if(!available.length){row.append(text('p',t('Model list unavailable'),'note'));box.append(row);return;}
+   const channels=[...new Set(available.flatMap(source=>source.models.map(m=>ch(typeof m==='string'?m:m?.id))).filter(Boolean))].sort();
    if(!channels.length)row.append(text('p',t('No recognized plan channels'),'note'));
    for(const id of channels){
     const line=text('div','', 'tig-plan-line'), info=text('div','', 'tig-plan-info');info.append(text('strong',t(names[id])));
@@ -33,8 +34,10 @@
      if(observed/w.limit>=(data.warning_thresholds?.[0]??.8))info.append(text('p',t('Rolling usage is near the reference limit; the actual reset date is unknown.'),'tig-plan-alert'));
     }
     info.append(text('p',t('Observed last 7 / 30 days: {week} / {month}',{week:fmt(usage.rolling_7d),month:fmt(usage.rolling_30d)}),'note'));
+    const consumed=Object.entries(usage.models||{}).sort((a,b)=>b[1]-a[1]);
+    if(consumed.length){const details=document.createElement('details'),summary=text('summary',t('Model usage in the last 30 days'));details.append(summary);for(const [model,amount] of consumed)details.append(text('p',`${model}: ${fmt(amount)} ${plan.unit}`,'note'));info.append(details);}
     if(usage.unpriced)info.append(text('p',t('{n} attempts could not be priced',{n:usage.unpriced}),'tig-plan-alert'));
-    const rates=[...new Map((data.rates||[]).filter(x=>x.deployment===id&&[source.id,source.preset].some(v=>v&&String(v).startsWith(String(x.provider||'').replace(/\*$/,'')))).map(x=>[String(x.model).toLowerCase(),x])).values()];
+    const rates=[...new Map((data.rates||[]).filter(x=>x.deployment===id&&available.some(source=>[source.id,source.preset].some(v=>v&&String(v).startsWith(String(x.provider||'').replace(/\*$/,''))))).map(x=>[String(x.model).toLowerCase(),x])).values()];
     if(rates.length){const details=document.createElement('details'),summary=text('summary',t('Model coefficients'));details.append(summary);for(const rate of rates){const v=rate.credit_rates?`${rate.credit_rates.input} / ${rate.credit_rates.cache_read} / ${rate.credit_rates.output}`:String(rate.coefficient);details.append(text('p',`${rate.model}: ${v}`,'note'));}info.append(details);}
     line.append(info);row.append(line);
    }
