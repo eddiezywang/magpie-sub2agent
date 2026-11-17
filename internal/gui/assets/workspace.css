@@ -36,3 +36,7 @@
 @media(max-width:900px){#view-workspace{overflow-y:auto}.ws-primary{overflow:visible}}
 
 #ws-guide[hidden],#ws-next[hidden]{display:none}#ws-route-controls>[data-ws-focus=agent],.ws-fold{display:inline-flex;align-items:center;gap:10px;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+
+/* The workspace uses the same compact control for each disclosure. */
+.ws-expand-label,.ws-account-activity>summary {display:inline-flex;align-items:center;gap:10px;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+.ws-account-activity>summary{list-style:none}.ws-account-activity>summary::-webkit-details-marker{display:none}.ws-account-activity>summary::after{content:"⌄"}.ws-account-activity[open]>summary::after{content:"⌃"}

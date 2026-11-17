@@ -419,10 +419,14 @@ function icon(name, lazy) {
 // a change done: its line, with the agent's notice (a warning) when there is one
 const saidOk = (msg, ms) => state.notice ? status(withNotice(msg, state.notice), "warn", 9000) : status(msg, "ok", ms);
 // statusErr: a failed call's message, as the status line's error
+function displayError(s) {
+  return intranet && typeof s === "string" ? s.replace(/@magpie-community\//gi, "community/").replace(/magpie/gi, "Sub2Agent") : s;
+}
 function statusErr(e) { status(e.message, "err"); }
 function statusTErr(e) { status(t(e.message), "err"); }
 function settingsErr(e) { statusTErr(e); renderSettings(); }
 function status(msg, kind = "", ms = kind === "err" ? 8000 : 3500) {
+  if (kind === "err") msg = displayError(msg);
   const s = $("#status");
   s.textContent = msg;
   s.title = msg;
@@ -15031,7 +15035,7 @@ function editorError(msg, kind = "err") {
     ed.addEventListener("input", () => box.remove(), { once: true });
   }
   box.className = "editor-error " + kind;
-  box.textContent = msg;
+  box.textContent = kind === "err" ? displayError(msg) : msg;
   return true;
 }
 

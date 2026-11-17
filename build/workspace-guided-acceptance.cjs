@@ -33,6 +33,10 @@ async function test(browser,engine){
   await page.goto('http://workspace.test/?view=workspace');
   await page.locator('#ws-route-controls [data-ws-focus=strategy]').waitFor();
   assert.equal(await page.evaluate(()=>guidanceQA.writes),0,'read never changes policy');
+  await page.evaluate(()=>status('@magpie-community/opencode-factory-auth: rename C:\\Users\\example\\.sub2agent\\plugins: Access is denied', 'err'));
+  assert.doesNotMatch(await page.locator('#status').innerText(),/magpie/i,'errors hide upstream brand');
+  await page.evaluate(()=>status(''));
+
   assert.equal(await page.locator('#ws-agents').getAttribute('open'),null);
   assert.equal(await page.locator('#ws-guide .ws-step').count(),3);
   assert.equal(await page.locator('.ws-grid > :first-child').getAttribute('class'),'ws-providers','reading order starts with providers');
