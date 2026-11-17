@@ -144,3 +144,9 @@ endpoint. Its identity is the existing OS username, not verified individual
 identity; the shared billing key is not a per-user credential. The endpoint
 does not send email. See
 `services/usage-server/test/mail-preferences.test.js`.
+The client-side `MailPreferences` state machine persists explicit choices and
+an operation ID separately from telemetry, fetches the server revision before
+its first write and retains offline choices. A stale revision is surfaced as a
+conflict rather than silently overwriting another device. Its signed HTTP
+transport uses the billing service and does not carry credentials to the page.
+The state machine is not yet attached to the desktop lifecycle or Settings.

@@ -26,7 +26,7 @@ var reportDate = lazyre.New(`^\d{4}-\d{2}-\d{2}$`)
 // nonce so retries must be signed again.
 func SignBillingRequest(r *http.Request, key string, now time.Time) error {
 	k, err := hex.DecodeString(key)
-	if err != nil || len(k) != 32 || r.Method != http.MethodGet {
+	if err != nil || len(k) != 32 || (r.Method != http.MethodGet && !(r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/mail-preferences/"))) {
 		return fmt.Errorf("billing signing unavailable")
 	}
 	var n [16]byte
