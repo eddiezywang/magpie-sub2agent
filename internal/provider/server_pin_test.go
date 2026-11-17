@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/netproxy"
 )
 
@@ -103,6 +104,15 @@ func TestServerPinRemoteMagpie(t *testing.T) {
 	}
 }
 
+// Intranet only exposes its own preset; exercise the same custom-host
+// certificate contract with a preset the distribution actually permits.
+func pinTestPreset() string {
+	if distribution.Internal {
+		return "aiep-coding-plan"
+	}
+	return "lmstudio"
+}
+
 // What Save refuses: a pin that isn't a SHA-256, and one on a preset's
 // provider that takes no certificate of its own.
 func TestServerPinSaveChecks(t *testing.T) {
@@ -117,7 +127,7 @@ func TestServerPinSaveChecks(t *testing.T) {
 		"short":            {Provider{ID: "home3", Name: "Home3", Chat: "https://home3.example/v1", Key: "k", Models: []string{"m"}, ServerPin: "abcd"}, false},
 		"not hex":          {Provider{ID: "home4", Name: "Home4", Chat: "https://home4.example/v1", Key: "k", Models: []string{"m"}, ServerPin: strings.Repeat("zz", 32)}, false},
 		"a preset's":       {Provider{ID: "openrouter", Preset: "openrouter", Key: "k", ServerPin: good}, false},
-		"a preset at home": {Provider{ID: "lmstudio", Preset: "lmstudio", Chat: "https://box.lan:1234/v1", ServerPin: good}, true},
+		"a preset at home": {Provider{ID: "lmstudio", Preset: pinTestPreset(), Chat: "https://box.lan:1234/v1", Key: "k", ServerPin: good}, true},
 	} {
 		err := Save(c.p)
 		if (err == nil) != c.ok {
@@ -140,7 +150,7 @@ func TestServerPinPresetAtOwnServer(t *testing.T) {
 	dialsOut(t)
 	srv := selfSignedVendor(t)
 	ctx := context.Background()
-	if err := Save(Provider{ID: "lmstudio", Preset: "lmstudio", Chat: srv.URL + "/v1"}); err != nil {
+	if err := Save(Provider{ID: "lmstudio", Preset: pinTestPreset(), Chat: srv.URL + "/v1", Key: "k"}); err != nil {
 		t.Fatal(err)
 	}
 	p, _ := Find("lmstudio")
@@ -186,10 +196,10 @@ func TestServerPinNoVendorHost(t *testing.T) {
 			}
 		}
 	}
-	if (Provider{Preset: "openai", Chat: "http://box.lan/v1"}).TakesServerPin() {
+	if (Provider{Preset: pinTestPreset(), Chat: "http://box.lan/v1"}).TakesServerPin() {
 		t.Error("an http:// address has no certificate to pin")
 	}
-	if !(Provider{Preset: "openai", Chat: "https://box.lan/v1"}).TakesServerPin() {
+	if !(Provider{Preset: pinTestPreset(), Chat: "https://box.lan/v1"}).TakesServerPin() {
 		t.Error("a preset at the user's own https host takes no pin")
 	}
 }
