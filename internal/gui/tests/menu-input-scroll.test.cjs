@@ -55,6 +55,17 @@ async function press(page, loc) {
     await page.mouse.wheel(0, y < 80 ? -300 : 300);
     await page.waitForTimeout(150);
   }
+  // A just-opened editor may still be moving on its reveal spring. Aim only
+  // after the actual target settles, so this test reaches the menu button.
+  await loc.evaluate((el) => new Promise((resolve) => {
+    let last = '', stable = 0;
+    const tick = () => {
+      const r = el.getBoundingClientRect(), now = `${r.x.toFixed(1)},${r.y.toFixed(1)}`;
+      stable = now === last ? stable + 1 : 0; last = now;
+      if (stable >= 4) resolve(); else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
   const b = await loc.boundingBox();
   await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
 }
