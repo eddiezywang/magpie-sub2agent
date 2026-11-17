@@ -15,6 +15,7 @@ cache on first use without a download. `-SingleFile` remains a compatibility
 alias. Only explicit `-DirectoryBundle` produces a directory package.
 `-WithoutBun` explicitly opts into a smaller package requiring the managed
 runtime download. Build metadata stays outside the single-EXE archive.
+For an explicitly requested local development build, add `-Development`: it reuses the single `sub2agent-windows-x64-dev` output and overwrites its EXE, archive and metadata on subsequent runs. Do not build without the user’s authorization.
 Internal builds share `~/.sub2agent` and no longer ship a
 `.portable` marker. Previous configuration directories are copied on first
 use as described in [GUI app shell](subsystems/gui-shell.md).

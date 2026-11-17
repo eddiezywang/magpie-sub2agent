@@ -6,7 +6,8 @@ param(
     [string]$BillingKeyFile = '',
     [switch]$WithoutBun,
     [switch]$SingleFile,
-    [switch]$DirectoryBundle
+    [switch]$DirectoryBundle,
+    [switch]$Development
 )
 $ErrorActionPreference = 'Stop'
 if (!$BillingKeyFile) { $BillingKeyFile = Join-Path (Split-Path -Parent $PSScriptRoot) '..\.build-tools\sub2agent-billing-key\report-key.txt' }
@@ -16,9 +17,10 @@ if ($billingSigningKey -cnotmatch '^[0-9a-f]{64}$') { throw 'Billing signing key
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if (!$OutputRoot) { $OutputRoot = Join-Path (Split-Path -Parent $repoRoot) 'magpie-builds' }
 $OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
-$bundleName = 'sub2agent-windows-x64-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+$bundleName = if ($Development) { 'sub2agent-windows-x64-dev' } else { 'sub2agent-windows-x64-' + (Get-Date -Format 'yyyyMMdd-HHmmss') }
 $bundle = Join-Path $OutputRoot $bundleName
-if (Test-Path -LiteralPath $bundle) { throw "Output already exists: $bundle" }
+if ((Test-Path -LiteralPath $bundle) -and !$Development) { throw "Output already exists: $bundle" }
+if ($Development -and $DirectoryBundle) { throw "Development builds require a single-file bundle" }
 if ($DirectoryBundle -and $SingleFile) { throw 'Use DirectoryBundle or SingleFile, not both' }
 $SingleFile = !$DirectoryBundle
 if (!$WithoutBun -and (!$BunArchive -or (Get-FileHash -LiteralPath $BunArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '78c221c2376f79731ccf4e4af0b3bb46d81fefa3296c5abee09ad8a1b21e68c6')) {
@@ -84,7 +86,16 @@ try {
     $manifestPath = if ($SingleFile) { $bundle + '.manifest.json' } else { Join-Path $bundle 'manifest.json' }
     [ordered]@{ version = $Version; sourceCommit = $sourceCommit; workingTreeChanges = ($sourceChanges.Count -gt 0); profile = 'intranet'; singleFile = [bool]$SingleFile; bundledBun = !$WithoutBun; bunVersion = '1.4.2'; files = $fileRecords } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
     $archive = $bundle + '.zip'
-    [IO.Compression.ZipFile]::CreateFromDirectory($bundle, $archive, [IO.Compression.CompressionLevel]::Optimal, !$SingleFile)
+    if ($Development) {
+        $archiveStream = [IO.File]::Open($archive, [IO.FileMode]::Create, [IO.FileAccess]::ReadWrite)
+        try {
+            $devZip = [IO.Compression.ZipArchive]::new($archiveStream, [IO.Compression.ZipArchiveMode]::Create, $true)
+            try { [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($devZip, (Join-Path $bundle 'sub2agent.exe'), 'sub2agent.exe', [IO.Compression.CompressionLevel]::Optimal) | Out-Null }
+            finally { $devZip.Dispose() }
+        } finally { $archiveStream.Dispose() }
+    } else {
+        [IO.Compression.ZipFile]::CreateFromDirectory($bundle, $archive, [IO.Compression.CompressionLevel]::Optimal, !$SingleFile)
+    }
     $exe = Get-Item -LiteralPath (Join-Path $bundle 'sub2agent.exe')
     $runtimeBytes = 0
     if (!$WithoutBun) {
