@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -173,5 +174,90 @@ func TestMailRemoteSignsExactUpdateAndReadsConflict(t *testing.T) {
 	got, err := remote.Set(context.Background(), "alice", false, 3, "abcdefghijklmnop")
 	if err != nil || !seen || !got.Conflict || got.Revision != 4 || !got.Enabled {
 		t.Fatalf("result %+v %v", got, err)
+	}
+}
+func TestMailPreferenceReportsAndSecondDeviceAdopts(t *testing.T) {
+	key := strings.Repeat("12", 32)
+	revision := int64(0)
+	enabled := false
+	writes := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := hex.DecodeString(key)
+		mac := hmac.New(sha256.New, raw)
+		fmt.Fprintf(mac, "sub2agent-billing-v1\n%s\n%s\n%s\n%s", r.Method, r.URL.RequestURI(), r.Header.Get("X-Sub2Agent-Timestamp"), r.Header.Get("X-Sub2Agent-Nonce"))
+		if !hmac.Equal([]byte(hex.EncodeToString(mac.Sum(nil))), []byte(r.Header.Get("X-Sub2Agent-Signature"))) {
+			http.Error(w, "bad signature", 401)
+			return
+		}
+		if r.URL.Path != "/mail-preferences/alice" {
+			http.Error(w, "wrong user", 400)
+			return
+		}
+		if r.Method == "POST" {
+			expected, err := strconv.ParseInt(r.URL.Query().Get("revision"), 10, 64)
+			if err != nil || expected != revision {
+				w.WriteHeader(http.StatusConflict)
+				fmt.Fprintf(w, `{"exists":true,"enabled":%t,"revision":%d,"conflict":true}`, enabled, revision)
+				return
+			}
+			enabled = r.URL.Query().Get("enabled") == "true"
+			revision++
+			writes++
+		}
+		fmt.Fprintf(w, `{"exists":%t,"enabled":%t,"revision":%d}`, revision > 0, enabled, revision)
+	}))
+	defer srv.Close()
+	remote := billingMailRemote{base: srv.URL + "/usage/events", key: key, client: srv.Client()}
+	ctx := context.Background()
+	first, err := NewMailPreferences(t.TempDir(), "alice", remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = first.Sync(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if !enabled || writes != 1 {
+		t.Fatalf("default not reported: %t %d", enabled, writes)
+	}
+	if err = first.Set(false); err != nil {
+		t.Fatal(err)
+	}
+	if err = first.Sync(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if enabled || writes != 2 {
+		t.Fatalf("opt-out not reported: %t %d", enabled, writes)
+	}
+	second, err := NewMailPreferences(t.TempDir(), "ALICE", remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = second.Sync(ctx); err != nil {
+		t.Fatal(err)
+	}
+	state, synced := second.Status()
+	if state.Enabled || !synced || writes != 2 {
+		t.Fatalf("second device overwrote opt-out: %+v %t %d", state, synced, writes)
+	}
+}
+
+func TestMailPreferenceFailedRefreshIsNotReportedSynced(t *testing.T) {
+	remote := &fakeMailRemote{}
+	m, err := NewMailPreferences(t.TempDir(), "alice", remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, synced := m.Status(); !synced {
+		t.Fatal("initial sync failed")
+	}
+	remote.fail = true
+	if err = m.Sync(context.Background()); err == nil {
+		t.Fatal("offline refresh succeeded")
+	}
+	if state, synced := m.Status(); synced || !state.Enabled {
+		t.Fatalf("offline state: %+v synced=%v", state, synced)
 	}
 }

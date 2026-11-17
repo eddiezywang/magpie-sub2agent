@@ -3099,6 +3099,8 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		rw.WriteHeader(http.StatusNoContent)
 	})
 	// the agents a quit would cut off, for its question (quitask.go)
+	mux.HandleFunc("GET /api/mail-preference", handleMailPreference)
+	mux.HandleFunc("POST /api/mail-preference", handleMailPreference)
 	mux.HandleFunc("GET /api/quit", func(rw http.ResponseWriter, r *http.Request) {
 		writeJSON(rw, map[string]any{"agents": quitAgents()})
 	})

@@ -239,6 +239,17 @@ var cliForRoute = map[string]string{
 }
 
 var notYet = map[string]string{
+	"GET /api/accounting/report":         W, // desktop billing report proxy
+	"GET /api/agents/connections":        A, // workspace connection status
+	"GET /api/gateway/throughput":        W, // workspace live throughput
+	"GET /api/legacy-suppliers":          W, // desktop migration prompt
+	"POST /api/legacy-suppliers/dismiss": W, // desktop migration prompt
+	"POST /api/legacy-suppliers/import":  W, // desktop migration prompt
+	"POST /api/provider-zht/key":         W, // desktop provider setup
+	"POST /api/workspace/strategy":       W, // workspace route selection
+
+	"GET /api/mail-preference":                   W,  // desktop mail preference status
+	"POST /api/mail-preference":                  W,  // desktop mail preference switch
 	"POST /api/agent-fast":                       A,  // agent_models.go
 	"POST /api/agent-models/{id}":                A,  // agent_models.go
 	"GET /api/agents/cli":                        A,  // api.go

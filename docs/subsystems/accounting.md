@@ -149,4 +149,4 @@ an operation ID separately from telemetry, fetches the server revision before
 its first write and retains offline choices. A stale revision is surfaced as a
 conflict rather than silently overwriting another device. Its signed HTTP
 transport uses the billing service and does not carry credentials to the page.
-The state machine is not yet attached to the desktop lifecycle or Settings.
+The desktop starts a retry worker on launch, refreshes the server value every 30 seconds, and exposes the setting in Settings. A failed sync is shown as pending; a conflict requires an explicit choice. Sending mail remains a future server feature.

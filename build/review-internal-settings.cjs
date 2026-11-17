@@ -4,14 +4,14 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const {chromium,webkit}=require('playwright');
 const assets=path.resolve(process.env.INTRANET_ASSETS||'internal/gui/assets');
-const ids=['gateway','version','login','lightweight','data','legacy-import','log','cli','remote','uninstall'];
+const ids=['gateway','version','login','lightweight','billing-email','data','legacy-import','log','cli','remote','uninstall'];
 (async()=>{
  const output=process.argv[2];await fs.mkdir(output,{recursive:true});const results=[];
  for(const engine of process.env.BROWSER?[process.env.BROWSER]:['chromium','webkit']) {
   const browser=await(engine==='webkit'?webkit.launch():chromium.launch({channel:'chrome'}));
   try {for(const lang of process.env.LANG_CASE?[process.env.LANG_CASE]:['zh','en','zh-TW','ja','de']) for(const width of process.env.WIDTH_CASE?[Number(process.env.WIDTH_CASE)]:[1440,420]) {
    const page=await browser.newPage({viewport:{width,height:1100},reducedMotion:'reduce'});
-   const errors=[],posts=[],reads=[];let s={lang,theme:'light',version:'0.1.3913-sub2agent.17',port:8989,gateway:'http://127.0.0.1:8989',dir:'D:/sub2agent/data',log:'D:/sub2agent/data/logs/app.log',portable:true,login:false,lightweight:false,proxy:'fixture-hidden-proxy',builtins:[]};
+   const errors=[],posts=[],reads=[];let mail={enabled:true,synced:true,pending:false,conflict:false};let s={lang,theme:'light',version:'0.1.3913-sub2agent.17',port:8989,gateway:'http://127.0.0.1:8989',dir:'D:/sub2agent/data',log:'D:/sub2agent/data/logs/app.log',portable:true,login:false,lightweight:false,proxy:'fixture-hidden-proxy',builtins:[]};
    page.on('pageerror',e=>{if(!e.message.startsWith('ResizeObserver loop'))errors.push(e.message);});
    await page.route('**/*',async route=>{
     const u=new URL(route.request().url()),json=data=>route.fulfill({json:data}),method=route.request().method();
@@ -20,6 +20,7 @@ const ids=['gateway','version','login','lightweight','data','legacy-import','log
     if(u.pathname.startsWith('/api/')) {
      if(method==='POST')posts.push({path:u.pathname,body:route.request().postDataJSON()});else reads.push(u.pathname);
      if(u.pathname==='/api/settings') {if(method==='POST')s={...s,...route.request().postDataJSON()};return json(s);}
+     if(u.pathname==='/api/mail-preference'){if(method==='POST')mail={...mail,enabled:route.request().postDataJSON().enabled,synced:false,pending:true};return json(mail);}
      if(u.pathname==='/api/settings/login'){s.login=route.request().postDataJSON().on;return json(s);}
      if(u.pathname==='/api/settings/port'){s.port=route.request().postDataJSON().port;s.gateway='http://127.0.0.1:'+s.port;return json({settings:s,port:{moved:[]}});}
      if(u.pathname==='/api/remote')return json({url:method==='POST'?route.request().postDataJSON().url:'',hasKey:false});
@@ -54,6 +55,7 @@ const ids=['gateway','version','login','lightweight','data','legacy-import','log
    assert.equal(await root.locator('.remote-key').getAttribute('type'),'password');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'horizontal overflow');
    await page.screenshot({path:path.join(output,`17-settings-${engine}-${lang}-${width}.png`),fullPage:true});
+   const mailRow=root.locator('[data-setting=billing-email]');await mailRow.locator('button').first().click();await page.waitForFunction(()=>document.querySelector('[data-setting=billing-email] button[data-seg="false"]')?.classList.contains('on'));assert.equal(posts.find(p=>p.path==='/api/mail-preference')?.body.enabled,false);
    const login=root.locator('[data-setting=login]');await login.locator('button').last().click();
    await page.waitForFunction(()=>document.querySelector('[data-setting=login] button:last-child')?.classList.contains('on'));
    assert.equal(posts.find(p=>p.path==='/api/settings/login')?.body.on,true);

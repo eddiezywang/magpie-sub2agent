@@ -46,6 +46,33 @@ function gateway(root, s) {
   val.append(field, save, segs([["on",t("On")],["paused",t("Paused")]], s.gatewayPaused ? "paused" : "on", v => setGatewayPaused(v === "paused")));
   if (portError) val.append(el("div", "sub err", portError));
 }
+let mailState = null, mailRead = false, mailRevision = 0, mailTimer, mailResume;
+function mailPreference(root) {
+  const item=row(root,"billing-email","Daily billing email");
+  const draw=()=>{
+    if (!item.r.isConnected) return;
+    item.val.replaceChildren();
+    const state=mailState, choice=segs([[false,t("Off")],[true,t("On")]],state?.enabled ?? true,async on=>{
+      const version=++mailRevision, previous=mailState;
+      mailState={...state,enabled:on,pending:true,synced:false,conflict:false};draw();
+      try { const next=await api("mail-preference",{enabled:on});if(version===mailRevision)mailState=next; }
+      catch(err){if(version===mailRevision)mailState=previous;statusErr(err);}
+      draw(); refresh();
+    });
+    if (!state) for(const button of choice.querySelectorAll('button')) button.disabled=true;
+    item.val.append(choice);
+    const message=!state?'Preference unavailable':state.conflict?'Changed on another device; select again to confirm':state.synced?'Preference synced':'Waiting to sync';
+    item.r.querySelector('.say').textContent=t('Email delivery is not available yet.')+' · '+t(message);
+  };
+  const refresh=async()=>{
+    if (mailRead || !item.r.isConnected || document.querySelector('#view-settings').hidden) return;
+    mailRead=true;const version=mailRevision;
+    try {const next=await api('mail-preference');if(version===mailRevision)mailState=next;}
+    catch {if(version===mailRevision)mailState=null;}
+    finally {mailRead=false;draw();clearTimeout(mailTimer);if(item.r.isConnected&&!document.querySelector('#view-settings').hidden)mailTimer=setTimeout(refresh,5000);else if(mailResume!==refresh)mailResume?.();}
+  };
+  mailResume=refresh;draw();refresh();
+}
 export function render(s) {
   if (!s) return;
   let root = document.getElementById("internalSettings");
@@ -65,6 +92,7 @@ export function render(s) {
   row(root,"login","Open at login").val.append(segs([[false,t("Off")],[true,t("On")]],!!s.login,on => prefWrite(api("settings/login",{on}))));
   row(root,"lightweight","Lightweight mode",t("A closed window frees about 100 MB after a minute; the gateway and tasks keep running, only the page reloads")).val.append(
     segs([[false,t("Off")],[true,t("On")]],s.lightweight === true,on => savePrefs({...prefsKeep(prefs),lightweight:on})));
+  mailPreference(root);
   pathTools(row(root,"data","Data folder").val,s.dir,"settings/reveal");
   row(root,"legacy-import","Import previous suppliers").val.append(action("Import…", () => window.legacySuppliers.open()));
   pathTools(row(root,"log","Log").val,s.log,"settings/log/reveal");

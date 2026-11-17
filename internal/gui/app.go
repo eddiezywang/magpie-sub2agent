@@ -426,6 +426,7 @@ func Run(version string, showMain bool, link string) error {
 		// leaves both to it: the failover goes on through the new one, and
 		// so do the threads.
 		OnShutdown: func() {
+			stopMailPreference()
 			usage.NotifyAppQuit()
 			proc.EndProbes()
 			if handedOver.Load() {
@@ -480,6 +481,9 @@ func Run(version string, showMain bool, link string) error {
 	}
 	if Started != nil {
 		h.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { Started() })
+	}
+	if ownPage && distribution.Internal {
+		h.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { startMailPreference() })
 	}
 
 	onDock = func(s settings.Settings) { h.dock(s, h.MainShown()) }
@@ -756,6 +760,7 @@ func Run(version string, showMain bool, link string) error {
 	if ownPage {
 		startAppPage(h, gw)
 	}
+	defer stopMailPreference()
 	return h.app.Run()
 }
 

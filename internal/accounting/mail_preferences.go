@@ -78,14 +78,14 @@ func (m *MailPreferences) Status() (MailPreference, bool) {
 func (m *MailPreferences) Set(on bool) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	old := m.state
+	old, wasSynced := m.state, m.synced
 	m.state.Enabled = on
 	m.state.Pending = true
 	m.state.Conflict = false
 	m.state.Operation = NewID()
 	m.synced = false
 	if err := m.persist(); err != nil {
-		m.state = old
+		m.state, m.synced = old, wasSynced
 		return err
 	}
 	return nil
@@ -93,7 +93,14 @@ func (m *MailPreferences) Set(on bool) error {
 
 // Sync fetches an unknown server revision first. An offline change without a
 // prior revision requires explicit confirmation if an account value exists.
-func (m *MailPreferences) Sync(ctx context.Context) error {
+func (m *MailPreferences) Sync(ctx context.Context) (syncErr error) {
+	defer func() {
+		if syncErr != nil {
+			m.mu.Lock()
+			m.synced = false
+			m.mu.Unlock()
+		}
+	}()
 	m.mu.Lock()
 	snapshot := m.state
 	m.mu.Unlock()
@@ -129,6 +136,28 @@ func (m *MailPreferences) Sync(ctx context.Context) error {
 		}
 		snapshot = m.state
 		m.mu.Unlock()
+	}
+	if snapshot.Known && !snapshot.Pending && !snapshot.Conflict {
+		remote, err := m.remote.Get(ctx, snapshot.User)
+		if err != nil {
+			return err
+		}
+		if !remote.Exists || remote.Revision < snapshot.Revision {
+			return fmt.Errorf("mail preference server state regressed")
+		}
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		if m.state != snapshot {
+			return nil
+		}
+		old := m.state
+		m.state.Enabled, m.state.Revision = remote.Enabled, remote.Revision
+		if err := m.persist(); err != nil {
+			m.state = old
+			return err
+		}
+		m.synced = true
+		return nil
 	}
 	if !snapshot.Pending || snapshot.Conflict {
 		return nil

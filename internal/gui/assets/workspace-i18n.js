@@ -1,6 +1,13 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["Daily billing email", "每日账单邮件", "每日帳單郵件", "日次請求メール", "Tägliche Abrechnung per E-Mail"],
+    ["Email delivery is not available yet.", "邮件推送尚未开通。", "郵件推送尚未開通。", "メール配信はまだ利用できません。", "E-Mail-Versand ist noch nicht verfügbar."],
+    ["Preference synced", "设置已同步", "設定已同步", "設定を同期しました", "Einstellung synchronisiert"],
+    ["Waiting to sync", "等待同步", "等待同步", "同期待ち", "Wartet auf Synchronisierung"],
+    ["Changed on another device; select again to confirm", "其他设备的设置已变化，请重新选择确认", "其他裝置的設定已變更，請重新選擇確認", "別の端末で変更されました。選び直して確認してください", "Auf einem anderen Gerät geändert; zur Bestätigung erneut auswählen"],
+    ["Preference unavailable", "设置暂不可用", "設定暫時無法使用", "設定を利用できません", "Einstellung derzeit nicht verfügbar"],
+
     ["Choose how to close", "选择关闭方式", "選擇關閉方式", "閉じ方を選択", "Schließen auswählen"],
     ["Hide to background", "隐藏到后台", "隱藏到背景", "バックグラウンドに隠す", "Im Hintergrund ausblenden"],
     ["Quit and stop the gateway", "退出并停止网关", "結束並停止閘道", "終了してゲートウェイを停止", "Beenden und Gateway stoppen"],
