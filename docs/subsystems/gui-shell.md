@@ -1477,3 +1477,6 @@ on outside click or Escape, retain their anchor through workspace refresh and
 follow workspace scrolling. A pending refresh is painted after dismissal.
 See `plugins/workspace/client.js`, `openRowMenu`, and
 `build/workspace-controls-acceptance.cjs`.
+The workspace setup guide uses square pixel step markers and a segmented
+connector. Its status labels are green only for completed steps; the preserved
+model confirmation is green while the next policy action remains available.

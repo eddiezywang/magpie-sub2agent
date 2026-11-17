@@ -4,11 +4,15 @@
 
 .ws-providers #addSheet>.row-head{flex-wrap:wrap;gap:8px}.ws-providers #addSheet>.row-head>.label{flex-basis:100%;white-space:nowrap}.ws-providers #addSheet>.row-head>.grow{display:none}.ws-providers #addSheet>.row-head>.find{min-width:0;flex:1 1 120px}
 
-#ws-guide{display:flex;gap:24px;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:12px;flex-wrap:wrap}
-#ws-guide .ws-step{display:flex;align-items:center;gap:8px;padding:4px 0;color:var(--muted);background:transparent;text-align:left;box-shadow:none;border:0}
-.ws-step-number{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid var(--line);border-radius:50%;font-variant-numeric:tabular-nums}
-#ws-guide [aria-current=step]{color:var(--accent)}#ws-guide [aria-current=step] .ws-step-number{border-color:var(--accent);background:var(--accent-soft)}
-#ws-guide .done{color:var(--fg)}.ws-step-state{font-size:11px;color:var(--muted)}
+#ws-guide{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:12px;flex-wrap:wrap;row-gap:12px}
+#ws-guide .ws-step{display:flex;align-items:center;gap:10px;min-width:0;padding:2px 0;color:var(--fg);background:transparent;text-align:left;box-shadow:none;border:0}
+#ws-guide .ws-step:not(:last-child)::after{content:"";width:30px;height:2px;margin:0 18px;background:repeating-linear-gradient(90deg,var(--line) 0 4px,transparent 4px 7px);flex:none}
+.ws-step-number{box-sizing:border-box;display:grid;place-items:center;width:24px;height:24px;flex:none;border:2px solid var(--muted);border-radius:0;background:var(--card);box-shadow:2px 2px 0 var(--line);font:700 12px/1 monospace;color:var(--muted)}
+.ws-step-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.ws-step-title{font-size:12px;line-height:1.2}.ws-step-state{font-size:11px;line-height:1.2;color:var(--muted)}
+#ws-guide [aria-current=step] .ws-step-number{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:2px 2px 0 var(--fg)}
+#ws-guide .done .ws-step-number{border-color:var(--green);color:var(--green)}#ws-guide .done .ws-step-state,.ws-next-message.is-positive{color:var(--green)}
+#ws-guide .ws-step:hover .ws-step-title{text-decoration:underline;text-underline-offset:3px}
+@media(max-width:650px){#ws-guide .ws-step:not(:last-child)::after{width:12px;margin:0 8px}}
 #ws-next{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:36px;margin-bottom:20px;font-size:12px}
 #ws-route-members{font-size:12px;margin:0 0 12px;overflow-wrap:anywhere;display:flex;gap:8px;flex-wrap:wrap}
 #ws-route-controls>[data-ws-focus=strategy]{display:inline-flex;align-items:center;gap:10px;max-width:100%;white-space:normal}

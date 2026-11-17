@@ -39,6 +39,12 @@ async function test(browser,engine){
 
   assert.equal(await page.locator('#ws-agents').getAttribute('open'),null);
   assert.equal(await page.locator('#ws-guide .ws-step').count(),3);
+  const guideColors=await page.evaluate(()=>{const ref=document.createElement('span');ref.style.color='var(--green)';document.body.append(ref);const green=getComputedStyle(ref).color;ref.remove();return {green,states:[...document.querySelectorAll('#ws-guide .ws-step-state')].map(e=>getComputedStyle(e).color),positive:getComputedStyle(document.querySelector('.ws-next-message')).color,shape:getComputedStyle(document.querySelector('.ws-step-number')).borderRadius}});
+  assert.equal(guideColors.shape,'0px','step markers are square pixels');
+  assert.equal(guideColors.states[0],guideColors.green,'ready provider status is green');
+  assert.equal(guideColors.states[1],guideColors.green,'connected Agent status is green');
+  assert.notEqual(guideColors.states[2],guideColors.green,'unapplied policy is not green');
+  assert.equal(guideColors.positive,guideColors.green,'preserved model confirmation is green');
   assert.equal(await page.locator('.ws-grid > :first-child').getAttribute('class'),'ws-providers','reading order starts with providers');
   await page.locator('#ws-guide [data-step="1"]').focus();
   await page.evaluate(()=>renderAgents());
@@ -92,6 +98,7 @@ async function test(browser,engine){
   await page.setViewportSize({width:1440,height:1000});
   await page.evaluate(()=>{providers.providers.forEach(p=>p.off=true);magpie.call('workspace','render')});
   assert.equal(await page.locator('#ws-guide [aria-current=step]').getAttribute('data-step'),'0','disabled providers require configuration first');
+  assert.notEqual(await page.locator('#ws-guide [data-step="0"] .ws-step-state').evaluate(e=>getComputedStyle(e).color),guideColors.green,'unready provider status is not green');
   await page.locator('#ws-next [data-action="0"]').click();
   await page.locator('#addSheet').waitFor({state:'visible'});
   await page.evaluate(()=>{providers.providers.forEach(p=>p.off=false);state.agents.forEach(a=>a.wired=false);renderAgents()});
