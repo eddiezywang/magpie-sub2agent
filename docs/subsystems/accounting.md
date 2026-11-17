@@ -205,6 +205,14 @@ and account attribution are explicitly unavailable, and totals omit activity
 outside Sub2Agent. The fixed local report proxy permits only JSON for this
 report. No actual remaining balance is inferred.
 
+For TIG requests with a recognized channel suffix, minute summaries also
+retain `tig_request_model`, independently of the returned model. This keeps
+different channels in separate groups even when a response omits the suffix.
+The TIG report prices against the requested channel only when the returned
+model has the same canonical identity; a different returned model remains
+unpriced. Older summaries without the optional field retain their previous
+interpretation. Deploy the accepting server before sending the new field.
+
 The intranet Usage overview detects TIG channels from the current provider's
 model list and shows reference limits, server model coefficients, estimated
 observed user totals and a near-limit warning for the rolling five-hour

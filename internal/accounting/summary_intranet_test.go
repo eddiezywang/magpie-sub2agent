@@ -28,3 +28,21 @@ func TestSummaryManagedRulesMatchActualDeploymentIDs(t *testing.T) {
 		t.Fatal("variant matched shorter prefix")
 	}
 }
+
+func TestTIGSummaryKeepsRequestedChannelWhenServedModelDiffers(t *testing.T) {
+	at := time.Date(2026, 11, 13, 8, 0, 0, 0, time.UTC)
+	var b minuteBuffer
+	for _, model := range []string{"glm-5.3-zp", "glm-5.3-tc"} {
+		if err := b.Add(usage.Record{Provider: "aiep-coding-plan", Model: model, Served: "glm-5.3", Input: 100}, at, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(b.groups) != 2 {
+		t.Fatalf("channels collapsed into %d groups", len(b.groups))
+	}
+	for k := range b.groups {
+		if k.Model != "glm-5.3" || k.TIGRequestModel == "" || k.ModelSource != "served" {
+			t.Fatalf("lost model identity: %+v", k)
+		}
+	}
+}

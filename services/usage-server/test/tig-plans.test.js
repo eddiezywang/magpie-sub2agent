@@ -17,3 +17,11 @@ test('rolling observed totals keep channels distinct and unpriced attempts visib
  const result=usage([event('sub2agent-tigcodingplan','glm-5.3-zp','2026-11-17T09:00:00Z',10),event('sub2agent-tigcodingplan','glm-5.3-hs','2026-11-16T09:00:00Z',3),event('sub2agent-tigcodingplan','glm-5.3-tc','2026-11-17T09:00:00Z',null),event('other','glm-5.3-zp','2026-11-17T09:00:00Z',99)],config,billing,now);
  assert.equal(result.channels.zp.rolling_5h,10);assert.equal(result.channels.hs.rolling_7d,3);assert.equal(result.channels.hs.rolling_5h,0);assert.equal(result.channels.tc.unpriced,1);assert.equal(result.account_attribution,'unavailable');assert.equal(result.period_anchors,'unknown');
 });
+
+test('preserves requested TIG channel when the response omits the suffix',()=>{
+ const now=new Date('2026-11-17T10:00:00Z'), config={plans:{zp:{unit:'GLM_POINTS'},hs:{unit:'VOLC_AFP'},tc:{unit:'TC_POINTS'}}};
+ const event=(requested,served)=>({ts:'2026-11-17T09:00:00Z',_summary:{provider:'aiep-coding-plan',model:served,model_source:'served',tig_request_model:requested,attempts:1}});
+ const billing={charge:g=>({priced:true,currency:channel(g.model)==='zp'?'GLM_POINTS':'TC_POINTS',amount:10})};
+ const result=usage([event('glm-5.3-zp','glm-5.3'),event('glm-5.3-tc','glm-5.3'),event('glm-5.3-zp','glm-5.3-flash')],config,billing,now);
+ assert.equal(result.channels.zp.rolling_5h,10);assert.equal(result.channels.tc.rolling_5h,10);assert.equal(result.channels.zp.unpriced,1);
+});

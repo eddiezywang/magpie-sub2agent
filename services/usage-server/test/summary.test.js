@@ -57,6 +57,16 @@ test('durable minute summaries deduplicate by install/id, reject conflicts and s
  assert.equal(s.append(identity,{...summary('bad-date'),minute:8}),'rejected');
  assert.equal(s.append(identity,{...summary('old'),minute:'2020-01-01T00:00:00Z'}),'rejected');
 });
+test('TIG requested model survives ingestion and restart without merging channels',t=>{
+ const dataDir=temp(t);let s=createSummaryStore({dataDir,now:fixed});
+ const base={...group(),provider:'aiep-coding-plan',model:'glm-5.3',model_source:'served'};
+ const packet=summary('tig-distinct',{...base,tig_request_model:'glm-5.3-zp'});
+ packet.groups.push({...base,tig_request_model:'glm-5.3-tc'});
+ assert.equal(s.append(identity,packet),'accepted');
+ s=createSummaryStore({dataDir,now:fixed});assert.equal(s.append(identity,packet),'duplicate');
+ assert.deepEqual(s.projected('20261113','20261113').map(x=>x.tig_request_model),['glm-5.3-zp','glm-5.3-tc']);
+ assert.equal(s.append(identity,summary('invalid',{...base,tig_request_model:'glm-5.3-other'})),'rejected');
+});
 test('torn append preserves tail; complete corrupt records refuse startup',t=>{
  const dataDir=temp(t);const s=createSummaryStore({dataDir,now:fixed});s.append(identity,summary());
  const dir=path.join(dataDir,'minute-summaries');const file=path.join(dir,fs.readdirSync(dir)[0]);fs.appendFileSync(file,'{"torn":');

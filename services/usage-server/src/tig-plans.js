@@ -1,5 +1,6 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
+const {canonical}=require('./billing-policy');
 // Reference ceilings, never proof of a particular TIG key's subscription.
 const defaults={version:1,plans:{
  zp:{label:'Zhipu team advanced',unit:'GLM_POINTS',windows:[{id:'rolling_5h',limit:35000,duration_ms:18000000},{id:'subscription_week',limit:155000,duration_ms:604800000,anchor_required:true}]},
@@ -26,7 +27,7 @@ function detect(models){if(!Array.isArray(models))return {state:'unknown',channe
 function usage(events,config,billing,now){
  const at=now.getTime();if(!Number.isFinite(at))throw Error('invalid time');
  const result=Object.fromEntries(['zp','hs','tc'].map(id=>[id,{channel:id,unit:config.plans[id].unit,rolling_5h:0,rolling_7d:0,rolling_30d:0,unpriced:0,models:{}}]));
- for(const event of events){const g=event._summary,t=Date.parse(event.ts);if(!g||!Number.isFinite(t)||t>at||at-t>=30*86400000||!/^(?:sub2agent-tigcodingplan|aiep-coding-plan)/.test(g.provider))continue;const id=channel(g.model);if(!id)continue;const row=result[id],c=billing.charge(g,event.ts);if(!c.priced||c.currency!==row.unit){row.unpriced+=g.attempts;continue;}row.rolling_30d+=c.amount;if(at-t<7*86400000)row.rolling_7d+=c.amount;if(at-t<5*3600000)row.rolling_5h+=c.amount;row.models[g.model]=(row.models[g.model]||0)+c.amount;}
+ for(const event of events){const g=event._summary,t=Date.parse(event.ts);if(!g||!Number.isFinite(t)||t>at||at-t>=30*86400000||!/^(?:sub2agent-tigcodingplan|aiep-coding-plan)/.test(g.provider))continue;const requested=g.tig_request_model||g.model,id=channel(requested);if(!id)continue;const row=result[id];if(g.tig_request_model&&g.model_source==='served'&&canonical(g.model)!==canonical(requested)){row.unpriced+=g.attempts;continue;}const c=billing.charge({...g,model:requested},event.ts);if(!c.priced||c.currency!==row.unit){row.unpriced+=g.attempts;continue;}row.rolling_30d+=c.amount;if(at-t<7*86400000)row.rolling_7d+=c.amount;if(at-t<5*3600000)row.rolling_5h+=c.amount;row.models[requested]=(row.models[requested]||0)+c.amount;}
  return {as_of:now.toISOString(),basis:'estimated_observed_user',completion_minute:true,account_attribution:'unavailable',period_anchors:'unknown',plans:config.plans,warning_thresholds:config.warning_thresholds,channels:result};
 }
 module.exports={channel,validate,createPlanConfig,detect,usage};

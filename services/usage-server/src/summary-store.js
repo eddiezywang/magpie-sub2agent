@@ -19,8 +19,11 @@ function normalizeSummary(identity, raw) {
   if (g.attempts<1 || g.requests+g.handed_on!==g.attempts || g.success+g.failed+g.canceled!==g.attempts || g.reasoning_tokens>g.output_tokens || g.duration_samples>g.attempts || g.ttft_samples>g.attempts || g.zero_token_calls>g.attempts || g.cache_unknown_calls>g.attempts) return null;
   if (g.cache_unknown_input_tokens>g.input_tokens+g.cache_read_tokens+g.cache_write_5m_tokens+g.cache_write_1h_tokens)return null;
   if (g.context_tier!=='unclassified' && !g.rules_revision) return null;
-  const key=JSON.stringify(dimensions.map(k=>g[k])); if(seen.has(key))return null; seen.add(key);
-  groups.push(Object.fromEntries([...dimensions,...counters].map(k=>[k,g[k]])));
+  if (g.tig_request_model!==undefined && (!label(g.tig_request_model) || !/^(?:sub2agent-tigcodingplan|aiep-coding-plan)/.test(g.provider) || !/(?:-openai)?-(?:zp|hs|tc)(?:-openai)?$/i.test(g.tig_request_model))) return null;
+  const key=JSON.stringify([...dimensions.map(k=>g[k]),g.tig_request_model||'']); if(seen.has(key))return null; seen.add(key);
+  const group=Object.fromEntries([...dimensions,...counters].map(k=>[k,g[k]]));
+  if(g.tig_request_model!==undefined)group.tig_request_model=g.tig_request_model;
+  groups.push(group);
  }
  return {schema:SCHEMA,install_id:identity.install_id,username:identity.username,id:raw.id,minute:at.toISOString(),groups};
 }

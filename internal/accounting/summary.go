@@ -2,6 +2,7 @@ package accounting
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -59,14 +60,17 @@ func (r AggregationRules) Validate() error {
 }
 
 type SummaryDimensions struct {
-	Agent         string `json:"agent"`
-	Provider      string `json:"provider"`
-	Model         string `json:"model"`
-	ModelSource   string `json:"model_source"` // served or requested; never pretend a fallback was observed
-	ServiceTier   string `json:"service_tier"`
-	RulesRevision string `json:"rules_revision"`
-	ContextTier   string `json:"context_tier"` // unclassified, base, or above:N (strictly greater than N)
+	Agent           string `json:"agent"`
+	Provider        string `json:"provider"`
+	Model           string `json:"model"`
+	TIGRequestModel string `json:"tig_request_model,omitempty"` // preserve the requested TIG channel when the response omits it
+	ModelSource     string `json:"model_source"`                // served or requested; never pretend a fallback was observed
+	ServiceTier     string `json:"service_tier"`
+	RulesRevision   string `json:"rules_revision"`
+	ContextTier     string `json:"context_tier"` // unclassified, base, or above:N (strictly greater than N)
 }
+
+var tigChannelModel = regexp.MustCompile(`(?i)(?:-openai)?-(?:zp|hs|tc)(?:-openai)?$`)
 
 type SummaryCounters struct {
 	Attempts          int64 `json:"attempts"`
@@ -137,6 +141,9 @@ func (b *minuteBuffer) Add(r usage.Record, completed time.Time, rules *Aggregati
 		}
 	}
 	d := SummaryDimensions{Agent: r.Agent, Provider: r.Provider, Model: r.Model, ModelSource: "requested", ServiceTier: r.TierServed, ContextTier: "unclassified"}
+	if (strings.HasPrefix(r.Provider, "sub2agent-tigcodingplan") || strings.HasPrefix(r.Provider, "aiep-coding-plan")) && tigChannelModel.MatchString(r.Model) {
+		d.TIGRequestModel = r.Model
+	}
 	if r.Served != "" {
 		d.Model, d.ModelSource = r.Served, "served"
 	}
@@ -236,8 +243,8 @@ func (b *minuteBuffer) Seal(now time.Time, all bool) {
 		if n := a.Minute.Compare(c.Minute); n != 0 {
 			return n
 		}
-		as := []string{a.Agent, a.Provider, a.Model, a.ModelSource, a.ServiceTier, a.RulesRevision, a.ContextTier}
-		cs := []string{c.Agent, c.Provider, c.Model, c.ModelSource, c.ServiceTier, c.RulesRevision, c.ContextTier}
+		as := []string{a.Agent, a.Provider, a.Model, a.TIGRequestModel, a.ModelSource, a.ServiceTier, a.RulesRevision, a.ContextTier}
+		cs := []string{c.Agent, c.Provider, c.Model, c.TIGRequestModel, c.ModelSource, c.ServiceTier, c.RulesRevision, c.ContextTier}
 		return slices.Compare(as, cs)
 	})
 	var packet *MinuteSummary
