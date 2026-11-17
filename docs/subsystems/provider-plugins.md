@@ -775,3 +775,11 @@ Verify offline with `node build/sub2agent-providers.mjs` followed by
 `node --test plugins/sub2agent/workbuddy-cib.test.mjs`, and intranet shipped
 provider tests. Fixtures cover browser callback fields, fixed listing, default
 routing, signed streaming and enterprise balance; they never call the vendor.
+
+The intranet offline baseline includes independent `glm-coding-plan` and
+`deepseek-api` plugin switches. Both start off; enabling one exposes only its
+own native-key preset. GLM defaults to its Coding Plan endpoint. Disabling a
+switch hides and stops serving its preset while retaining stored credentials
+and choices, restored on re-enabling. The older native-api collection remains
+independent. Sources: `shipped`, `NativePresetEnabled`, `optionalNativePreset`,
+`intranetSourceAllowed`, and the optional native preset and bundle tests.

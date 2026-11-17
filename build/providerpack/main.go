@@ -26,7 +26,7 @@ func pack(source, out string) error {
 	}
 	defer os.Remove(file.Name())
 	z := zip.NewWriter(file)
-	for _, kind := range []string{"codebuddy", "workbuddy", "workbuddy-cib", "trae", "aiep", "native-api", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"} {
+	for _, kind := range []string{"codebuddy", "workbuddy", "workbuddy-cib", "trae", "aiep", "native-api", "glm-coding-plan", "deepseek-api", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"} {
 		names := []string{"index.js", "package.json"}
 		if kind == "workbuddy-cib" {
 			names = append(names, "LICENSE")

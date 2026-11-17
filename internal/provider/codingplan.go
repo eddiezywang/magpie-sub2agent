@@ -71,7 +71,7 @@ func intranetSourceAllowed(p Provider) bool {
 		return p.IsPlugin()
 	}
 	if p.Preset != "" {
-		return p.Preset == codingPlanPreset.ID || p.Preset == zhtPreset.ID || p.Preset == RemoteMagpiePreset || (nativeAPIEnabled() && builtinPreset(p.Preset) != nil)
+		return p.Preset == codingPlanPreset.ID || p.Preset == zhtPreset.ID || p.Preset == RemoteMagpiePreset || optionalNativePreset(p.Preset) != nil || (nativeAPIEnabled() && builtinPreset(p.Preset) != nil)
 	}
 	for _, id := range accountIDs {
 		if p.ID == id {

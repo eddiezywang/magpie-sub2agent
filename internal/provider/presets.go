@@ -828,11 +828,52 @@ func mantleRegions(ids ...string) []Region {
 }
 
 var nativeAPIEnabled = plugin.NativeAPIEnabled
+var nativePresetEnabled = plugin.NativePresetEnabled
+
+// optionalNativePreset reuses upstream endpoints while keeping these two
+// switches independent of the collection of other native API presets.
+func optionalNativePreset(id string) *PresetDef {
+	if id != "glm-coding-plan" && id != "deepseek-api" {
+		return nil
+	}
+	if !nativePresetEnabled(id) {
+		return nil
+	}
+	source := "zhipu"
+	if id == "deepseek-api" {
+		source = "deepseek"
+	}
+	for _, original := range presets {
+		if original.ID != source {
+			continue
+		}
+		p := original
+		p.ID = id
+		if id == "glm-coding-plan" {
+			p.Name = "GLM Coding Plan"
+			p.Chat = "https://open.bigmodel.cn/api/coding/paas/v4"
+			p.Responses = "https://open.bigmodel.cn/api/v1"
+			p.Anthropic = "https://open.bigmodel.cn/api/anthropic"
+			p.Regions = nil
+			p.RegionLabel = ""
+			p.KeyPlans = false
+		} else {
+			p.Name = "DeepSeek API Key"
+		}
+		return &p
+	}
+	return nil
+}
 
 // Presets lists every preset, sponsored ones first within their kind.
 func Presets() []PresetDef {
 	if distribution.Internal {
 		out := []PresetDef{codingPlanDefinition(), zhtPreset, remoteSub2AgentPreset()}
+		for _, id := range []string{"glm-coding-plan", "deepseek-api"} {
+			if p := optionalNativePreset(id); p != nil {
+				out = append(out, *p)
+			}
+		}
 		if nativeAPIEnabled() {
 			for _, pr := range presets {
 				if pr.ID != RemoteMagpiePreset {
@@ -944,6 +985,9 @@ func Preset(id string) *PresetDef {
 // builtinPreset is the preset of that id built into magpie, partners'
 // aside.
 func builtinPreset(id string) *PresetDef {
+	if distribution.Internal && (id == "glm-coding-plan" || id == "deepseek-api") {
+		return optionalNativePreset(id)
+	}
 	if distribution.Internal && id == RemoteMagpiePreset {
 		pr := remoteSub2AgentPreset()
 		return &pr

@@ -88,7 +88,7 @@ func effectiveList() List {
 	return l
 }
 
-var shippedKinds = []string{"codebuddy", "workbuddy", "workbuddy-cib", "trae", "aiep", "native-api", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"}
+var shippedKinds = []string{"codebuddy", "workbuddy", "workbuddy-cib", "trae", "aiep", "native-api", "glm-coding-plan", "deepseek-api", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"}
 
 func shippedPackage(kind string) string {
 	if name, ok := strings.CutPrefix(kind, "community-"); ok {

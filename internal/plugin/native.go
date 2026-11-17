@@ -45,3 +45,16 @@ func NativeAPIEnabled() bool {
 	}
 	return false
 }
+
+// NativePresetEnabled reports an explicitly enabled, separately bundled preset.
+func NativePresetEnabled(kind string) bool {
+	if kind != "glm-coding-plan" && kind != "deepseek-api" {
+		return false
+	}
+	for _, entry := range Load().Plugins {
+		if Name(entry.Spec) == "@sub2agent/"+kind {
+			return !entry.Off
+		}
+	}
+	return false
+}

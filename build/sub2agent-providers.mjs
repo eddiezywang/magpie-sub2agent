@@ -27,6 +27,12 @@ for(const kind of ['codebuddy','workbuddy','workbuddy-cib','trae','aiep']) {
   await fs.writeFile(path.join(output,kind,'package.json'),JSON.stringify({name:'@sub2agent/'+kind,version:versionFor(kind),type:'module',main:'index.js',
     magpie:{name:kind==='workbuddy-cib'?'WorkBuddy CIB':kind==='workbuddy'?'WorkBuddy 企业':kind==='trae'?'Trae 企业':kind==='aiep'?'TIG Coding Plan':'CodeBuddy',icon:kind==='workbuddy-cib'?'workbuddy-cib':kind==='aiep'?'tig-color':kind==='trae'?'trae':kind+'-color',...(kind==='aiep'?{nativeProvider:{id:'aiep-coding-plan',name:'TIG Coding Plan',anthropic:'http://172.21.11.82/public',keysUrl:'https://aiep.weoa.com',website:'http://docs.weoa.com/docs/47kgJOEB8WTo77qV'}}:{})}}));
 }
+// These independent switches expose existing native-key presets only when enabled.
+for (const [kind, name, icon] of [['glm-coding-plan','GLM Coding Plan','zhipu-color'],['deepseek-api','DeepSeek API Key','deepseek-color']]) {
+  const dir=path.join(output,kind); await fs.mkdir(dir,{recursive:true});
+  await fs.writeFile(path.join(dir,'index.js'),'export default async () => ({});\n');
+  await fs.writeFile(path.join(dir,'package.json'),JSON.stringify({name:'@sub2agent/'+kind,version:'1.0.0',type:'module',main:'index.js',magpie:{name,icon,nativeProviderGroup:kind}},null,2));
+}
 // The switch gates native Magpie presets; inference stays in the Go gateway.
 const nativeDir=path.join(output,'native-api');
 await fs.mkdir(nativeDir,{recursive:true});

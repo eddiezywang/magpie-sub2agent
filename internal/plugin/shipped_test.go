@@ -264,3 +264,36 @@ func TestNativeAPIProviderBundleDefaultsOff(t *testing.T) {
 		t.Fatal("native APIs did not disable")
 	}
 }
+func TestOptionalNativeBundlesDefaultOffAndKeepChoice(t *testing.T) {
+	storeSandbox(t)
+	root := t.TempDir()
+	old := shippedDirectory
+	shippedDirectory = func() string { return root }
+	t.Cleanup(func() { shippedDirectory = old })
+	for _, kind := range []string{"glm-coding-plan", "deepseek-api"} {
+		dir := filepath.Join(root, kind)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"@sub2agent/`+kind+`","version":"1.0.0"}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, kind := range []string{"glm-coding-plan", "deepseek-api"} {
+		if NativePresetEnabled(kind) {
+			t.Fatalf("%s enabled by default", kind)
+		}
+	}
+	if err := SetOff("@sub2agent/glm-coding-plan", false); err != nil {
+		t.Fatal(err)
+	}
+	if !NativePresetEnabled("glm-coding-plan") || NativePresetEnabled("deepseek-api") {
+		t.Fatal("independent choice lost")
+	}
+	if err := SetOff("@sub2agent/glm-coding-plan", true); err != nil {
+		t.Fatal(err)
+	}
+	if NativePresetEnabled("glm-coding-plan") {
+		t.Fatal("explicit disable lost")
+	}
+}

@@ -93,3 +93,43 @@ func TestNativeAPIPresetsFollowPluginSwitch(t *testing.T) {
 		t.Fatalf("saved provider not restored: %+v %v", kept, err)
 	}
 }
+func TestOptionalNativePresetsAreIndependent(t *testing.T) {
+	azureHome(t)
+	old := nativePresetEnabled
+	enabled := map[string]bool{}
+	nativePresetEnabled = func(id string) bool { return enabled[id] }
+	t.Cleanup(func() { nativePresetEnabled = old })
+	for _, id := range []string{"glm-coding-plan", "deepseek-api"} {
+		if _, err := FromPreset(id); err == nil {
+			t.Fatalf("%s offered while disabled", id)
+		}
+	}
+	enabled["glm-coding-plan"] = true
+	glm, err := FromPreset("glm-coding-plan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if glm.Chat != "https://open.bigmodel.cn/api/coding/paas/v4" || glm.Key != "" {
+		t.Fatalf("GLM default: %+v", glm)
+	}
+	if _, err := FromPreset("deepseek-api"); err == nil {
+		t.Fatal("DeepSeek enabled by GLM switch")
+	}
+	glm.Key = "fixture-key"
+	if err := Save(glm); err != nil {
+		t.Fatal(err)
+	}
+	enabled["glm-coding-plan"] = false
+	if _, err := Find(glm.ID); err == nil {
+		t.Fatal("disabled GLM still served")
+	}
+	enabled["glm-coding-plan"] = true
+	if got, err := Find(glm.ID); err != nil || got.Key != "fixture-key" {
+		t.Fatalf("GLM restore: %+v %v", got, err)
+	}
+	enabled["deepseek-api"] = true
+	deep, err := FromPreset("deepseek-api")
+	if err != nil || deep.Chat != "https://api.deepseek.com/v1" || deep.Key != "" {
+		t.Fatalf("DeepSeek: %+v %v", deep, err)
+	}
+}
