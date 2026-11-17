@@ -30,7 +30,7 @@
     for(const w of win.filter(w=>w.id!=='rolling_5h'))info.append(text('p',t(w.id==='month'?'Reference limit: {limit} per month':'Reference limit: {limit} per subscription week',{limit:fmt(w.limit)}),'note'));
     info.append(text('p',t('Observed last 7 / 30 days: {week} / {month}',{week:fmt(usage.rolling_7d),month:fmt(usage.rolling_30d)}),'note'));
     if(usage.unpriced)info.append(text('p',t('{n} attempts could not be priced',{n:usage.unpriced}),'tig-plan-alert'));
-    const rates=(data.rates||[]).filter(x=>x.deployment===id&&[source.id,source.preset].some(v=>v&&String(v).startsWith(String(x.provider||'').replace(/\*$/,''))));
+    const rates=[...new Map((data.rates||[]).filter(x=>x.deployment===id&&[source.id,source.preset].some(v=>v&&String(v).startsWith(String(x.provider||'').replace(/\*$/,'')))).map(x=>[String(x.model).toLowerCase(),x])).values()];
     if(rates.length){const details=document.createElement('details'),summary=text('summary',t('Model coefficients'));details.append(summary);for(const rate of rates){const v=rate.credit_rates?`${rate.credit_rates.input} / ${rate.credit_rates.cache_read} / ${rate.credit_rates.output}`:String(rate.coefficient);details.append(text('p',`${rate.model}: ${v}`,'note'));}info.append(details);}
     line.append(info);row.append(line);
    }
