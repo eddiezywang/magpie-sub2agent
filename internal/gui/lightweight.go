@@ -105,6 +105,10 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 			return
 		}
 		e.Cancel()
+		if distribution.Internal && runtime.GOOS == "windows" {
+			w.ExecJS(`if(window.askCloseChoice)window.askCloseChoice();else fetch("/api/window/main-hide",{method:"POST"})`)
+			return
+		}
 		if closeStep(runtime.GOOS, w.IsFullscreen()) == closeLeaveFullscreen {
 			h.leaveFullscreenThenHide()
 			return

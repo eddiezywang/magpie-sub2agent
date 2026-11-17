@@ -78,6 +78,9 @@ func (h *host) hideMain() {
 	h.dock(settings.Load(), false)
 }
 
+// HideMain hides the window after the user chooses to keep the app running.
+func (h *host) HideMain() { h.hideMain() }
+
 // leaveFullscreenThenHide takes the closed full-screen window out of full
 // screen; WindowDidExitFullScreen hides it. Should that never come (the
 // system refused to leave), it is hidden after a while all the same.

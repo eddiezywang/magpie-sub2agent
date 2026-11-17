@@ -3106,6 +3106,17 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		switch r.PathValue("action") {
 		case "hide":
 			w.HidePanel()
+		case "main-hide":
+			if !distribution.Internal {
+				http.NotFound(rw, r)
+				return
+			}
+			if h, ok := w.(interface{ HideMain() }); ok {
+				h.HideMain()
+			} else {
+				http.Error(rw, "window unavailable", http.StatusNotImplemented)
+				return
+			}
 		case "main":
 			w.ShowMain(mainView(r.URL.Query()))
 		case "quit":

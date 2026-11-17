@@ -1,7 +1,20 @@
 // This layer stays dormant until the native host explicitly provides a
 // matching frameless window. The preview can opt in with synthetic data.
 (() => {
-  if (!window.bootPrefs?.retroFrame || !document.body.classList.contains('window')) return;
+  if (!window.bootPrefs?.intranet || !document.body.classList.contains('window')) return;
+  window.askCloseChoice = () => {
+    if (confirmAsk) return;
+    const ed = el('div', 'editor close-choice'), head = el('div', 'ehead');
+    head.append(el('b', '', t('Choose how to close'))); ed.append(head);
+    ed.append(el('p', 'lib-confirm', t('The gateway stops when the app quits; connected Agents cannot use it until it starts again.')));
+    const bar = el('div', 'bar'), quit = el('button', 'text', t('Quit and stop the gateway')), hide = el('button', 'text primary', t('Hide to background'));
+    quit.type = hide.type = 'button';
+    const act = async (action) => { quit.disabled = hide.disabled = true; try { await api(action, {}); } catch (err) { quit.disabled = hide.disabled = false; statusErr(err); } };
+    quit.onclick = e => { e.stopPropagation(); act('window/quit?now=1'); };
+    hide.onclick = e => { e.stopPropagation(); closeConfirmAsk(); act('window/main-hide'); };
+    bar.append(quit, el('span', 'grow'), hide); ed.append(bar); confirmAsk = ed; openModal(ed); document.querySelector('#modal').classList.add('lib'); hide.focus(NO_SCROLL);
+  };
+  if (!window.bootPrefs?.retroFrame) return;
   const brand = document.querySelector('.brand');
   const name = brand?.querySelector('span:not(.logo)');
   const actions = document.querySelector('.top .actions');

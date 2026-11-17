@@ -1,6 +1,10 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["Choose how to close", "选择关闭方式", "選擇關閉方式", "閉じ方を選択", "Schließen auswählen"],
+    ["Hide to background", "隐藏到后台", "隱藏到背景", "バックグラウンドに隠す", "Im Hintergrund ausblenden"],
+    ["Quit and stop the gateway", "退出并停止网关", "結束並停止閘道", "終了してゲートウェイを停止", "Beenden und Gateway stoppen"],
+    ["The gateway stops when the app quits; connected Agents cannot use it until it starts again.", "退出后本地网关将停止，已接入的 Agent 在重新启动前无法使用。", "結束後本機閘道將停止，已接入的 Agent 在重新啟動前無法使用。", "終了するとゲートウェイが停止し、再起動するまで接続済み Agent は利用できません。", "Beim Beenden stoppt das Gateway; verbundene Agents können es erst nach dem Neustart nutzen."],
     ["Refresh status", "刷新状态", "重新整理狀態", "状態を更新", "Status aktualisieren"],
     ["Agent connection status is unknown; check again before connecting", "Agent 接入状态未知，请先展开并重新检查", "Agent 接入狀態未知，請先展開並重新檢查", "Agent の接続状態が不明です。展開して再確認してください", "Agent-Verbindungsstatus unbekannt; öffnen und erneut prüfen"],
     ["Workspace setup", "工作台配置", "工作台設定", "ワークスペース設定", "Arbeitsbereich einrichten"],

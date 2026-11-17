@@ -1480,3 +1480,8 @@ See `plugins/workspace/client.js`, `openRowMenu`, and
 The workspace setup guide uses square pixel step markers and a segmented
 connector. Its status labels are green only for completed steps; the preserved
 model confirmation is green while the next policy action remains available.
+
+On Windows the intranet main window's close event opens a choice: hide the
+window while the gateway stays active, or quit and stop the gateway. The choice
+handles the confirmed quit directly; Escape or the backdrop cancels. The
+native window API keeps hide separate from the existing quit confirmation.
