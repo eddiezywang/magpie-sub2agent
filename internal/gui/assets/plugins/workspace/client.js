@@ -72,7 +72,9 @@
     const box=main.querySelector('#ws-route-controls');
     const menu=agentMenu&&box.contains(agentMenu.anchor)?agentMenu:protoMenu&&box.contains(protoMenu.anchor)?protoMenu:null;
     const focus=box.contains(document.activeElement)?document.activeElement.dataset.wsFocus:menu?.box.contains(document.activeElement)?menu.anchor.dataset.wsFocus:null;
-    if(menu===agentMenu)closeAgentMenu();else if(menu)closeProtoMenu();box.replaceChildren();
+    // Keep the open menu usable while an asynchronous refresh arrives.
+    // Selecting an item repaints from the latest state; later refreshes do too.
+    if(menu)return;box.replaceChildren();
     const a=target();if(!a){if(focus)main.querySelector('#ws-agents summary').focus({preventScroll:true});box.textContent=t('Connect an Agent to choose a routing group');main.querySelector('#ws-route-members').replaceChildren();return;}
     main.dataset.agent=a.id;const f=field(a),g=selected(a),choose=button('Agent',e=>{e.stopPropagation();openRowMenu(choose,eligible().map(agent=>({name:agent.name,run:()=>{main.dataset.agent=agent.id;paint();guide();}})));});choose.textContent=a.name;choose.append(svg('M4 6l4 4 4-4',12,1.6));choose.setAttribute('aria-haspopup','menu');choose.dataset.wsFocus='agent';choose.disabled=saving;
     const pick=button('Routing policy',e=>{e.stopPropagation();const items=(routeData?.templates||[]).map(tp=>{const saved=routeData.groups?.find(g=>g.templateKind===tp.kind),reason=saved?.disabled?'Routing group is disabled':saved&&!saved.ready?'Routing group has no available members':tp.need?tp.need==='model'?'No recognized model in this tier; choose members in Routing groups':'Template prerequisites are not met; check Routing groups':'';return {name:t(kinds[tp.kind]||tp.group.name),off:!!reason,why:reason?t(reason):'',tip:tp.group.members.map(id=>routeData.models?.find(m=>m.id===id)?.name||id).join('\n'),run:()=>apply(tp.kind)};});for(const group of routeData?.groups||[])if(!group.templateKind||!kinds[group.templateKind])items.push({name:group.name,off:!group.ready||!!group.disabled,run:()=>applySaved(group)});openRowMenu(pick,items);});
