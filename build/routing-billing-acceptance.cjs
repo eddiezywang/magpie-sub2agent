@@ -24,6 +24,8 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
    });
    await page.goto('http://workspace.test/?view=providers');
    await page.evaluate(()=>openProvider('workbuddy'));
+   const zhipu=await page.evaluate(()=>routingBillingText({state:'active',currency:'GLM_POINTS',credit_rates:{input:6.9,cache_read:1.7,output:24}}));
+   assert.equal(zhipu,'智谱积分：6.9 / 1.7 / 24');
    const chip=page.locator('.mchip').filter({hasText:'示例模型 A'});
    await chip.getByText('MaaS 系数 7',{exact:true}).waitFor();
    await chip.getByText('官方积分 ×0.34',{exact:true}).waitFor();

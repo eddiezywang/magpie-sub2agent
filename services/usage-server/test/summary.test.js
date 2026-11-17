@@ -43,7 +43,7 @@ const {createBillingPolicy}=require('../src/billing-policy');
 const {createUsageServer}=require('../src/server');
 const fixed=()=>new Date('2026-11-13T08:20:00Z');
 const identity={install_id:'fixture-device',username:'fixture-user'};
-const group=()=>({...Object.fromEntries(counters.map(k=>[k,0])),agent:'codex',provider:'sub2agent-workbuddy',model:'glm-5.3-flash-maas-fixture',model_source:'served',service_tier:'',rules_revision:'internal-2026-11-13-1',context_tier:'base',attempts:100,requests:98,success:90,failed:8,canceled:2,handed_on:2,input_tokens:1000,output_tokens:500,cache_read_tokens:250,cache_write_5m_tokens:50,cache_write_1h_tokens:20,reasoning_tokens:100,duration_ms_sum:300000,duration_samples:100,ttft_ms_sum:25000,ttft_samples:100});
+const group=()=>({...Object.fromEntries(counters.map(k=>[k,0])),agent:'codex',provider:'sub2agent-workbuddy',model:'glm-5.3-flash-maas-fixture',model_source:'served',service_tier:'',rules_revision:'internal-2026-11-17-zhipu-1',context_tier:'base',attempts:100,requests:98,success:90,failed:8,canceled:2,handed_on:2,input_tokens:1000,output_tokens:500,cache_read_tokens:250,cache_write_5m_tokens:50,cache_write_1h_tokens:20,reasoning_tokens:100,duration_ms_sum:300000,duration_samples:100,ttft_ms_sum:25000,ttft_samples:100});
 const summary=(id='fixture-summary',g=group())=>({id,minute:'2026-11-13T08:15:00Z',groups:[g]});
 const temp=t=>{const d=fs.mkdtempSync(path.join(os.tmpdir(),'usage-v3-'));t.after(()=>fs.rmSync(d,{recursive:true,force:true}));return d;};
 test('durable minute summaries deduplicate by install/id, reject conflicts and survive restart',t=>{
@@ -66,7 +66,7 @@ test('torn append preserves tail; complete corrupt records refuse startup',t=>{
 test('server pricing keeps points separate, applies China weekday time and promotion expiry',t=>{
  const billing=createBillingPolicy({dataDir:temp(t)});const g=group();
  assert.equal(billing.charge(g,summary().minute).amount,1820);
- const plan={...g,provider:'sub2agent-tigcodingplan',model:'glm-5.3-flash-zp'};
+ const plan={...g,provider:'sub2agent-tigcodingplan',model:'glm-5.3-flash'};
  assert.equal(billing.charge(plan,'2026-11-13T06:00:00Z').amount,910);
  assert.equal(billing.charge(plan,'2026-11-13T10:00:00Z').amount,1820);
  assert.equal(billing.charge(plan,'2026-11-14T06:00:00Z').amount,1820);
@@ -87,7 +87,7 @@ test('real HTTP accepts explicit IDs, preserves old telemetry and generates weig
  assert.ok(Date.parse(routing.expires_at)>Date.now());
  assert.equal(routing.models.find(r=>r.model==='hy4free').score,0);
  assert.equal(routing.models.find(r=>r.model==='deepseek-v4-pro-maas').score,8.5);
- assert.ok(routing.models.every(r=>typeof r.currency==='string'&&typeof r.coefficient==='number'&&!('weekday_afternoon_factor' in r)));
+ assert.ok(routing.models.every(r=>typeof r.currency==='string'&&(typeof r.coefficient==='number'||r.credit_rates)&&!('weekday_afternoon_factor' in r)));
  const payload={schema:SCHEMA,...identity,summaries:[summary()]};
  assert.deepEqual((await post(payload)).body.accepted_ids,['fixture-summary']);
  assert.deepEqual((await post(payload)).body.duplicate_ids,['fixture-summary']);
@@ -152,4 +152,15 @@ test('additional listener shares summary deduplication and closes with the servi
  const net=require('node:net');const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const aliasPort=probe.address().port;await new Promise(r=>probe.close(r));
  const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:temp(t),now:fixed,billingSigningKey:billingKey});await app.start();t.after(()=>app.stop());
  await app.listenAlias(aliasPort);assert.equal((await fetch('http://127.0.0.1:'+aliasPort+'/healthz')).status,200);
+});
+
+test('TIG ZP uses Zhipu weighted credits with official peak times',t=>{
+ const billing=createBillingPolicy({dataDir:temp(t)}),g={...group(),provider:'sub2agent-tigcodingplan',model:'glm-5.3-zp',input_tokens:10000,cache_read_tokens:10000,output_tokens:10000,cache_write_5m_tokens:0,cache_write_1h_tokens:0,cache_unknown_calls:0,cache_unknown_input_tokens:0};
+ for(const id of ['glm-5.3-zp','glm-5.2-zp','glm-5.1-zp-openai']) { const charge=billing.charge({...g,model:id},'2026-11-13T06:00:00Z');assert.equal(charge.currency,'GLM_POINTS');assert.ok(Math.abs(charge.amount-32.6)<1e-9,id); }
+ for(const id of ['glm-5.3-flash-zp','glm-5-turbo-zp','glm-4.7-zp-openai']) { const charge=billing.charge({...g,model:id},'2026-11-13T06:00:00Z');assert.ok(Math.abs(charge.amount-10.86)<1e-9,id); }
+ assert.ok(Math.abs(billing.charge(g,'2026-11-13T10:00:00Z').amount-16.3)<1e-9);
+ assert.ok(Math.abs(billing.charge(g,'2026-11-14T06:00:00Z').amount-16.3)<1e-9);
+ assert.equal(billing.charge({...g,model:'glm-5.9-zp'},'2026-11-13T06:00:00Z').priced,false);
+ assert.equal(billing.charge({...g,cache_unknown_calls:1},'2026-11-13T06:00:00Z').reason,'cache_usage_unknown');
+ assert.equal(billing.charge({...g,model:'glm-5.3'},'2026-11-13T06:00:00Z').currency,'PLAN_TOKENS');
 });

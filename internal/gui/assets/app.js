@@ -7139,6 +7139,7 @@ function billingWord(kind) {
 function routingBillingText(b) {
   if (!b) return "";
   if (b.state === "expired") return t("Billing rule expired");
+  if (b.state === "active" && b.currency === "GLM_POINTS" && b.credit_rates) return t("Zhipu points: {input} / {cached} / {output}", {input:b.credit_rates.input,cached:b.credit_rates.cache_read,output:b.credit_rates.output});
   if (b.state !== "active" || b.coefficient == null) return t("Billing rule unknown");
   if (b.currency === "POINTS" && b.source === "MaaS") return t("MaaS coefficient {n}", {n:b.coefficient});
   const unit = { POINTS: "Point coefficient {n}", PLAN_TOKENS: "Plan coefficient {n}", USD: "USD coefficient {n}" }[b.currency];
@@ -7146,7 +7147,7 @@ function routingBillingText(b) {
 }
 function routingBillingHint(b) {
   if (!b) return "";
-  return [routingBillingText(b), b.currency === "POINTS" && b.source === "MaaS" ? t("MaaS: tokens × coefficient; 300M points/week per pool. Separate from official points.") : "", b.revision, b.pool ? t("Allowance pool: {pool}", {pool:b.pool}) : t("Shared allowance scope unknown"), t("Reference coefficient; actual usage is determined by the provider")].filter(Boolean).join("\n");
+  return [routingBillingText(b), b.currency === "GLM_POINTS" ? t("Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.") : "", b.currency === "POINTS" && b.source === "MaaS" ? t("MaaS: tokens × coefficient; 300M points/week per pool. Separate from official points.") : "", b.revision, b.pool ? t("Allowance pool: {pool}", {pool:b.pool}) : t("Shared allowance scope unknown"), t("Reference coefficient; actual usage is determined by the provider")].filter(Boolean).join("\n");
 }
 // billingField: provider.Billing, the user's word over magpie's reading
 // of its endpoints (EV_John_Liu on X)

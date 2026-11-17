@@ -1,6 +1,8 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["Zhipu points: {input} / {cached} / {output}", "智谱积分：{input} / {cached} / {output}", "智譜積分：{input} / {cached} / {output}", "智譜ポイント：{input} / {cached} / {output}", "Zhipu-Punkte: {input} / {cached} / {output}"],
+    ["Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.", "依次为输入、缓存命中、输出系数；每 1 万 Token 折算积分，非高峰减半。仅供估算，实际扣费以 TIG 为准。", "依序為輸入、快取命中、輸出係數；每 1 萬 Token 換算積分，離峰減半。僅供估算，實際扣費以 TIG 為準。", "入力・キャッシュ入力・出力の係数。1万トークン当たりのポイント、オフピークは半分。推定値であり実際の請求は TIG によります。", "Koeffizienten für Eingabe, Cache-Treffer und Ausgabe je 10.000 Token; außerhalb der Spitzenzeit halbiert. Schätzung, tatsächliche Abrechnung durch TIG."],
     ["Daily billing email", "每日账单邮件", "每日帳單郵件", "日次請求メール", "Tägliche Abrechnung per E-Mail"],
     ["Email delivery is not available yet.", "邮件推送尚未开通。", "郵件推送尚未開通。", "メール配信はまだ利用できません。", "E-Mail-Versand ist noch nicht verfügbar."],
     ["Preference synced", "设置已同步", "設定已同步", "設定を同期しました", "Einstellung synchronisiert"],

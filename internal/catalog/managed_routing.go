@@ -24,27 +24,35 @@ type managedRouting struct {
 	Expires  time.Time     `json:"expires_at"`
 	Models   []managedRate `json:"models"`
 }
+type creditRates struct {
+	Input     float64 `json:"input"`
+	CacheRead float64 `json:"cache_read"`
+	Output    float64 `json:"output"`
+}
 type managedRate struct {
-	Provider    string    `json:"provider"`
-	Model       string    `json:"model"`
-	Score       float64   `json:"score"`
-	Until       time.Time `json:"valid_until,omitempty"`
-	Currency    string    `json:"currency,omitempty"`
-	Coefficient *float64  `json:"coefficient,omitempty"`
-	Source      string    `json:"source,omitempty"`
-	Pool        string    `json:"pool,omitempty"`
+	Provider    string       `json:"provider"`
+	Deployment  string       `json:"deployment,omitempty"`
+	CreditRates *creditRates `json:"credit_rates,omitempty"`
+	Model       string       `json:"model"`
+	Score       float64      `json:"score"`
+	Until       time.Time    `json:"valid_until,omitempty"`
+	Currency    string       `json:"currency,omitempty"`
+	Coefficient *float64     `json:"coefficient,omitempty"`
+	Source      string       `json:"source,omitempty"`
+	Pool        string       `json:"pool,omitempty"`
 }
 
 // RoutingBilling keeps enterprise accounting distinct from USD list prices.
 // Pool is empty until the upstream's shared allowance scope is established.
 type RoutingBilling struct {
-	Currency    string   `json:"currency,omitempty"`
-	Coefficient *float64 `json:"coefficient,omitempty"`
-	Source      string   `json:"source,omitempty"`
-	Pool        string   `json:"pool,omitempty"`
-	Revision    string   `json:"revision,omitempty"`
-	State       string   `json:"state"`
-	Score       float64  `json:"-"`
+	Currency    string       `json:"currency,omitempty"`
+	CreditRates *creditRates `json:"credit_rates,omitempty"`
+	Coefficient *float64     `json:"coefficient,omitempty"`
+	Source      string       `json:"source,omitempty"`
+	Pool        string       `json:"pool,omitempty"`
+	Revision    string       `json:"revision,omitempty"`
+	State       string       `json:"state"`
+	Score       float64      `json:"-"`
 }
 
 func managedRoutingPath() string { return appdir.Join(appdir.Cache(), "routing-catalog.json") }
@@ -57,8 +65,11 @@ func parseManagedRouting(raw []byte) (managedRouting, error) {
 		return d, fmt.Errorf("invalid managed routing catalog")
 	}
 	for _, r := range d.Models {
-		if (r.Currency != "" && r.Currency != "POINTS" && r.Currency != "PLAN_TOKENS" && r.Currency != "USD") || (r.Coefficient != nil && (math.IsNaN(*r.Coefficient) || math.IsInf(*r.Coefficient, 0) || *r.Coefficient < 0)) || (r.Coefficient != nil && r.Currency == "") {
+		if (r.Currency != "" && r.Currency != "POINTS" && r.Currency != "GLM_POINTS" && r.Currency != "PLAN_TOKENS" && r.Currency != "USD") || (r.Coefficient != nil && (math.IsNaN(*r.Coefficient) || math.IsInf(*r.Coefficient, 0) || *r.Coefficient < 0)) || (r.Coefficient != nil && r.Currency == "") {
 			return d, fmt.Errorf("invalid routing billing")
+		}
+		if (r.Deployment != "" && r.Deployment != "zp") || (r.CreditRates != nil && (r.Currency != "GLM_POINTS" || r.CreditRates.Input < 0 || r.CreditRates.CacheRead < 0 || r.CreditRates.Output < 0 || math.IsNaN(r.CreditRates.Input) || math.IsNaN(r.CreditRates.CacheRead) || math.IsNaN(r.CreditRates.Output) || math.IsInf(r.CreditRates.Input, 0) || math.IsInf(r.CreditRates.CacheRead, 0) || math.IsInf(r.CreditRates.Output, 0))) {
+			return d, fmt.Errorf("invalid credit rates")
 		}
 		if r.Provider == "" || r.Model == "" || math.IsNaN(r.Score) || math.IsInf(r.Score, 0) || r.Score < 0 || strings.Contains(strings.TrimSuffix(r.Provider, "*"), "*") || strings.Contains(strings.TrimSuffix(r.Model, "*"), "*") {
 			return d, fmt.Errorf("invalid managed rate")
@@ -103,6 +114,12 @@ func RoutingBillingOf(provider, model string) RoutingBilling {
 	best := -1
 	var matched *managedRate
 	for _, r := range d.Models {
+		bare := strings.ToLower(model[strings.LastIndexByte(model, '/')+1:])
+		zp := strings.HasSuffix(bare, "-zp") || strings.HasSuffix(bare, "-zp-openai")
+		tig := strings.HasPrefix(provider, "sub2agent-tigcodingplan") || strings.HasPrefix(provider, "aiep-coding-plan")
+		if r.Deployment == "zp" && !zp || tig && zp && r.Deployment != "zp" {
+			continue
+		}
 		if routingMatch(r.Provider, provider) && routingMatch(routingModel(r.Model), routingModel(model)) {
 			specificity := len(strings.TrimSuffix(r.Provider, "*")) + len(strings.TrimSuffix(r.Model, "*"))
 			if !strings.HasSuffix(r.Model, "*") {
@@ -119,10 +136,11 @@ func RoutingBillingOf(provider, model string) RoutingBilling {
 		return unknown
 	}
 	r := matched
-	b := RoutingBilling{Currency: r.Currency, Coefficient: r.Coefficient, Source: r.Source, Pool: r.Pool, Revision: d.Revision, State: "active", Score: r.Score}
+	b := RoutingBilling{Currency: r.Currency, Coefficient: r.Coefficient, CreditRates: r.CreditRates, Source: r.Source, Pool: r.Pool, Revision: d.Revision, State: "active", Score: r.Score}
 	if !time.Now().Before(d.Expires) || (!r.Until.IsZero() && !time.Now().Before(r.Until)) {
 		b.State = "expired"
 		b.Coefficient = nil
+		b.CreditRates = nil
 	}
 	return b
 }
