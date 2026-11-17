@@ -43,7 +43,7 @@ const {createBillingPolicy}=require('../src/billing-policy');
 const {createUsageServer}=require('../src/server');
 const fixed=()=>new Date('2026-11-13T08:20:00Z');
 const identity={install_id:'fixture-device',username:'fixture-user'};
-const group=()=>({...Object.fromEntries(counters.map(k=>[k,0])),agent:'codex',provider:'sub2agent-workbuddy',model:'glm-5.3-flash-maas-fixture',model_source:'served',service_tier:'',rules_revision:'internal-2026-11-17-zhipu-1',context_tier:'base',attempts:100,requests:98,success:90,failed:8,canceled:2,handed_on:2,input_tokens:1000,output_tokens:500,cache_read_tokens:250,cache_write_5m_tokens:50,cache_write_1h_tokens:20,reasoning_tokens:100,duration_ms_sum:300000,duration_samples:100,ttft_ms_sum:25000,ttft_samples:100});
+const group=()=>({...Object.fromEntries(counters.map(k=>[k,0])),agent:'codex',provider:'sub2agent-workbuddy',model:'glm-5.3-flash-maas-fixture',model_source:'served',service_tier:'',rules_revision:'internal-2026-11-17-tig-2',context_tier:'base',attempts:100,requests:98,success:90,failed:8,canceled:2,handed_on:2,input_tokens:1000,output_tokens:500,cache_read_tokens:250,cache_write_5m_tokens:50,cache_write_1h_tokens:20,reasoning_tokens:100,duration_ms_sum:300000,duration_samples:100,ttft_ms_sum:25000,ttft_samples:100});
 const summary=(id='fixture-summary',g=group())=>({id,minute:'2026-11-13T08:15:00Z',groups:[g]});
 const temp=t=>{const d=fs.mkdtempSync(path.join(os.tmpdir(),'usage-v3-'));t.after(()=>fs.rmSync(d,{recursive:true,force:true}));return d;};
 test('durable minute summaries deduplicate by install/id, reject conflicts and survive restart',t=>{
@@ -163,4 +163,12 @@ test('TIG ZP uses Zhipu weighted credits with official peak times',t=>{
  assert.equal(billing.charge({...g,model:'glm-5.9-zp'},'2026-11-13T06:00:00Z').priced,false);
  assert.equal(billing.charge({...g,cache_unknown_calls:1},'2026-11-13T06:00:00Z').reason,'cache_usage_unknown');
  assert.equal(billing.charge({...g,model:'glm-5.3'},'2026-11-13T06:00:00Z').currency,'PLAN_TOKENS');
+});
+
+test('TIG channels preserve separate reference units and protocol aliases',t=>{
+ const billing=createBillingPolicy({dataDir:temp(t),listPrice:()=>({priced:true,cost:123})}),g={...group(),provider:'sub2agent-tigcodingplan',input_tokens:10000,output_tokens:10000,cache_read_tokens:0,cache_write_5m_tokens:0,cache_write_1h_tokens:0,cache_unknown_calls:0,cache_unknown_input_tokens:0};
+ for(const id of ['glm-5.3-tc','glm-5.3-openai-tc','glm-5.3-tc-openai']) {const x=billing.charge({...g,model:id},'2026-11-13T06:00:00Z');assert.equal(x.currency,'TC_POINTS');assert.equal(x.amount,140000);}
+ for(const id of ['glm-5.3-hs','glm-5.3-openai-hs','glm-5.3-hs-openai']) {const x=billing.charge({...g,model:id},'2026-11-13T06:00:00Z');assert.equal(x.currency,'VOLC_AFP');assert.equal(x.amount,9);}
+ for(const id of ['glm-5.3-zp','glm-5.3-openai-zp','glm-5.3-zp-openai']) assert.equal(billing.charge({...g,model:id},'2026-11-13T06:00:00Z').currency,'GLM_POINTS');
+ for(const id of ['glm-5.9-hs','glm-5.9-tc']) assert.equal(billing.charge({...g,model:id},'2026-11-13T06:00:00Z').priced,false);
 });

@@ -1,6 +1,9 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["Volcengine AFP coefficient {n}", "火山 AFP 系数 {n}", "火山 AFP 係數 {n}", "Volcengine AFP 係数 {n}", "Volcengine-AFP-Faktor {n}"],
+    ["AFP per 10,000 input and output tokens; estimate depends on the actual plan.", "输入和输出每 1 万 Token 折算 AFP；仅供估算，实际以套餐为准。", "輸入和輸出每 1 萬 Token 換算 AFP；僅供估算，實際以方案為準。", "入出力1万トークン当たりの AFP。推定値は実際のプランによります。", "AFP je 10.000 Eingabe- und Ausgabe-Token; Schätzung abhängig vom tatsächlichen Tarif."],
+    ["TIG Tencent coefficient {n}", "TIG 腾讯参考系数 {n}", "TIG 騰訊參考係數 {n}", "TIG Tencent 参考係数 {n}", "TIG-Tencent-Referenzfaktor {n}"],
     ["Zhipu points: {input} / {cached} / {output}", "智谱积分：{input} / {cached} / {output}", "智譜積分：{input} / {cached} / {output}", "智譜ポイント：{input} / {cached} / {output}", "Zhipu-Punkte: {input} / {cached} / {output}"],
     ["Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.", "依次为输入、缓存命中、输出系数；每 1 万 Token 折算积分，非高峰减半。仅供估算，实际扣费以 TIG 为准。", "依序為輸入、快取命中、輸出係數；每 1 萬 Token 換算積分，離峰減半。僅供估算，實際扣費以 TIG 為準。", "入力・キャッシュ入力・出力の係数。1万トークン当たりのポイント、オフピークは半分。推定値であり実際の請求は TIG によります。", "Koeffizienten für Eingabe, Cache-Treffer und Ausgabe je 10.000 Token; außerhalb der Spitzenzeit halbiert. Schätzung, tatsächliche Abrechnung durch TIG."],
     ["Daily billing email", "每日账单邮件", "每日帳單郵件", "日次請求メール", "Tägliche Abrechnung per E-Mail"],

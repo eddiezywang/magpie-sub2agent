@@ -155,7 +155,7 @@ The desktop starts a retry worker on launch, refreshes the server value every 30
 ## TIG Zhipu Coding Plan estimates
 
 TIG and its legacy provider ID use the Zhipu Coding Plan schedule only for
-explicit `-zp` or `-zp-openai` deployment IDs. The policy maps GLM-5.2 and
+explicit `-zp`, `-zp-openai` or `-openai-zp` deployment IDs. The policy maps GLM-5.2 and
 5.1 to GLM-5.3 rates and GLM-5-Turbo and 4.7 to Flash rates, as the
 [official plan documentation](https://docs.bigmodel.cn/cn/coding-plan/overview)
 states. Input/cache hit/output coefficients are respectively 6.9/1.7/24 and
@@ -166,9 +166,23 @@ cache breakdown is unpriced. `GLM_POINTS` stays separate from WorkBuddy
 TIG deployments retain their rules. This is a reference estimate: TIG's
 actual upstream routing and charge are not established by a suffix alone.
 
-The default policy is revision `internal-2026-11-17-zhipu-1`; an existing
+The default policy is revision `internal-2026-11-17-tig-2`; an existing
 server's stored policy is deliberately not overwritten. Applying it requires
 an explicit new policy revision through the server administration interface.
 The new routing-catalog currency requires the updated desktop reader; deploy
 server and compatible desktop together. No service deployment is implied by
 this code change.
+
+
+TIG's `-tc` and `-hs` suffixes denote separate Tencent and Volcengine
+channels. Tencent's `TC_POINTS` factors are the internal reference table
+provided for TIG, not public Tencent Cloud Token Plan rates; no weekly
+balance is inferred. Fire's `VOLC_AFP` references the
+[official enterprise AFP table](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-enterprise-afp-credits-billing-rules)
+for models and modalities with confirmed rates, divided by 10,000 tokens.
+Unknown channel/model combinations are not priced. These estimates do not
+prove which exact commercial plan TIG forwards to or what it actually bills.
+Protocol aliases such as `-openai-zp` and `-zp-openai` identify the same
+channel and model; the original request ID is kept. Default model exposure
+collapses aliases within a TIG channel, preserving explicit selections and
+separate ZP, Tencent, and Volcengine channels.

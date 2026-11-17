@@ -16,6 +16,7 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
      const response=await original(input,init),url=new URL(String(input),location.href);
      if(!['/api/providers','/api/groups'].includes(url.pathname))return response;
      const data=await response.json(),billing={state:'active',currency:'POINTS',source:'MaaS',coefficient:7,revision:'synthetic-v1'};
+     if(data.providers) { const original=data.providers.find(p=>p.id==='workbuddy'); if(original){const tiger=structuredClone(original);tiger.id='sub2agent-tigcodingplan';tiger.name='TIG';tiger.chosen=[];tiger.models=[{...tiger.models[0],id:'glm-5.3-openai-zp',name:'glm-5.3-openai-zp'},{...tiger.models[0],id:'glm-5.3-zp',name:'glm-5.3-zp'},{...tiger.models[0],id:'glm-5.3-hs',name:'glm-5.3-hs'}];data.providers.push(tiger);} }
      if(data.providers)for(const p of data.providers)for(const m of p.models){m.routingBilling=m.id==='model-a'?billing:{state:'expired',currency:'POINTS',revision:'synthetic-v0'};m.rate=0.34;}
      if(data.models)for(const m of data.models)m.routingBilling=billing;
      if(data.groups)for(const g of data.groups)for(const m of g.memberInfo)m.routingBilling=billing;
@@ -40,6 +41,10 @@ const output=process.env.ARTIFACT_DIR||path.resolve('../.build-tools/points-ui')
     await page.setViewportSize({width,height:1000});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    }
+   await page.evaluate(()=>openProvider('sub2agent-tigcodingplan'));
+   await page.locator('.mchip').filter({hasText:'glm-5.3-zp'}).first().waitFor();
+   assert.equal(await page.locator('.mchip').filter({hasText:'glm-5.3-openai-zp'}).count(),0,'duplicate protocol alias is hidden by default');
+   assert.equal(await page.locator('.mchip').filter({hasText:'glm-5.3-hs'}).count(),1,'different channel remains visible');
    await page.goto('http://workspace.test/?view=groups');await page.locator('#view-groups').waitFor({state:'visible'});
    await page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true}).waitFor();
    const note=page.getByText('先用便宜模型；需要高推理或便宜模型都失败时，交给最强的模型',{exact:true});

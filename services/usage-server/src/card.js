@@ -233,8 +233,8 @@ function receipt(report) {
   const costText=value=>valuation ? '¥'+((Number(value)||0)*valuation.usd_to_cny).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}) : money(value);
   const amounts = Object.entries(billing?.amounts_by_currency || {});
   const pending = valuation?.unpriced_attempts ?? billing?.unpriced_attempts ?? unpriced ?? 0;
-  const unitName = unit => unit === 'GLM_POINTS' ? '智谱积分' : unit === 'POINTS' ? '积分' : unit === 'PLAN_TOKENS' ? '计划折算 token' : 'USD';
-  const amountText = ([unit, n]) => unit === 'USD' ? money(n) : unit === 'GLM_POINTS' ? `${(Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:4})} ${unitName(unit)}` : `${count(n)} ${unitName(unit)}`;
+  const unitName = unit => unit === 'VOLC_AFP' ? '火山 AFP' : unit === 'TC_POINTS' ? 'TIG 腾讯参考积分' : unit === 'GLM_POINTS' ? '智谱积分' : unit === 'POINTS' ? '积分' : unit === 'PLAN_TOKENS' ? '计划折算 token' : 'USD';
+  const amountText = ([unit, n]) => unit === 'USD' ? money(n) : (unit === 'GLM_POINTS' || unit === 'VOLC_AFP') ? `${(Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:4})} ${unitName(unit)}` : `${count(n)} ${unitName(unit)}`;
   const noDollarBreakdown = !valuation && !!billing && (amounts.length !== 1 || amounts[0][0] !== 'USD');
 
   const dateLabel = day

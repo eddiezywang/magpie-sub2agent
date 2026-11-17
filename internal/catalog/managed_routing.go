@@ -65,10 +65,10 @@ func parseManagedRouting(raw []byte) (managedRouting, error) {
 		return d, fmt.Errorf("invalid managed routing catalog")
 	}
 	for _, r := range d.Models {
-		if (r.Currency != "" && r.Currency != "POINTS" && r.Currency != "GLM_POINTS" && r.Currency != "PLAN_TOKENS" && r.Currency != "USD") || (r.Coefficient != nil && (math.IsNaN(*r.Coefficient) || math.IsInf(*r.Coefficient, 0) || *r.Coefficient < 0)) || (r.Coefficient != nil && r.Currency == "") {
+		if (r.Currency != "" && r.Currency != "POINTS" && r.Currency != "GLM_POINTS" && r.Currency != "TC_POINTS" && r.Currency != "VOLC_AFP" && r.Currency != "PLAN_TOKENS" && r.Currency != "USD") || (r.Coefficient != nil && (math.IsNaN(*r.Coefficient) || math.IsInf(*r.Coefficient, 0) || *r.Coefficient < 0)) || (r.Coefficient != nil && r.Currency == "") {
 			return d, fmt.Errorf("invalid routing billing")
 		}
-		if (r.Deployment != "" && r.Deployment != "zp") || (r.CreditRates != nil && (r.Currency != "GLM_POINTS" || r.CreditRates.Input < 0 || r.CreditRates.CacheRead < 0 || r.CreditRates.Output < 0 || math.IsNaN(r.CreditRates.Input) || math.IsNaN(r.CreditRates.CacheRead) || math.IsNaN(r.CreditRates.Output) || math.IsInf(r.CreditRates.Input, 0) || math.IsInf(r.CreditRates.CacheRead, 0) || math.IsInf(r.CreditRates.Output, 0))) {
+		if (r.Deployment != "" && r.Deployment != "zp" && r.Deployment != "tc" && r.Deployment != "hs") || (r.CreditRates != nil && (r.Currency != "GLM_POINTS" || r.CreditRates.Input < 0 || r.CreditRates.CacheRead < 0 || r.CreditRates.Output < 0 || math.IsNaN(r.CreditRates.Input) || math.IsNaN(r.CreditRates.CacheRead) || math.IsNaN(r.CreditRates.Output) || math.IsInf(r.CreditRates.Input, 0) || math.IsInf(r.CreditRates.CacheRead, 0) || math.IsInf(r.CreditRates.Output, 0))) {
 			return d, fmt.Errorf("invalid credit rates")
 		}
 		if r.Provider == "" || r.Model == "" || math.IsNaN(r.Score) || math.IsInf(r.Score, 0) || r.Score < 0 || strings.Contains(strings.TrimSuffix(r.Provider, "*"), "*") || strings.Contains(strings.TrimSuffix(r.Model, "*"), "*") {
@@ -115,9 +115,15 @@ func RoutingBillingOf(provider, model string) RoutingBilling {
 	var matched *managedRate
 	for _, r := range d.Models {
 		bare := strings.ToLower(model[strings.LastIndexByte(model, '/')+1:])
-		zp := strings.HasSuffix(bare, "-zp") || strings.HasSuffix(bare, "-zp-openai")
+		dep := ""
+		for _, pair := range []struct{ suffix, channel string }{{"-zp", "zp"}, {"-zp-openai", "zp"}, {"-tc", "tc"}, {"-tc-openai", "tc"}, {"-hs", "hs"}, {"-hs-openai", "hs"}} {
+			if strings.HasSuffix(bare, pair.suffix) {
+				dep = pair.channel
+				break
+			}
+		}
 		tig := strings.HasPrefix(provider, "sub2agent-tigcodingplan") || strings.HasPrefix(provider, "aiep-coding-plan")
-		if r.Deployment == "zp" && !zp || tig && zp && r.Deployment != "zp" {
+		if r.Deployment != "" && r.Deployment != dep || tig && dep != "" && r.Deployment != dep {
 			continue
 		}
 		if routingMatch(r.Provider, provider) && routingMatch(routingModel(r.Model), routingModel(model)) {

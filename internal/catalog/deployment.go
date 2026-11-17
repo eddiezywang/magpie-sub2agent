@@ -16,13 +16,13 @@ func DeploymentModel(id string) string {
 	if i := strings.LastIndexByte(k, '/'); i >= 0 {
 		bare = k[i+1:]
 	}
-	if !strings.HasPrefix(bare, "glm-") && !strings.HasPrefix(bare, "deepseek-") && !strings.HasPrefix(bare, "minimax-") && !strings.HasPrefix(bare, "hy") {
+	if !strings.HasPrefix(bare, "glm-") && !strings.HasPrefix(bare, "deepseek-") && !strings.HasPrefix(bare, "minimax-") && !strings.HasPrefix(bare, "hy") && !strings.HasPrefix(bare, "kimi-") && !strings.HasPrefix(bare, "doubao-") {
 		return id
 	}
 	if !strings.ContainsAny(bare, "0123456789") {
 		return id
 	}
-	for _, suffix := range []string{"-zp-openai", "-zp", "-maas"} {
+	for _, suffix := range []string{"-openai-zp", "-zp-openai", "-openai-tc", "-tc-openai", "-openai-hs", "-hs-openai", "-zp", "-tc", "-hs", "-maas"} {
 		if strings.HasSuffix(k, suffix) {
 			return id[:len(id)-len(suffix)]
 		}

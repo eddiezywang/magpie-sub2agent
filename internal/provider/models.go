@@ -1809,6 +1809,7 @@ func (p Provider) ExposedOf(avail []catalog.Model) []catalog.Model {
 	// a model listed on none of the APIs the provider has a URL for is
 	// left out before the first 24 are taken (#2094)
 	avail = p.servable(avail)
+	avail = tigDefaultModels(p, avail)
 	// Best in family: the newest of each family the list has
 	if p.BestInFamily {
 		avail = catalog.BestInFamily(avail)

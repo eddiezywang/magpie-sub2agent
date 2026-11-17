@@ -45,7 +45,7 @@ func TestInternalDeploymentSuffixesPreserveExplicitVariant(t *testing.T) {
 
 func TestInternalGLM53DeploymentKeepsZhipuIdentity(t *testing.T) {
 	writeCatalog(t, `{"zhipuai":{"models":{"glm-5.3":{"id":"glm-5.3","name":"GLM-5.3","modalities":{"input":["text","image"]},"limit":{"context":204800,"output":65536},"cost":{"input":4,"output":8},"reasoning_options":[{"type":"effort","values":["low","high","max"]}]},"glm-5.3-flash":{"id":"glm-5.3-flash","limit":{"context":1024000},"cost":{"input":1,"output":2}}}}}`)
-	for _, id := range []string{"glm-5.3-zp", "glm-5.3-zp-openai", "tig/glm-5.3-zp", "glm-5.3-maas-user"} {
+	for _, id := range []string{"glm-5.3-zp", "glm-5.3-zp-openai", "glm-5.3-openai-zp", "glm-5.3-tc", "glm-5.3-openai-tc", "glm-5.3-hs", "glm-5.3-hs-openai", "tig/glm-5.3-zp", "glm-5.3-maas-user"} {
 		if NameOf(id) != "GLM-5.3" || Spelling(id) != "glm-5.3" {
 			t.Errorf("canonical name missing for %s: name=%q spelling=%q", id, NameOf(id), Spelling(id))
 		}

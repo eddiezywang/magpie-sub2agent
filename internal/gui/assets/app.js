@@ -7141,13 +7141,15 @@ function routingBillingText(b) {
   if (b.state === "expired") return t("Billing rule expired");
   if (b.state === "active" && b.currency === "GLM_POINTS" && b.credit_rates) return t("Zhipu points: {input} / {cached} / {output}", {input:b.credit_rates.input,cached:b.credit_rates.cache_read,output:b.credit_rates.output});
   if (b.state !== "active" || b.coefficient == null) return t("Billing rule unknown");
+  if (b.currency === "VOLC_AFP") return t("Volcengine AFP coefficient {n}", {n:b.coefficient});
+  if (b.currency === "TC_POINTS") return t("TIG Tencent coefficient {n}", {n:b.coefficient});
   if (b.currency === "POINTS" && b.source === "MaaS") return t("MaaS coefficient {n}", {n:b.coefficient});
   const unit = { POINTS: "Point coefficient {n}", PLAN_TOKENS: "Plan coefficient {n}", USD: "USD coefficient {n}" }[b.currency];
   return unit ? [b.source, t(unit, { n: b.coefficient })].filter(Boolean).join(" · ") : t("Billing rule unknown");
 }
 function routingBillingHint(b) {
   if (!b) return "";
-  return [routingBillingText(b), b.currency === "GLM_POINTS" ? t("Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.") : "", b.currency === "POINTS" && b.source === "MaaS" ? t("MaaS: tokens × coefficient; 300M points/week per pool. Separate from official points.") : "", b.revision, b.pool ? t("Allowance pool: {pool}", {pool:b.pool}) : t("Shared allowance scope unknown"), t("Reference coefficient; actual usage is determined by the provider")].filter(Boolean).join("\n");
+  return [routingBillingText(b), b.currency === "VOLC_AFP" ? t("AFP per 10,000 input and output tokens; estimate depends on the actual plan.") : "", b.currency === "GLM_POINTS" ? t("Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.") : "", b.currency === "POINTS" && b.source === "MaaS" ? t("MaaS: tokens × coefficient; 300M points/week per pool. Separate from official points.") : "", b.revision, b.pool ? t("Allowance pool: {pool}", {pool:b.pool}) : t("Shared allowance scope unknown"), t("Reference coefficient; actual usage is determined by the provider")].filter(Boolean).join("\n");
 }
 // billingField: provider.Billing, the user's word over magpie's reading
 // of its endpoints (EV_John_Liu on X)
@@ -10797,8 +10799,14 @@ function renderModels(p) {
     const served = draft.chosen.length || draft.picking || decideOnly(p) || draft.none ? new Set() : new Set(dashed());
     // models that would read alike say what tells them apart (modelTells)
     const tells = modelTells(p.models);
+    // Keep selected and searched protocol aliases accessible; collapse only TIG's default list.
+    const tig = p.preset === "aiep-coding-plan" || /^(sub2agent-tigcodingplan|aiep-coding-plan)/.test(p.id);
+    const aliasKey = id => id.toLowerCase().replace(/-openai-(zp|tc|hs)$/, "-$1").replace(/-(zp|tc|hs)-openai$/, "-$1");
+    const preferred = new Map();
+    if (tig) for (const m of p.models) { const k=aliasKey(m.id), old=preferred.get(k); if (!old || m.id.toLowerCase()===k) preferred.set(k,m.id); }
     // a filter is a search: what it doesn't match is left out
     for (const m of p.models) {
+      if (tig && !f && !draft.chosen.includes(m.id) && preferred.get(aliasKey(m.id)) !== m.id) continue;
       const on = draft.chosen.includes(m.id);
       if (f && !m.id.toLowerCase().includes(f) && !(m.name || "").toLowerCase().includes(f) && !(m.default || "").toLowerCase().includes(f)) continue;
       // past the first 80 only the picked are drawn, till the rest are asked for (#685)
