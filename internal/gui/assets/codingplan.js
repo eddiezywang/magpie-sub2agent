@@ -31,7 +31,7 @@ export function notice(editor, preset) {
     const names = {zp:t('Zhipu · team advanced (estimated)'),hs:t('Volcengine · AFP'),tc:t('Tencent · TIG reference')};
     for (const id of ['zp','hs','tc']) {
       const plan = data.config?.plans?.[id]; if (!plan) continue;
-      const row = document.createElement('p'); row.textContent = names[id] + ' · ' + plan.windows.map(w => `${windowName(w.id)} ${Number(w.limit).toLocaleString()} ${plan.unit}`).join(' / '); content.append(row);
+      const row = document.createElement('p'); row.textContent = names[id] + ' · ' + plan.windows.map(w => `${windowName(w.id)} ${Number(w.limit).toLocaleString()} ${planUnit(plan.unit)}`).join(' / '); content.append(row);
     }
     const details = document.createElement('details'), summary = document.createElement('summary'); summary.textContent = t('Model coefficients'); details.append(summary);
     const explanation = document.createElement('p'); explanation.textContent = t('Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.'); details.append(explanation);
@@ -39,13 +39,14 @@ export function notice(editor, preset) {
     for (const rate of data.rates || []) {
       const key = rate.model + ':' + rate.deployment; if (seen.has(key)) continue; seen.add(key);
       const row = document.createElement('p'); const c = rate.credit_rates;
-      row.textContent = `${rate.model} · ${c ? `${c.input} / ${c.cache_read} / ${c.output}` : rate.coefficient} ${rate.currency || ''}`; details.append(row);
+      row.textContent = `${rate.model} · ${c ? `${c.input} / ${c.cache_read} / ${c.output}` : rate.coefficient} ${planUnit(rate.currency)}`; details.append(row);
     }
     content.append(details);
   }).catch(() => {});
 }
 
 function windowName(id) { return id === 'rolling_5h' ? t('5 hours') : id === 'month' ? t('Month') : t('Week'); }
+function planUnit(unit) { return unit === 'GLM_POINTS' ? t('Zhipu points') : unit === 'TC_POINTS' ? t('Tencent weighted tokens') : unit === 'VOLC_AFP' ? 'AFP' : ''; }
 
 // Uses the managed plan report; never substitutes hard-coded limits on failure.
 export async function models(box, provider) {
@@ -67,7 +68,7 @@ export async function models(box, provider) {
       if (!Array.isArray(windows)) return [];
       return [names[id] + ' · ' + windows.map(w => {
         const name = windowName(w.id);
-        return name + ' ' + Number(w.limit).toLocaleString();
+        return name + ' ' + Number(w.limit).toLocaleString() + ' ' + planUnit(report.plans[id].unit);
       }).join(' / ')];
     });
     if (descriptions.length) line.textContent += '  ' + descriptions.join('　');
