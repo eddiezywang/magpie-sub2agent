@@ -21,4 +21,12 @@ function createPlanConfig({dataDir}){
 // A returned model list is evidence of a route, not proof of the plan, pool,
 // validity of credentials or availability. A failed listing stays unknown.
 function detect(models){if(!Array.isArray(models))return {state:'unknown',channels:[]};return {state:'inferred',channels:[...new Set(models.map(m=>channel(typeof m==='string'?m:m?.id)).filter(Boolean))].sort()};}
-module.exports={channel,validate,createPlanConfig,detect};
+// The v3 ledger is per user/provider, not per upstream key or pool. The
+// returned totals are estimates of observed completed-minute usage only.
+function usage(events,config,billing,now){
+ const at=now.getTime();if(!Number.isFinite(at))throw Error('invalid time');
+ const result=Object.fromEntries(['zp','hs','tc'].map(id=>[id,{channel:id,unit:config.plans[id].unit,rolling_5h:0,rolling_7d:0,rolling_30d:0,unpriced:0,models:{}}]));
+ for(const event of events){const g=event._summary,t=Date.parse(event.ts);if(!g||!Number.isFinite(t)||t>at||at-t>=30*86400000||!/^(?:sub2agent-tigcodingplan|aiep-coding-plan)/.test(g.provider))continue;const id=channel(g.model);if(!id)continue;const row=result[id],c=billing.charge(g,event.ts);if(!c.priced||c.currency!==row.unit){row.unpriced+=g.attempts;continue;}row.rolling_30d+=c.amount;if(at-t<7*86400000)row.rolling_7d+=c.amount;if(at-t<5*3600000)row.rolling_5h+=c.amount;row.models[g.model]=(row.models[g.model]||0)+c.amount;}
+ return {as_of:now.toISOString(),basis:'estimated_observed_user',completion_minute:true,account_attribution:'unavailable',period_anchors:'unknown',channels:result};
+}
+module.exports={channel,validate,createPlanConfig,detect,usage};

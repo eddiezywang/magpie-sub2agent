@@ -196,3 +196,11 @@ and 600,000,000 Tencent reference units/week. They are assumptions, not
 proof of entitlements, pool ownership or renewal dates. Model suffix detection
 accepts multiple channels; a failed list stays unknown. Weekly and monthly
 periods require confirmed anchors. See `tig-plans.js` and its tests.
+
+The signed `GET /reports/{user}/tig-plans.json` report sums observed v3
+minute summaries per channel for rolling five-hour, seven-day and thirty-day
+windows. These are user-level estimates rather than account, subscription or
+billing-cycle totals: unpriced attempts are counted separately, period anchors
+and account attribution are explicitly unavailable, and totals omit activity
+outside Sub2Agent. The fixed local report proxy permits only JSON for this
+report. No actual remaining balance is inferred.

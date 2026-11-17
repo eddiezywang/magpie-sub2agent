@@ -47,13 +47,16 @@ func SignBillingRequest(r *http.Request, key string, now time.Time) error {
 // BillingReport fetches the current OS user's report through the fixed managed
 // service; the secret and upstream signature never go to the frontend.
 func BillingReport(ctx context.Context, period, format, date string) ([]byte, string, error) {
-	if period != "daily" && period != "weekly" {
+	if period != "daily" && period != "weekly" && period != "tig-plans" {
 		return nil, "", fmt.Errorf("invalid billing period")
 	}
-	if format != "json" && format != "svg" && format != "png" {
+	if format != "json" && format != "svg" && format != "png" || period == "tig-plans" && format != "json" {
 		return nil, "", fmt.Errorf("invalid billing format")
 	}
 	if date != "" {
+		if period == "tig-plans" {
+			return nil, "", fmt.Errorf("invalid date")
+		}
 		if !reportDate.MatchString(date) {
 			return nil, "", fmt.Errorf("invalid date")
 		}

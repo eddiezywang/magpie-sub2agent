@@ -31,7 +31,7 @@ const path = require('node:path');
 const { createUsageStore } = require('./store');
 const {SCHEMA: summarySchema,createSummaryStore,withSummaries}=require('./summary-store');
 const {createBillingPolicy}=require('./billing-policy');
-const {createPlanConfig}=require('./tig-plans');
+const {createPlanConfig,usage: tigUsage}=require('./tig-plans');
 const {createReportCurrency}=require('./report-currency');
 const { createTelemetryStore, MAX_JSON_BYTES } = require('./telemetry-store');
 const { createDailyLogger } = require('./daily-logger');
@@ -440,6 +440,17 @@ function createUsageServer(options = {}) {
       const revision=Number(q.get('revision')); if(!Number.isSafeInteger(revision)){sendJson(res,400,{error:'invalid_query'});return;}
       const result=mailPreferences.set(user,q.get('enabled')==='true',revision,q.get('operation'));
       sendJson(res,result.conflict?409:200,result); return;
+    }
+    const tigMatch = /^\/reports\/([^/]+)\/tig-plans\.json$/.exec(pathname);
+    if (tigMatch && req.method === 'GET') {
+      if (!verifyBilling(req)) { sendJson(res,401,{error:'unauthorized'}); return; }
+      if (url.search) { sendJson(res,400,{error:'invalid_query'}); return; }
+      const user=resolveReportUser(tigMatch[1]);
+      if (!user || user==='ambiguous') { sendJson(res,user==='ambiguous'?409:404,{error:user==='ambiguous'?'ambiguous_user':'user_not_found'}); return; }
+      const time=now(), start=new Date(time.getTime()-31*86400000);
+      const stamp=d=>String(d.getFullYear())+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+      const events=store.eventsForUser(user.key,stamp(start),stamp(time));
+      sendJson(res,200,tigUsage(events,tigPlans.get(),billing,time)); return;
     }
     const reportMatch = /^\/reports\/([^/]+)\/(daily|weekly)\.(json|svg|png)$/.exec(pathname);
     if (reportMatch && req.method === 'GET') {

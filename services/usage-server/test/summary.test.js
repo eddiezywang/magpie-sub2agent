@@ -178,3 +178,13 @@ test('TIG channels preserve separate reference units and protocol aliases',t=>{
  for(const id of ['glm-5.3-zp','glm-5.3-openai-zp','glm-5.3-zp-openai']) assert.equal(billing.charge({...g,model:id},'2026-11-13T06:00:00Z').currency,'GLM_POINTS');
  for(const id of ['glm-5.9-hs','glm-5.9-tc']) assert.equal(billing.charge({...g,model:id},'2026-11-13T06:00:00Z').priced,false);
 });
+
+test('signed TIG report sums observed usage and rejects anonymous requests',async t=>{
+ const app=createUsageServer({host:'127.0.0.1',port:0,dataDir:temp(t),now:fixed,billingSigningKey:billingKey});
+ const port=await app.start();t.after(()=>app.stop());const base='http://127.0.0.1:'+port;
+ const gp={...group(),provider:'sub2agent-tigcodingplan',model:'glm-5.3-zp',cache_unknown_calls:0,cache_unknown_input_tokens:0};
+ const payload={schema:SCHEMA,...identity,summaries:[summary('tig-fixture',gp)]};
+ const posted=await fetch(base+'/usage/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});assert.equal(posted.status,200);
+ const bad=await fetch(base+'/reports/fixture-user/tig-plans.json',{headers:{}});assert.equal(bad.status,401);
+ const res=await fetch(base+'/reports/fixture-user/tig-plans.json');assert.equal(res.status,200);const data=await res.json();assert.equal(data.account_attribution,'unavailable');assert.ok(data.channels.zp.rolling_5h>0);assert.equal(data.channels.hs.rolling_5h,0);
+});
