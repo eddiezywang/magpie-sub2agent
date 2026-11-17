@@ -139,5 +139,8 @@ On 2026-11-14 the signature verifier was deployed to the 0.177 usage service on 
 The usage server's `mail-preferences.js` stores a per-account boolean and
 monotonic revision with an idempotent operation ID. A stale revision cannot
 replace a newer choice; invalid or unreadable storage fails closed. The store
-is not yet exposed through an API and does not send email. See
+is exposed at the billing-signed GET/POST `/mail-preferences/{username}`
+endpoint. Its identity is the existing OS username, not verified individual
+identity; the shared billing key is not a per-user credential. The endpoint
+does not send email. See
 `services/usage-server/test/mail-preferences.test.js`.

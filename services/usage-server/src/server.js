@@ -44,6 +44,7 @@ const DEFAULT_KEEP_DAYS = 400;
 const DEFAULT_MAX_BODY_BYTES = 2 * 1024 * 1024; // 200-event batches are ~100KB.
 
 const { billingVerifier } = require('./billing-auth');
+const { createMailPreferences } = require('./mail-preferences');
 const fs = require('node:fs');
 function billingKeyFromFile() {
  try { return fs.readFileSync(process.env.USAGE_SERVER_BILLING_KEY_FILE, 'utf8').trim(); } catch { return ''; }
@@ -74,6 +75,7 @@ function createUsageServer(options = {}) {
   } = options;
 
   const verifyBilling = billingVerifier(billingSigningKey, () => now().getTime());
+  const mailPreferences = createMailPreferences(dataDir);
   const legacyStore = createUsageStore({ dataDir, keepDays, now });
   const summaries = createSummaryStore({dataDir,keepDays,now});
   const store = withSummaries(legacyStore,summaries);
@@ -416,6 +418,21 @@ function createUsageServer(options = {}) {
       handleAdminPricing(req, res, url);
       return;
     }
+    const mailMatch = /^\/mail-preferences\/([^/]+)$/.exec(pathname);
+    if (mailMatch && (req.method === 'GET' || req.method === 'POST')) {
+      if (!verifyBilling(req)) { sendJson(res, 401, {error:'unauthorized'}); return; }
+      let user; try { user=decodeURIComponent(mailMatch[1]).trim().toLowerCase(); } catch { sendJson(res,400,{error:'invalid_user'}); return; }
+      if (!user || user==='unknown' || user==='.' || user==='..' || /[\/\\\x00-\x1f]/.test(user) || user.length>256) { sendJson(res,400,{error:'invalid_user'}); return; }
+      if (req.method === 'GET') {
+        if (url.search) { sendJson(res,400,{error:'invalid_query'}); return; }
+        sendJson(res,200,mailPreferences.get(user)); return;
+      }
+      const q=url.searchParams, keys=[...q.keys()];
+      if (keys.length!==3 || new Set(keys).size!==3 || !['enabled','revision','operation'].every(k=>q.has(k)) || !/^(true|false)$/.test(q.get('enabled')) || !/^(0|[1-9]\d*)$/.test(q.get('revision')) || !/^[A-Za-z0-9_-]{16,128}$/.test(q.get('operation'))) { sendJson(res,400,{error:'invalid_query'}); return; }
+      const revision=Number(q.get('revision')); if(!Number.isSafeInteger(revision)){sendJson(res,400,{error:'invalid_query'});return;}
+      const result=mailPreferences.set(user,q.get('enabled')==='true',revision,q.get('operation'));
+      sendJson(res,result.conflict?409:200,result); return;
+    }
     const reportMatch = /^\/reports\/([^/]+)\/(daily|weekly)\.(json|svg|png)$/.exec(pathname);
     if (reportMatch && req.method === 'GET') {
       if (!verifyBilling(req)) { sendJson(res, 401, {error:'unauthorized'}); return; }
@@ -481,7 +498,7 @@ function createUsageServer(options = {}) {
       return Promise.all([closing,...aliases.splice(0)].map(s=>new Promise(resolve=>{s.close(()=>resolve());s.closeIdleConnections?.();})));
     },
     // Exposed for tests/admin tooling.
-    _store: store,_summaries:summaries,_billing:billing,
+    _store: store,_summaries:summaries,_billing:billing,_mailPreferences:mailPreferences,
     _pricing: pricing,
     _aggregator: aggregator,
   };
