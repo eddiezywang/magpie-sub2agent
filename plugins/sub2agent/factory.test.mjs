@@ -123,10 +123,10 @@ test('WorkBuddy keeps model capacity separate from transport size and coalesces 
  assert.deepEqual(a,b);
  assert.deepEqual(a['glm-5.3-flash-maas-fixture'].limit,{context:256000,input:256000,output:32000});
  assert.equal(a['GLM-5.0-Turbo'].limit.input,180000);
- assert.equal(a.hy4free.limit.input,960000);
- assert.equal(a.hy4free.limit.output,64000);
+ assert.equal(a['hy4flash-free'].limit,undefined);
+
  assert.equal(a['auto-maas-fixture'].limit,undefined,'a byte limit does not establish Auto token capacity');
- assert.equal(a.hy4free.cost,undefined,'vendor discovery must not replace server pricing');
+ assert.equal(a['hy4flash-free'].cost,undefined,'vendor discovery must not replace server pricing');
  const other={access:JSON.stringify({...readBundle(auth),enterpriseId:'other'})};
  await plugin.provider.models({models:{}},{auth:other});assert.equal(calls,4,'accounts must not share tenant limits');
  offline=true;now=6*60_000;
@@ -150,7 +150,7 @@ test('WorkBuddy unavailable discovery retains known metadata without writing cre
  const plugin=await createSub2AgentPlugin('workbuddy',{client},{fetchImpl:async()=>{throw new Error('fixture outage');}});
  const a=await plugin.provider.models({models:{}},{auth});
  assert.equal(a['custom-maas-fixture'].limit.input,60000);
- assert.equal(a.hy4free.limit.input,960000);
+ assert.equal(a['hy4flash-free'].limit,undefined);
  assert.equal(a['auto-maas-fixture'].limit,undefined);
 });
 
@@ -198,7 +198,7 @@ test('WorkBuddy enterprise login keeps tenant identity and discovered models',as
  assert.equal(bundle.enterpriseId,'test-tenant');
  assert.deepEqual(bundle.modelMap,models.modelMap);
  const listed=await plugin.provider.models({models:{}},{auth:result});
- assert.deepEqual(Object.keys(listed),[...models.models,"hy4free"]);
+ assert.deepEqual(Object.keys(listed),[...models.models,"hy4flash-free"]);
 });
 
 test('WorkBuddy concurrent requests share refresh and retain private request headers',async()=>{
@@ -319,19 +319,22 @@ test('Trae cancellation closes its local callback listener without saving an acc
  await assert.rejects(fetch(flow.callbackUrl));
 });
 
-test('WorkBuddy fallback is listed once and hy4free is sent as the actual upstream model',async()=>{
+test('WorkBuddy fallback is listed once and hy4flash-free is sent as the actual upstream model',async()=>{
  const sent=[];
  const auth={type:'oauth',access:JSON.stringify({...models,accessToken:'fixture',expiresAt:Date.now()+3600000,userId:'u',enterpriseId:'e'})};
  const plugin=await createSub2AgentPlugin('workbuddy',{client},{workbuddyAdapter:{},fetchImpl:async(url,options)=>{sent.push(JSON.parse(options.body));return sse();}});
  const listed=await plugin.provider.models({models:{}},{auth});
- assert.equal(Object.keys(listed).filter(id=>id==='hy4free').length,1);
- assert.equal(listed.hy4free.cost,undefined,'discovery must not hardcode a permanent free price');
+ assert.equal(Object.keys(listed).filter(id=>id==='hy4flash-free').length,1);
+ assert.equal(listed.hy4free,undefined,'expired model is not added when discovery omits it');
+ assert.equal(listed['hy4flash-free'].cost,undefined,'discovery must not hardcode a permanent free price');
  const loader=await plugin.auth.loader(async()=>auth);
- const response=await loader.fetch('',{body:JSON.stringify({model:'hy4free',messages:[{role:'user',content:'hello'}],stream:true})});
+ const response=await loader.fetch('',{body:JSON.stringify({model:'hy4flash-free',messages:[{role:'user',content:'hello'}],stream:true})});
  assert.equal(response.status,200);await response.text();
- assert.equal(sent[0].model,'hy4free');
- const duplicate={...auth,access:JSON.stringify({...readBundle(auth),models:['hy4free','hy4free','Enterprise Model']})};
- assert.equal(Object.keys(await plugin.provider.models({models:{}},{auth:duplicate})).filter(id=>id==='hy4free').length,1);
+ assert.equal(sent[0].model,'hy4flash-free');
+ const duplicate={...auth,access:JSON.stringify({...readBundle(auth),models:['hy4flash-free','hy4flash-free','Enterprise Model']})};
+ assert.equal(Object.keys(await plugin.provider.models({models:{}},{auth:duplicate})).filter(id=>id==='hy4flash-free').length,1);
+ const existing={...auth,access:JSON.stringify({...readBundle(auth),models:['hy4free']})};
+ assert.ok((await plugin.provider.models({models:{}},{auth:existing})).hy4free,'upstream-discovered models are preserved');
 });
 
  test('MaaS working windows cap unknown deployments without widening smaller limits',async()=>{
@@ -341,5 +344,5 @@ test('WorkBuddy fallback is listed once and hy4free is sent as the actual upstre
   assert.deepEqual(listed['new-maas-tenant'].limit,{context:256000,input:256000,output:32000});
   assert.deepEqual(listed['small-maas-tenant'].limit,{context:64000,input:60000,output:4000});
   assert.equal(listed.ordinary.limit.input,900000);
-  assert.equal(listed.hy4free.limit.input,960000);
+  assert.equal(listed['hy4flash-free'].limit,undefined);
  });
