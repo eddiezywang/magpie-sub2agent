@@ -163,6 +163,9 @@ func (l *liveRow) finish(failed bool, output int) {
 	rate, rated := liveRates.rate(provider, model)
 	l.throughput.add(l.f.agent, l.f.session, provider, model, content-was, rate, rated)
 	if sse && !failed && output > 0 {
+		if !rated {
+			l.throughput.calibrate(provider, model, content, output)
+		}
 		liveRates.learn(provider, model, content, output)
 	}
 	l.tell(bytes, contentAt, provider, model, content)

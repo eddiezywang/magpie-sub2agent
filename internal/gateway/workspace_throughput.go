@@ -14,7 +14,7 @@ const throughputSpan = 180
 type throughputBucket struct {
 	Second  int64
 	Tokens  float64
-	Unknown bool
+	Unknown map[string]int64
 }
 type throughputTrack struct {
 	ID, Name, Agent, Provider string
@@ -70,7 +70,7 @@ func (t *throughputTrack) mean(second int64) (float64, bool) {
 	for s := second - 4; s <= second; s++ {
 		b := t.Buckets[(s%throughputSpan+throughputSpan)%throughputSpan]
 		if b.Second == s {
-			if b.Unknown {
+			if len(b.Unknown) > 0 {
 				return 0, false
 			}
 			sum += b.Tokens
@@ -146,9 +146,69 @@ func (m *throughputMeter) add(agent, session, provider, model string, content in
 		if rated {
 			b.Tokens += float64(content) * rate
 		} else {
-			b.Unknown = true
+			if b.Unknown == nil {
+				b.Unknown = make(map[string]int64)
+			}
+			b.Unknown[throughputID(provider, model)] += content
 		}
 	}
+}
+
+// calibrate fills only earlier uncalibrated bytes for this provider/model.
+// It uses the completed reply's real output count as an estimate, without
+// changing the separate three-reply calibration used by the live route.
+func (m *throughputMeter) calibrate(provider, model string, content int64, output int) {
+	if m == nil || content <= 0 || output <= 0 {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := m.clock().Unix()
+	key, rate := throughputID(provider, model), float64(output)/float64(content)
+	fix := func(t *throughputTrack) {
+		if t == nil {
+			return
+		}
+		changed := false
+		for i := range t.Buckets {
+			b := &t.Buckets[i]
+			if n := b.Unknown[key]; n > 0 {
+				b.Tokens += float64(n) * rate
+				delete(b.Unknown, key)
+				changed = true
+			}
+		}
+		if changed {
+			// Recover peak estimates for the retained window after filling the gap.
+			for s := max(t.Started, now-throughputSpan); s < now; s++ {
+				if v, ok := t.mean(s); ok {
+					t.PeakKnown = true
+					if v > t.Peak {
+						t.Peak = v
+					}
+				}
+			}
+		}
+	}
+	fix(m.total)
+	for _, set := range []map[string]*throughputTrack{m.providers, m.models, m.sessions} {
+		for _, t := range set {
+			fix(t)
+		}
+	}
+}
+
+func copyThroughputTrack(t *throughputTrack) throughputTrack {
+	copy := *t
+	for i := range copy.Buckets {
+		if old := t.Buckets[i].Unknown; old != nil {
+			copy.Buckets[i].Unknown = make(map[string]int64, len(old))
+			for k, v := range old {
+				copy.Buckets[i].Unknown[k] = v
+			}
+		}
+	}
+	return copy
 }
 func (t *throughputTrack) series(now int64) ThroughputSeries {
 	out := ThroughputSeries{ID: t.ID, Name: t.Name, Agent: t.Agent, Provider: t.Provider, StartedAt: t.Started, Calibration: "ok", Points: make([]*float64, throughputSpan)}
@@ -158,7 +218,7 @@ func (t *throughputTrack) series(now int64) ThroughputSeries {
 			continue
 		}
 		b := t.Buckets[s%throughputSpan]
-		if b.Second == s && b.Unknown {
+		if b.Second == s && len(b.Unknown) > 0 {
 			out.Calibration = "uncalibrated"
 			continue
 		}
@@ -171,7 +231,7 @@ func (t *throughputTrack) series(now int64) ThroughputSeries {
 	if v, ok := t.mean(now - 1); ok {
 		out.Current = &v
 	}
-	if t.PeakKnown || out.Calibration == "ok" {
+	if (t.PeakKnown || out.Calibration == "ok") && !(out.Calibration != "ok" && t.Peak == 0) {
 		peak := t.Peak
 		out.Peak = &peak
 	}
@@ -187,12 +247,12 @@ func (m *throughputMeter) snapshot() ThroughputState {
 		m.total = &throughputTrack{ID: "total", Name: "Total", Started: now, At: now}
 	}
 	m.total.advance(now)
-	total := *m.total
+	total := copyThroughputTrack(m.total)
 	clone := func(set map[string]*throughputTrack) []throughputTrack {
 		rows := make([]throughputTrack, 0, len(set))
 		for _, t := range set {
 			t.advance(now)
-			rows = append(rows, *t)
+			rows = append(rows, copyThroughputTrack(t))
 		}
 		return rows
 	}

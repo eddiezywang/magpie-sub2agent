@@ -1323,6 +1323,8 @@ in [reference.md](../reference.md); the code is
 
 ## Workspace throughput (intranet)
 
+When a first streamed response provides actual output usage, the workspace uses its output-to-content ratio to estimate its previously uncalibrated delivered bytes and recover the retained peak. Unknown intervals remain unknown until such a sample is available; the separate live route estimator still requires its usual three samples.
+
 The independent `workspace_throughput.go` meter receives actual delivered
 content deltas from `liveRow.observe` and its final parser flush. It fixes
 liveRates conversion at ingestion, preserving actual provider/model attribution

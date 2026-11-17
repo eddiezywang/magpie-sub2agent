@@ -121,6 +121,10 @@ func TestWorkspaceThroughputUnknownAndLimits(t *testing.T) {
 	if out.Total.Peak != nil || out.Models[0].Peak != nil {
 		t.Fatal("uncalibrated peak presented as numeric zero")
 	}
+	second += 6
+	if later := m.snapshot(); later.Total.Peak != nil {
+		t.Fatal("idle zeros hid an uncalibrated peak")
+	}
 	for i := 0; i < 300; i++ {
 		m.add("a", time.Unix(int64(i), 0).String(), "p", "m", 1, 1, true)
 	}
@@ -232,5 +236,28 @@ func TestWorkspaceThroughputOwnerBoundary(t *testing.T) {
 		if w.Code != 200 {
 			t.Fatalf("local owner route unavailable: %d", w.Code)
 		}
+	}
+}
+
+func TestWorkspaceThroughputCalibratesFirstCompletedReply(t *testing.T) {
+	freshRates(t)
+	second := int64(5000)
+	meter := throughputMeter{now: func() time.Time { return time.Unix(second, 0) }}
+	f := &inflight{agent: "claude", session: "s", throughput: &meter}
+	l := liveBegin(f, "glm-5.3-zp", provider.Chat)
+	l.routed("tig", "glm-5.3-zp")
+	l.observe([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"hello world\"}}]}\n\n"))
+	second++
+	before := meter.snapshot()
+	if before.Total.Current != nil {
+		t.Fatal("unknown output reported as known")
+	}
+	l.finish(false, 11)
+	after := meter.snapshot()
+	if after.Total.Current == nil || *after.Total.Current != 2.2 || after.Total.Peak == nil || *after.Total.Peak != 2.2 {
+		t.Fatalf("first completed reply not reflected: %+v", after.Total)
+	}
+	if len(after.Providers) != 1 || after.Providers[0].Peak == nil || *after.Providers[0].Peak != 2.2 {
+		t.Fatalf("provider peak missing: %+v", after.Providers)
 	}
 }
