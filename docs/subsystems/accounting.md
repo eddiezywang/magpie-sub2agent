@@ -204,3 +204,11 @@ billing-cycle totals: unpriced attempts are counted separately, period anchors
 and account attribution are explicitly unavailable, and totals omit activity
 outside Sub2Agent. The fixed local report proxy permits only JSON for this
 report. No actual remaining balance is inferred.
+
+The intranet Usage overview detects TIG channels from the current provider's
+model list and shows reference limits, server model coefficients, estimated
+observed user totals and a near-limit warning for the rolling five-hour
+reference. A warning is not proof of exhaustion. A missing report remains
+unavailable; account-level attribution and actual subscription resets are not
+inferred. The overview refreshes while open, and stops polling on leave. See
+`assets/tig-plan-usage.js` and `build/tig-plan-acceptance.cjs`.

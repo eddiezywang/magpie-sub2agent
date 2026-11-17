@@ -27,6 +27,6 @@ function usage(events,config,billing,now){
  const at=now.getTime();if(!Number.isFinite(at))throw Error('invalid time');
  const result=Object.fromEntries(['zp','hs','tc'].map(id=>[id,{channel:id,unit:config.plans[id].unit,rolling_5h:0,rolling_7d:0,rolling_30d:0,unpriced:0,models:{}}]));
  for(const event of events){const g=event._summary,t=Date.parse(event.ts);if(!g||!Number.isFinite(t)||t>at||at-t>=30*86400000||!/^(?:sub2agent-tigcodingplan|aiep-coding-plan)/.test(g.provider))continue;const id=channel(g.model);if(!id)continue;const row=result[id],c=billing.charge(g,event.ts);if(!c.priced||c.currency!==row.unit){row.unpriced+=g.attempts;continue;}row.rolling_30d+=c.amount;if(at-t<7*86400000)row.rolling_7d+=c.amount;if(at-t<5*3600000)row.rolling_5h+=c.amount;row.models[g.model]=(row.models[g.model]||0)+c.amount;}
- return {as_of:now.toISOString(),basis:'estimated_observed_user',completion_minute:true,account_attribution:'unavailable',period_anchors:'unknown',channels:result};
+ return {as_of:now.toISOString(),basis:'estimated_observed_user',completion_minute:true,account_attribution:'unavailable',period_anchors:'unknown',plans:config.plans,warning_thresholds:config.warning_thresholds,channels:result};
 }
 module.exports={channel,validate,createPlanConfig,detect,usage};

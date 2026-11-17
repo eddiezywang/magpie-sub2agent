@@ -1,6 +1,23 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["TIG plan usage", "TIG 套餐用量", "TIG 套餐用量", "TIG プラン使用量", "TIG-Tarifnutzung"],
+    ["TIG plan detection unavailable", "TIG 套餐识别暂不可用", "TIG 套餐識別暫不可用", "TIG プランを検出できません", "TIG-Tariferkennung nicht verfügbar"],
+    ["Detected from available model IDs; entitlement and balance are not confirmed.", "根据可用模型名称推测线路，套餐权限和余额尚未确认。", "根據可用模型名稱推測線路，套餐權限和餘額尚未確認。", "モデル ID から推定。契約と残高は未確認です。", "Aus Modell-IDs geschätzt; Berechtigung und Guthaben sind unbestätigt."],
+    ["Model list unavailable", "模型列表不可用", "模型清單不可用", "モデル一覧を取得できません", "Modellliste nicht verfügbar"],
+    ["No recognized plan channels", "未识别到套餐线路", "未識別到套餐線路", "プラン経路を検出できません", "Keine Tarifroute erkannt"],
+    ["Zhipu · team advanced (estimated)", "智谱 · 团队高级版（推测）", "智譜 · 團隊高級版（推測）", "智譜 · チーム上級（推定）", "Zhipu · Team Advanced (geschätzt)"],
+    ["Volcengine · AFP", "火山 · AFP", "火山 · AFP", "Volcengine · AFP", "Volcengine · AFP"],
+    ["Tencent · TIG reference", "腾讯 · TIG 参考", "騰訊 · TIG 參考", "Tencent · TIG 参考", "Tencent · TIG-Referenz"],
+    ["Usage unavailable; waiting for the billing service", "用量暂不可用，等待账单服务", "用量暫不可用，等待帳單服務", "使用量を取得できません", "Nutzung nicht verfügbar; warte auf Abrechnungsdienst"],
+    ["Last 5 hours: {used} / {limit} (estimated)", "近 5 小时：{used} / {limit}（估算）", "近 5 小時：{used} / {limit}（估算）", "直近5時間：{used} / {limit}（推定）", "Letzte 5 Stunden: {used} / {limit} (geschätzt)"],
+    ["Estimated usage is near the reference limit; actual balance is unknown.", "估算用量接近参考额度，实际余额未知。", "估算用量接近參考額度，實際餘額未知。", "推定使用量が参考上限に近づいています。実際の残高は不明です。", "Geschätzte Nutzung nahe dem Referenzlimit; tatsächlicher Stand unbekannt."],
+    ["Reference limit: {limit} per month", "参考额度：每月 {limit}", "參考額度：每月 {limit}", "参考上限：月 {limit}", "Referenzlimit: {limit} pro Monat"],
+    ["Reference limit: {limit} per subscription week", "参考额度：套餐周 {limit}", "參考額度：套餐週 {limit}", "参考上限：契約週 {limit}", "Referenzlimit: {limit} pro Vertragswoche"],
+    ["Observed last 7 / 30 days: {week} / {month}", "已上报近 7 / 30 天：{week} / {month}", "已回報近 7 / 30 天：{week} / {month}", "報告済み直近7 / 30日：{week} / {month}", "Gemeldet, letzte 7 / 30 Tage: {week} / {month}"],
+    ["{n} attempts could not be priced", "{n} 次尝试无法计价", "{n} 次嘗試無法計價", "{n} 回の試行は計算できません", "{n} Versuche konnten nicht bepreist werden"],
+    ["Model coefficients", "模型系数", "模型係數", "モデル係数", "Modellkoeffizienten"],
+    ["Usage combines reported activity by username, not by key. Other devices, shared pools and unreported usage may differ. Subscription reset dates are unknown.", "用量按用户名合并已上报请求，无法区分 Key；其他设备、共享额度池和未上报用量可能导致差异。套餐重置时间未知。", "用量依使用者名稱合併已回報請求，無法區分 Key；其他裝置、共享額度池和未回報用量可能導致差異。套餐重置時間未知。", "報告済み使用量はユーザー名別で Key 別ではありません。共有枠や未報告分により差が生じます。更新日時は不明です。", "Gemeldete Nutzung wird nach Benutzername, nicht Key zusammengefasst. Gemeinsame Pools und nicht gemeldete Nutzung können abweichen. Reset-Daten sind unbekannt."],
     ["Volcengine AFP coefficient {n}", "火山 AFP 系数 {n}", "火山 AFP 係數 {n}", "Volcengine AFP 係数 {n}", "Volcengine-AFP-Faktor {n}"],
     ["AFP per 10,000 input and output tokens; estimate depends on the actual plan.", "输入和输出每 1 万 Token 折算 AFP；仅供估算，实际以套餐为准。", "輸入和輸出每 1 萬 Token 換算 AFP；僅供估算，實際以方案為準。", "入出力1万トークン当たりの AFP。推定値は実際のプランによります。", "AFP je 10.000 Eingabe- und Ausgabe-Token; Schätzung abhängig vom tatsächlichen Tarif."],
     ["TIG Tencent coefficient {n}", "TIG 腾讯参考系数 {n}", "TIG 騰訊參考係數 {n}", "TIG Tencent 参考係数 {n}", "TIG-Tencent-Referenzfaktor {n}"],

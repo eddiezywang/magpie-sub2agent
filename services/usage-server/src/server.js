@@ -450,7 +450,8 @@ function createUsageServer(options = {}) {
       const time=now(), start=new Date(time.getTime()-31*86400000);
       const stamp=d=>String(d.getFullYear())+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
       const events=store.eventsForUser(user.key,stamp(start),stamp(time));
-      sendJson(res,200,tigUsage(events,tigPlans.get(),billing,time)); return;
+      const report=tigUsage(events,tigPlans.get(),billing,time);report.rates=billing.routing().models.filter(r=>['zp','hs','tc'].includes(r.deployment));
+      sendJson(res,200,report); return;
     }
     const reportMatch = /^\/reports\/([^/]+)\/(daily|weekly)\.(json|svg|png)$/.exec(pathname);
     if (reportMatch && req.method === 'GET') {

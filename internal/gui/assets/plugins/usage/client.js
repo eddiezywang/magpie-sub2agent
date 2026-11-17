@@ -30,6 +30,7 @@ magpie.plugin("usage", (ctx) => {
     <span class="usage-cost" id="usageCost"></span>
   </div>
   <div class="usage-pane" id="usagePane">
+    <section id="tig-plan-usage" hidden></section>
     <div class="row-head quota-head" id="quotaHead" hidden>
       <span class="label" data-t>Allowances</span>
       <span class="grow"></span>
@@ -138,17 +139,17 @@ magpie.plugin("usage", (ctx) => {
   </div>
 `,
     mount() { mountUsageFolds(); },
-    open() { return loadUsage(true).catch((e) => status(e.message, "err")); },
+    open() { window.tigPlanUsage?.start(); return loadUsage(true).catch((e) => status(e.message, "err")); },
     refresh(again) {
       // on the Overview, where the allowances are, coming back is opening them (#1588)
-      if (again && usageTab === "usage") quotasOpened();
+      if (again && usageTab === "usage") { quotasOpened(); window.tigPlanUsage?.start(); }
       return (again && usageDrawn() ? refreshUsage() : loadUsage()).catch((e) => status(e.message, "err"));
     },
-    reload() { return refreshUsage(true); },
+    reload() { window.tigPlanUsage?.refresh(); return refreshUsage(true); },
     costs() { renderCosts(); },
     tab() { return usageTab; },
     // the reader goes to another page: the Requests give back what a
     // click lent them (ledLeave)
-    leave() { if (usageTab === "requests") ledLeave(true); },
+    leave() { window.tigPlanUsage?.stop(); if (usageTab === "requests") ledLeave(true); },
   });
 });

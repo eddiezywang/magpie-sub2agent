@@ -60,3 +60,5 @@
 #ws-throughput>summary .ws-expand-label::after,.ws-account-activity>summary::after{content:"";width:6px;height:6px;flex:none;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s ease}
 #ws-throughput[open]>summary .ws-expand-label::after,.ws-account-activity[open]>summary::after{transform:rotate(225deg) translate(-1px,-1px)}
 @media(prefers-reduced-motion:reduce){#ws-throughput>summary .ws-expand-label::after,.ws-account-activity>summary::after{transition:none}}
+
+#tig-plan-usage{margin:12px 0 22px;border-bottom:1px solid var(--line);padding-bottom:14px}#tig-plan-usage[hidden]{display:none}#tig-plan-usage h2{font-size:14px;margin:0 0 8px}.tig-plan-source{padding:10px 0}.tig-plan-line{border-left:3px solid var(--accent);padding:4px 12px;margin:10px 0}.tig-plan-info p{margin:5px 0}.tig-plan-info summary{cursor:pointer;font-size:12px}.tig-plan-alert{color:var(--red);font-size:12px}#tig-plan-usage>.note{font-size:12px}

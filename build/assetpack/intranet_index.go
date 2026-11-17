@@ -33,6 +33,6 @@ func internalIndex(b []byte) []byte {
 		}
 	}
 	index := strings.Replace(strings.Join(out, "\n"), "</head>", `<link rel="stylesheet" href="intranet-retro.css"><link rel="stylesheet" href="workspace.css"><style>#view-settings>:not(#internalSettings),#barkRow,#barkDailyRow,#updateProxyRow,#updateSourceRow,#update,#updateHide,.pm-mirror,#maskDemo,#birdRow,#setTab-sync{display:none!important}.logo img{object-fit:contain}.ic>img{image-rendering:pixelated;width:100%!important;height:100%!important}.logo img{image-rendering:pixelated}</style></head>`, 1)
-	index = strings.Replace(index, `<script src="app.js"></script>`, `<script src="workspace-i18n.js"></script><script src="plugins/workspace/client.js"></script><script src="workspace-throughput.js"></script><script src="app.js"></script>`, 1)
+	index = strings.Replace(index, `<script src="app.js"></script>`, `<script src="workspace-i18n.js"></script><script src="plugins/workspace/client.js"></script><script src="workspace-throughput.js"></script><script src="tig-plan-usage.js"></script><script src="app.js"></script>`, 1)
 	return []byte(strings.Replace(index, `<script src="app.js"></script>`, `<script src="app.js"></script><script src="intranet-titlebar.js"></script><script src="legacy-suppliers.js"></script>`, 1))
 }
