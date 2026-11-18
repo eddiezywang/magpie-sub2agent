@@ -35,7 +35,18 @@ func (r *Runtime) refreshRules(ctx context.Context) error {
 	u.Path = "/usage/aggregation-rules"
 	var rules AggregationRules
 	if err = r.sender.request(ctx, "GET", u.String(), nil, &rules); err != nil {
-		return err
+		if r.failover == nil || ctx.Err() != nil {
+			return err
+		}
+		publicURL, parseErr := endpoint(r.failover.public.UsageURL)
+		if parseErr != nil {
+			return parseErr
+		}
+		publicURL.Path = u.Path
+		rules = AggregationRules{}
+		if err = r.failover.public.request(ctx, "GET", publicURL.String(), nil, &rules); err != nil {
+			return err
+		}
 	}
 	if err = rules.Validate(); err != nil {
 		return err

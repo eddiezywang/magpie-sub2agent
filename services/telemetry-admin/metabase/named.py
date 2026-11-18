@@ -6,6 +6,7 @@ import re
 import ssl
 import sys
 from collections import Counter
+from itertools import chain
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -47,7 +48,7 @@ def identity(row, token):
     return user, install
 
 
-def collect(folder, now, token):
+def collect(folder, now, token, public=None):
     today = now.astimezone(ZONE).date()
     first = today - timedelta(days=DAYS - 1)
     earliest = (first - timedelta(days=1)).strftime("%Y%m%d")
@@ -64,7 +65,8 @@ def collect(folder, now, token):
         active[0] = max(active[0], at)
         return key, active
 
-    for row in rows(folder, r"telemetry-(?:archived-)?(\d{8})\.jsonl", earliest):
+    telemetry = rows(folder, r"telemetry-(?:archived-)?(\d{8})\.jsonl", earliest)
+    for row in chain(telemetry, public.records("legacy") if public else ()):
         who = identity(row, token)
         if who is None:
             continue
@@ -101,7 +103,8 @@ def collect(folder, now, token):
         if isinstance(version, str) and 0 < len(version) <= 64 and (active[1] is None or at >= active[1]):
             active[1:3] = at, version
 
-    for row in rows(folder / "minute-summaries", r"summaries-(\d{8})\.jsonl", earliest):
+    summaries = rows(folder / "minute-summaries", r"summaries-(\d{8})\.jsonl", earliest)
+    for row in chain(summaries, public.records("summary") if public else ()):
         packet = row["install_id"], row["id"]
         if packet in seen:
             continue
@@ -133,10 +136,10 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def send(folder, endpoint, token, ca):
+def send(folder, endpoint, token, ca, public=None):
     if not endpoint.startswith("https://"):
         raise ValueError("named export requires HTTPS")
-    raw = json.dumps(collect(folder, datetime.now(timezone.utc), token), separators=(",", ":")).encode()
+    raw = json.dumps(collect(folder, datetime.now(timezone.utc), token, public), separators=(",", ":")).encode()
     if len(raw) > LIMIT:
         raise ValueError("analytics snapshot exceeds limit")
     signature = hmac.digest(token.encode(), b"bi-snapshot:" + raw, "sha256").hex()
@@ -206,7 +209,21 @@ def receive(dsn, token, port):
 if __name__ == "__main__":
     env = os.environ
     if sys.argv[1:] == ["sync"]:
-        send(Path(env["USAGE_DATA"]), env["BI_SYNC_URL"], env["SYNC_TOKEN"], env["BI_CA_FILE"])
+        mirror = None
+        try:
+            if env.get("PUBLIC_MIRROR_URL"):
+                from public_mirror import PublicMirror
+                mirror = PublicMirror(env["PUBLIC_MIRROR_DB"], env["PUBLIC_MIRROR_URL"],
+                                      env["SYNC_TOKEN"], env["BI_CA_FILE"])
+                for refresh in (mirror.refresh, lambda: mirror.publish_rules(env["INTERNAL_RULES_URL"])):
+                    try:
+                        refresh()
+                    except (OSError, ValueError, KeyError) as error:
+                        print(f"public collector sync pending: {type(error).__name__}", file=sys.stderr)
+            send(Path(env["USAGE_DATA"]), env["BI_SYNC_URL"], env["SYNC_TOKEN"], env["BI_CA_FILE"], mirror)
+        finally:
+            if mirror:
+                mirror.close()
     else:
         receive(Path(env["BI_WRITER_DSN_FILE"]).read_text().strip(), env["SYNC_TOKEN"],
                 int(env.get("BI_LISTEN_PORT", "18898")))

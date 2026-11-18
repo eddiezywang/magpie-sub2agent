@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,9 +14,12 @@ import (
 	"time"
 )
 
+var errCollectorUnavailable = errors.New("accounting collector unavailable")
+
 type Sender struct {
 	LegacyURL, UsageURL, Token string
 	Client                     *http.Client
+	LegacyTimeout              time.Duration
 	Reject                     func([]string) error
 }
 
@@ -46,9 +50,12 @@ func (s Sender) request(ctx context.Context, method, addr string, body []byte, r
 	c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	res, err := c.Do(r)
 	if err != nil {
-		return fmt.Errorf("accounting transport failed")
+		return errCollectorUnavailable
 	}
 	defer res.Body.Close()
+	if res.StatusCode >= 500 || res.StatusCode == 429 {
+		return fmt.Errorf("%w: HTTP %d", errCollectorUnavailable, res.StatusCode)
+	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf("accounting HTTP %d", res.StatusCode)
 	}
@@ -76,7 +83,11 @@ func (s Sender) Send(ctx context.Context, items []Item) ([]string, error) {
 		}
 	}
 	if first.Kind == "legacy" {
-		legacyCtx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)
+		timeout := s.LegacyTimeout
+		if timeout <= 0 {
+			timeout = 300 * time.Millisecond
+		}
+		legacyCtx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 		if len(items) != 1 {
 			return nil, fmt.Errorf("legacy telemetry requires a single event")

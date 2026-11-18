@@ -21,12 +21,19 @@ class NamedExportTest(unittest.TestCase):
             group.update(requests=2, input_tokens=10, model="m", agent="a", provider="p")
             summary = {**event, "id": "stable", "minute": now.isoformat(), "groups": [group]}
             (summaries / "summaries-20261118.jsonl").write_text((json.dumps(summary) + "\n") * 2)
-            result = collect(folder, now, "fixture-token")
+            class Mirror:
+                def records(self, kind):
+                    if kind == "summary":
+                        yield summary
+                        yield {**summary, "install_id": "public-install", "username": "public-user"}
+
+            result = collect(folder, now, "fixture-token", Mirror())
         self.assertNotIn("original-install", json.dumps(result))
-        self.assertEqual(len(result["usage"]), 1)
+        self.assertEqual(len(result["usage"]), 2)
         row = result["usage"][0]
         self.assertEqual(row[:2], ["2026-11-19", "fixture-user"])
         self.assertEqual(row[6:8], [2, 10])
+        self.assertEqual(result["usage"][1][1], "public-user")
         self.assertEqual(result["activity"][0][5], "1.2.3")
 
     def test_online_interval_crosses_midnight_and_retry_counts_once(self):
