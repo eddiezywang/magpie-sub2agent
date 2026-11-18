@@ -54,7 +54,6 @@ import (
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/beat"
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/provider"
 )
@@ -153,7 +152,7 @@ func openMausBot(home string) *Agent {
 			if !wired() {
 				return nil
 			}
-			want := ombMerged(path, dir, gateway.URL())
+			want := ombMerged(path, dir, GatewayURL())
 			if want == nil {
 				return nil
 			}
@@ -164,7 +163,7 @@ func openMausBot(home string) *Agent {
 			if !wired() {
 				return ""
 			}
-			return wiringOff("OpenMausBot", path, func(k string) (string, bool) { return edit.GetJSON(path, ombInstance+".environment."+k) }, "ANTHROPIC_BASE_URL", gateway.URL())
+			return wiringOff("OpenMausBot", path, func(k string) (string, bool) { return edit.GetJSON(path, ombInstance+".environment."+k) }, "ANTHROPIC_BASE_URL", GatewayURL())
 		},
 		Fields: []Field{{
 			Key: "provider", Label: "provider",
@@ -181,7 +180,7 @@ func openMausBot(home string) *Agent {
 				if v == "" {
 					return ombUnwire(path)
 				}
-				return ombWire(path, dir, gateway.URL())
+				return ombWire(path, dir, GatewayURL())
 			},
 			Options: func(map[string]string) []Option {
 				return []Option{{Value: magpieID, Label: "magpie", Icon: "magpie", Note: "every magpie model under OpenMausBot's magpie engine; pick it for a bot"}}

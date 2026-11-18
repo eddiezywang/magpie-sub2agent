@@ -170,7 +170,7 @@ func (p place) gw() string {
 	if p.base != nil {
 		return p.base()
 	}
-	return gateway.URL()
+	return GatewayURL()
 }
 
 func (p place) v1() string       { return p.gw() + "/v1" }
@@ -178,14 +178,15 @@ func (p place) codexURL() string { return p.gw() + gateway.CodexPath }
 
 // host is the gateway's host as the agent reaches it.
 func (p place) host() string {
-	if p.base == nil {
+	base := p.gw()
+	if p.base == nil && base == gateway.URL() {
 		return "127.0.0.1"
 	}
-	h, _, err := net.SplitHostPort(strings.TrimPrefix(p.base(), "http://"))
-	if err != nil {
+	u, err := url.Parse(base)
+	if err != nil || u.Hostname() == "" {
 		return "127.0.0.1"
 	}
-	return h
+	return u.Hostname()
 }
 
 // native is a path under home as the agent names it in its config.

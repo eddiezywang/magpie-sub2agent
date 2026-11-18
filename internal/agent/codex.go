@@ -2745,7 +2745,7 @@ func codexOwnOf(id string) string {
 
 // codexGatewayURL is where Codex's built-in OpenAI provider is pointed to
 // reach magpie.
-func codexGatewayURL() string { return gateway.URL() + gateway.CodexPath }
+func codexGatewayURL() string { return GatewayURL() + gateway.CodexPath }
 
 // codexKeptGateway is the gateway's URL for this machine's Codex: the
 // address its config names when that is magpie's gateway on a host other
@@ -2775,7 +2775,7 @@ func codexKeptGateway(path string) string {
 	if p, _ := edit.GetTOMLTop(path, "model_provider"); p == magpieID && table != "" {
 		return table
 	}
-	return cmp.Or(kept(base, gateway.CodexPath), table, gateway.URL())
+	return cmp.Or(kept(base, gateway.CodexPath), table, GatewayURL())
 }
 
 // codexMoveGateway points Codex's config at to where it names magpie's

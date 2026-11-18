@@ -160,7 +160,7 @@ func zcodeProviderJSON(path string, keep bool) any {
 	if v, ok := edit.GetJSON(path, "provider."+magpieID+".enabled"); ok && v == "false" {
 		on = false
 	}
-	base, token := gateway.URL(), hereKey()
+	base, token := GatewayURL(), hereKey()
 	if keep {
 		base, token = zcodeKept(filepath.Dir(path))
 	}
@@ -240,8 +240,8 @@ func zcodeDefaultLevels(path string) map[string]string {
 // keeps with its key. An address on this machine's loopback is magpie's own
 // and follows the gateway.
 func zcodeAddress(was, wasKey string) (string, string) {
-	if !onAnotherMachine(was) || sameGateway(was, gateway.URL()) {
-		return gateway.URL(), hereKey()
+	if !onAnotherMachine(was) || sameGateway(was, GatewayURL()) {
+		return GatewayURL(), hereKey()
 	}
 	if wasKey == "" {
 		wasKey = gateway.Token
@@ -690,7 +690,7 @@ func zcodeRules(path string, on, keep bool) error {
 		if known {
 			zcodeSearchedPut(searched, ids)
 		}
-		base, token := gateway.URL(), hereKey()
+		base, token := GatewayURL(), hereKey()
 		if keep {
 			base, token = zcodeKept(filepath.Dir(path))
 		}

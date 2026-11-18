@@ -4,6 +4,15 @@ Sub2Agent writes `sub2agent` as the local gateway placeholder and
 `via Sub2Agent` in generated Claude Code and Paseo model descriptions.
 Wiring checks recognize existing `magpie` placeholders and descriptions.
 
+Settings › Local network › Local agent connection address defaults to
+loopback. Sub2Agent can instead write a private IPv4 address assigned to
+this machine and the existing LAN key into managed local agent configs
+(`GatewayURL`, `LocalOnGateway`, `RewireLocal`). The choice is per machine.
+WSL retains its own route. Disabling sharing clears the choice and
+reapplies loopback wiring. If the address changes, select the new address
+and reapply any stale agent config. Start a new agent session after changing
+the address.
+
 magpie connects a coding agent to its gateway by editing the agent's own
 config. That covers the endpoint, the key `magpie-<agent>` and the model,
 in the agent's own format. When the agent is disconnected, magpie puts back

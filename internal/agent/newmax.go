@@ -53,7 +53,6 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/yetone/magpie/internal/appdir"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/sessions"
 	_ "github.com/yetone/magpie/internal/sqlitedb"
 )
@@ -89,7 +88,7 @@ func newMax(home string) *Agent {
 		if !on {
 			return newMaxEdit(path, newMaxUnwire)
 		}
-		e := newMaxEntryFor(gateway.URL())
+		e := newMaxEntryFor(GatewayURL())
 		return newMaxEdit(path, func(app []byte, had bool) ([]byte, error) { return newMaxWire(app, had, e) })
 	}
 	return &Agent{

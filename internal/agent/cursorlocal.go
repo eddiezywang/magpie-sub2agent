@@ -33,7 +33,6 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/appdir"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/proc"
 	"github.com/yetone/magpie/internal/provider"
@@ -252,7 +251,7 @@ func cursorLocalOn(on bool) error {
 		}
 		return nil
 	}
-	env := cursorLocalEnv(gateway.URL())
+	env := cursorLocalEnv(GatewayURL())
 	if err := cursorLocalUserEnv(env); err != nil {
 		return err
 	}
@@ -288,7 +287,7 @@ func cursorLocal() *Agent {
 		detect:      func() bool { return cursorLocalApp() != "" },
 		Launch: func() string {
 			if app := cursorLocalApp(); app != "" {
-				return CursorLocalLaunch(app, gateway.URL())
+				return CursorLocalLaunch(app, GatewayURL())
 			}
 			return ""
 		},
@@ -320,7 +319,7 @@ func cursorLocal() *Agent {
 			},
 		}},
 		Notice: func() string {
-			return noticeCursorLocal.say("agent", cursorLocalName, "url", gateway.URL()+"/v1", "key", agentKey(CursorLocalID))
+			return noticeCursorLocal.say("agent", cursorLocalName, "url", GatewayURL()+"/v1", "key", agentKey(CursorLocalID))
 		},
 	}
 }

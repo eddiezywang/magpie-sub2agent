@@ -64,7 +64,8 @@ const file = async (route, url) => {
 };
 function settingsServer(lang, posts, over) {
   const { intranet = false, ...settings } = over;
-  const key = { id: "lan-fixture", masked: "sk-magpie-…012345" };
+  const key = { id: "lan-fixture", masked: "sk-sub2agent-…012345" };
+  const lanSecret = "sk-sub2agent-fixture-012345";
   const s = {
     theme: "light", lang, tray: "panel", currency: "usd", version: "0.1.400", dir: "/config/magpie",
     gateway: "http://127.0.0.1:3425", proxyNow: "none", proxySource: "none", login: false,
@@ -81,14 +82,17 @@ function settingsServer(lang, posts, over) {
     if (url.pathname === "/api/settings/lan") {
       const body = route.request().postDataJSON();
       posts.push(body);
-      s.lan = body.on;
-      s.lanAccessKey = body.on ? key : undefined;
+      if ("agentHost" in body) s.agentLanHost = body.agentHost;
+      else {
+        s.lan = body.on;
+        s.lanAccessKey = body.on ? key : undefined;
+      }
       return json(s);
     }
     if (url.pathname === "/api/caller-keys/copy-key") {
       const body = route.request().postDataJSON();
       posts.push(body);
-      return body.key === key.id ? json({ secret: KEY }) : json({}, 404);
+      return body.key === key.id ? json({ secret: lanSecret }) : json({}, 404);
     }
     if (url.pathname === "/api/copy") {
       posts.push(route.request().postDataJSON());
@@ -111,7 +115,8 @@ function settingsServer(lang, posts, over) {
 
 const STRINGS = ["Join with a password", "Other computers open the join link and type this password to get a gateway key of their own and the setup for their agents",
   "New password", "Set", "Turn off joining", "Join link", "Use a password of at least 8 characters", "Use a password of at most 1024 bytes",
-  "Let other devices connect with an API key."];
+  "Let other devices connect with an API key.", "Local agent connection address", "Loopback (default)", "Local network IP",
+  "Applies to agents connected on this computer.", "Restart open agents to use the new address."];
 
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
   test(engine + ": join with a password (EV_John_Liu on X)", async (t) => {
@@ -185,7 +190,9 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       sub.after(() => page.close());
       const errors = [];
       page.on("pageerror", (err) => errors.push(err.message));
-      await page.route("**/*", settingsServer("zh", posts, { intranet: true, lan: false, joinOn: true, lanURLs: ["http://10.55.81.17:8989"] }));
+      const ip = "192.168.50.17";
+      await page.route("**/*", settingsServer("zh", posts, { intranet: true, lan: false, joinOn: true,
+        lanURLs: [`http://${ip}:8989`], agentLanHosts: [ip] }));
       await watchSettingsReads(page);
       await page.goto("http://127.0.0.1:4999/?view=settings&tab=network");
       await settingsDrawn(page);
@@ -196,18 +203,32 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       await on.click();
       const key = lan.locator(".lan-key-row");
       await key.waitFor();
-      assert.equal(await lan.locator(".lan-address-text").textContent(), "http://10.55.81.17:8989/v1");
-      assert.equal(await key.locator("code").textContent(), "sk-magpie-…012345");
+      assert.equal(await lan.locator(".lan-address-text").textContent(), `http://${ip}:8989/v1`);
+      assert.equal(await key.locator("code").textContent(), "sk-sub2agent-…012345");
       assert.equal(await lan.locator(".join-row, .join-link-row").count(), 0);
       const copy = key.getByRole("button", { name: "复制网关密钥" });
       await reach(page, copy);
-      if (process.env.LAN_REVIEW_DIR) {
-        assert.ok(!(await lan.innerText()).includes(KEY));
-        await lan.screenshot({ path: path.join(process.env.LAN_REVIEW_DIR, `${engine}-lan-sharing.png`) });
-      }
       await copy.click();
       await page.waitForFunction(() => document.querySelector(".lan-key-row .copy.done"));
-      assert.deepEqual(posts, [{ on: true }, { key: "lan-fixture" }, { text: KEY }]);
+      assert.deepEqual(posts, [{ on: true }, { key: "lan-fixture" }, { text: "sk-sub2agent-fixture-012345" }]);
+      const pick = lan.getByRole("button", { name: "本机 Agent 接入地址" });
+      assert.match(await pick.textContent(), /本机回环/);
+      await reach(page, pick);
+      await pick.click();
+      await page.getByRole("menuitemradio", { name: `本机局域网 IP · ${ip}` }).click();
+      await pick.getByText(ip, { exact: false }).waitFor();
+      assert.deepEqual(posts.at(-1), { agentHost: ip });
+      if (process.env.LAN_REVIEW_DIR) {
+        assert.doesNotMatch(await lan.innerText(), /sk-sub2agent-fixture/);
+        await page.mouse.move(5, 5);
+        await page.waitForFunction(() => !document.querySelector("#status").textContent);
+        await lan.screenshot({ path: path.join(process.env.LAN_REVIEW_DIR, `${engine}-lan-agent-address.png`) });
+      }
+      await reach(page, pick);
+      await pick.click();
+      await page.getByRole("menuitemradio", { name: "本机回环（默认）" }).click();
+      await pick.getByText("本机回环（默认）").waitFor();
+      assert.deepEqual(posts.at(-1), { agentHost: "" });
       const off = lan.locator('[data-seg="off"]');
       await reach(page, off);
       await off.click();

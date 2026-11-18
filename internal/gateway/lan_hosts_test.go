@@ -38,6 +38,17 @@ func TestLANHostsKeepAPublicAddress(t *testing.T) {
 	if got := PublicURLs(urls); !slices.Equal(got, urls[2:]) {
 		t.Errorf("PublicURLs: %v, want %v", got, urls[2:])
 	}
+	if got := AgentLANHosts(); !slices.Equal(got, want[:2]) {
+		t.Errorf("AgentLANHosts: %v, want %v", got, want[:2])
+	}
+	t.Setenv("MAGPIE_ADDR", "10.77.70.2:8989")
+	if got := AgentLANHosts(); !slices.Equal(got, want[:1]) {
+		t.Errorf("AgentLANHosts with pinned private address: %v, want %v", got, want[:1])
+	}
+	t.Setenv("MAGPIE_ADDR", "127.0.0.1:8989")
+	if got := AgentLANHosts(); len(got) != 0 {
+		t.Errorf("AgentLANHosts with pinned loopback: %v, want none", got)
+	}
 }
 
 // A proxy's TUN interface (Clash, Surge, sing-box fake-ip) holds an

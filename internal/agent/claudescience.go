@@ -622,7 +622,7 @@ func scienceAgent(h *scienceHost) *Agent {
 		detect:      func() bool { return h.bin() != "" },
 		Launch: func() string {
 			if bin := h.bin(); bin != "" && h.wired() && h.id == ScienceID {
-				return ScienceLaunch(bin, gateway.URL())
+				return ScienceLaunch(bin, GatewayURL())
 			}
 			return ""
 		},

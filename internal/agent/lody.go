@@ -128,7 +128,7 @@ func lody(home string) *Agent {
 			}
 			return runtime.GOOS == "darwin" && lodyBundle(macAppFolders(home))
 		},
-		Import: func() string { return LodyLink(gateway.URL()) },
+		Import: func() string { return LodyLink(GatewayURL()) },
 		// There is no public status API. Never infer import success from a
 		// click, generated runtime files, or Lody's private document store.
 	}

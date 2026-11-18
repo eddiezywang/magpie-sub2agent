@@ -66,7 +66,6 @@ import (
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/proc"
 	"github.com/yetone/magpie/internal/provider"
 )
@@ -99,7 +98,7 @@ func liveAgent(home string) *Agent {
 		if !on {
 			return liveAgentUnwire(path)
 		}
-		return liveAgentWire(path, liveAgentFor(gateway.URL()))
+		return liveAgentWire(path, liveAgentFor(GatewayURL()))
 	}
 	return atomic(&Agent{
 		ID: "liveagent", Name: "LiveAgent", Icon: "liveagent-color", Aliases: []string{"live-agent", "k-brain", "kbrain"},

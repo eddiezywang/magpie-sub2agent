@@ -58,7 +58,6 @@ import (
 
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/provider"
 )
@@ -92,7 +91,7 @@ type droidEntry struct {
 }
 
 // droidEntries are magpie's custom models as the catalog is now.
-func droidEntries() []droidEntry { return droidEntriesAt(gateway.URL()) }
+func droidEntries() []droidEntry { return droidEntriesAt(GatewayURL()) }
 
 // droidEntriesAt are droidEntries for a droid reaching the gateway at gw.
 func droidEntriesAt(gw string) []droidEntry {

@@ -2844,7 +2844,7 @@ func (r *dshRounds) once() string {
 	// again, 158 MB of what a real account's magpie allocated in its first
 	// minute
 	defer provider.Hold()()
-	key := dshRoundKey{files: dshFilesSum(dir, files), gw: gateway.URL(), models: r.last.models}
+	key := dshRoundKey{files: dshFilesSum(dir, files), gw: GatewayURL(), models: r.last.models}
 	// the stamp is read before the models are built: a change while they
 	// are moves it past the one kept, and the next round builds them again
 	var models []catalog.Model
@@ -2880,7 +2880,7 @@ func (r *dshRounds) once() string {
 func dshWiredWith(dir string, files []string, models []catalog.Model) string {
 	var trouble []string
 	// a prefix a local proxy has put before the gateway stays (DshThrough)
-	gw := dshReach(dir, gateway.URL())
+	gw := dshReach(dir, GatewayURL())
 	// a profile dsh has just made — the desktop app's, opened for the first
 	// time while magpie runs — is its empty template: given magpie's route
 	// and start as the catalog sync would, rather than left listing dsh's

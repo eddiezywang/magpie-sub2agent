@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/catalog"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
 	"github.com/yetone/magpie/internal/settings"
 )
@@ -497,7 +496,7 @@ func group(name string, opts []Option) []Option {
 	return opts
 }
 
-func gatewayV1() string { return gateway.URL() + "/v1" }
+func gatewayV1() string { return GatewayURL() + "/v1" }
 
 // unknownWindow is the window an agent is told of a model whose own magpie
 // doesn't know: the agent's default n, held to the longest context the user

@@ -599,6 +599,7 @@ function renderLAN(s) {
     // the sidebar's gateway names the address shared, or this computer's
     api("providers").then((r) => renderSideGw(r?.gateway), () => {});
     if (ns.rekeyed) status(ns.rekeyed, "err");
+    else if ("agentHost" in body) status(t("Restart open agents to use the new address."), "ok");
   })
     .catch((e) => { status(t(e.message), "err"); renderSettings(); });
   const intranet = !!window.bootPrefs?.intranet;
@@ -668,6 +669,23 @@ function renderLAN(s) {
       };
     }
     row(t("API key"), "", key?.masked, action).classList.add("lan-key-row");
+    const label = t("Local agent connection address");
+    const loopback = t("Loopback (default)");
+    const lanIP = t("Local network IP");
+    const pick = el("button", "proto pick");
+    pick.type = "button";
+    pick.setAttribute("aria-label", label);
+    pick.append(el("span", "", s.agentLanHost ? lanIP + " · " + s.agentLanHost : loopback), svg(CHEV, 11, 1.6));
+    pick.onclick = (e) => {
+      e.stopPropagation();
+      if (pick.classList.contains("open")) return closeProtoMenu();
+      const choices = [{ v: "", name: loopback }];
+      if (key && !key.off) for (const ip of s.agentLanHosts || []) {
+        choices.push({ v: ip, name: lanIP + " · " + ip });
+      }
+      openProtoMenu(pick, choices, s.agentLanHost || "", (agentHost) => set({ agentHost }), label);
+    };
+    row(label, t("Applies to agents connected on this computer."), "", pick).classList.add("lan-agent-row");
   }
   if (sub) row(head || t("In a container"), sub, "").classList.add("lan-container");
   if (!intranet) renderJoin(s, box);

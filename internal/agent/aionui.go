@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/sessions"
 	_ "github.com/yetone/magpie/internal/sqlitedb"
 )
@@ -112,7 +111,7 @@ func aionui() *Agent {
 		ID: "aionui", Name: "AionUi", Icon: "aionui",
 		Dir: dir, Path: dir,
 		detect: func() bool { return dir != "" && isDir(filepath.Join(dir, "aionui")) },
-		Import: func() string { return AionUiLink(gateway.URL()) },
-		Added:  func() (bool, bool) { return st.read(db, gateway.URL()) },
+		Import: func() string { return AionUiLink(GatewayURL()) },
+		Added:  func() (bool, bool) { return st.read(db, GatewayURL()) },
 	}
 }

@@ -28,7 +28,6 @@ import (
 	"runtime"
 
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 )
 
 func pencil(home string) *Agent {
@@ -51,7 +50,7 @@ func pencil(home string) *Agent {
 		},
 		ListOnly: true,
 		Sync: func() error {
-			return syncJSON(path, key, theirsKept(path, key, func() any { return pencilProviderJSON(gateway.URL()) }, "models"))
+			return syncJSON(path, key, theirsKept(path, key, func() any { return pencilProviderJSON(GatewayURL()) }, "models"))
 		},
 		// its picker lists the models picked for it (#1508)
 		ListsModels: true,
@@ -67,7 +66,7 @@ func pencil(home string) *Agent {
 				if v == "" {
 					return edit.DelJSON(path, key)
 				}
-				return edit.SetJSON(path, edit.KV{Path: key, Value: theirsKept(path, key, func() any { return pencilProviderJSON(gateway.URL()) }, "models")()})
+				return edit.SetJSON(path, edit.KV{Path: key, Value: theirsKept(path, key, func() any { return pencilProviderJSON(GatewayURL()) }, "models")()})
 			},
 			Options: func(map[string]string) []Option {
 				return []Option{{Value: magpieID, Label: "magpie", Icon: "magpie", Note: "every magpie model in Pencil's model picker"}}

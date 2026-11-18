@@ -392,6 +392,20 @@ func LANURLs() []string {
 // is a utun too, and its address is reached.
 func LANHosts() []string { return lanHostsOf(hostIPs()) }
 
+// AgentLANHosts lists private addresses assigned to this machine that the
+// gateway can listen on. Public links, proxies and other hosts are excluded.
+func AgentLANHosts() []string {
+	pinned := pinnedHost()
+	var hosts []string
+	for _, host := range LANHosts() {
+		ip := net.ParseIP(host)
+		if ip.IsGlobalUnicast() && !PublicIP(ip) && (pinned == "" || pinned == host) {
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts
+}
+
 // lanHostsOf is LANHosts of the addresses ips.
 func lanHostsOf(ips []net.IP) []string {
 	var home, near, far []string

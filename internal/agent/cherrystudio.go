@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/sessions"
 	_ "github.com/yetone/magpie/internal/sqlitedb"
 )
@@ -182,7 +181,7 @@ func cherryStudio(home string) *Agent {
 			}
 			return false
 		},
-		Import: func() string { return CherryStudioLink(gateway.URL()) },
-		Added:  func() (bool, bool) { return st.read(home, gateway.URL()) },
+		Import: func() string { return CherryStudioLink(GatewayURL()) },
+		Added:  func() (bool, bool) { return st.read(home, GatewayURL()) },
 	}
 }

@@ -118,7 +118,7 @@ func obsidian(home, cfg string) *Agent {
 			p := obsCopilotData(v)
 			var err error
 			if on {
-				err = obsCopilotWire(p, gateway.URL())
+				err = obsCopilotWire(p, GatewayURL())
 			} else {
 				err = obsCopilotUnwire(p)
 			}
@@ -157,7 +157,7 @@ func obsidian(home, cfg string) *Agent {
 			var errs []error
 			for _, v := range vaults {
 				if p := obsCopilotData(v); obsCopilotWired(p) {
-					errs = append(errs, obsCopilotWire(p, gateway.URL()))
+					errs = append(errs, obsCopilotWire(p, GatewayURL()))
 				}
 			}
 			return errors.Join(errs...)

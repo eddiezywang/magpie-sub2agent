@@ -70,6 +70,30 @@ func Rekey(as []*Agent) (moved []string, err error) {
 	return moved, joinErrs(errs)
 }
 
+// LocalOnGateway selects managed wiring on this machine's prior address.
+// WSL and Claude Desktop's separate address keep their own routes.
+func LocalOnGateway(as []*Agent, from string) []*Agent {
+	var local []*Agent
+	desktop := settings.Load().DesktopGateway
+	for _, a := range as {
+		at := a.pointedAt()
+		if a.WSL == "" && !(a.ID == "claude-desktop" && desktop != "") && (at == "" || sameHost(at, from)) {
+			local = append(local, a)
+		}
+	}
+	return local
+}
+
+// RewireLocal reapplies managed wiring even if the previous address answers.
+func RewireLocal(as []*Agent) error {
+	_, errs := setAgain(as)
+	KeepCursorLocalEnv(context.Background())
+	if trouble := dshWiredOnce(); trouble != "" {
+		errs = append(errs, fmt.Errorf("%s", trouble))
+	}
+	return joinErrs(errs)
+}
+
 // setAgain sets each agent's wiring again, keeping what it had before
 // magpie, and says the names of those it set and what one failed with.
 func setAgain(as []*Agent) (moved []string, errs []error) {

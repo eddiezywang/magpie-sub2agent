@@ -959,6 +959,9 @@ func configureLAN(on, rotate bool) error {
 		return err
 	}
 	s := settings.Load()
+	if !on {
+		s.AgentLANHost = ""
+	}
 	if on {
 		keys, err := load()
 		if err != nil {

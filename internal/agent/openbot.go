@@ -87,7 +87,7 @@ func openBot(home, cfg string) *Agent {
 		if !on {
 			return openBotUnwire(path)
 		}
-		return openBotWire(path, openBotEntry(gateway.URL()))
+		return openBotWire(path, openBotEntry(GatewayURL()))
 	}
 	return atomic(&Agent{
 		ID: "openbot", Name: "OpenBot", Icon: "openbot", Aliases: []string{"open-bot"},

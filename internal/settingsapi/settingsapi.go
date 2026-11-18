@@ -289,6 +289,7 @@ func Merge(body []byte, cur settings.Settings, web bool) (settings.Settings, err
 	settings.CarryPerModel(&in, &cur)
 	in.LAN, in.LANKey = cur.LAN, cur.LANKey
 	in.LANKeyID = cur.LANKeyID
+	in.AgentLANHost = cur.AgentLANHost
 	// Bark has its own route (bark); the page never sees its key
 	in.BarkServer, in.BarkKey, in.BarkDaily = cur.BarkServer, cur.BarkKey, cur.BarkDaily
 

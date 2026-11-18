@@ -442,7 +442,8 @@ type settingsJSON struct {
 	// itself is never sent
 	JoinOn bool `json:"joinOn,omitempty"`
 	// LANAccessKey contains the display and copy controls' public metadata.
-	LANAccessKey *lanAccessKeyJSON `json:"lanAccessKey,omitempty"`
+	LANAccessKey  *lanAccessKeyJSON `json:"lanAccessKey,omitempty"`
+	AgentLANHosts []string          `json:"agentLanHosts,omitempty"`
 	// Dir is the data folder beside a portable magpie (#508)
 	Portable bool `json:"portable,omitempty"`
 	// Log is the log the desktop app writes (applog), as shown; "" for a
@@ -904,6 +905,7 @@ func settingsState() settingsJSON {
 	s.Login, s.LoginAllow = login != autostart.Off, login == autostart.NeedsAllowing
 	if s.LAN {
 		if distribution.Internal {
+			s.AgentLANHosts = gateway.AgentLANHosts()
 			keys, _ := access.List()
 			for _, key := range keys {
 				if key.ID == s.LANKeyID || key.LAN {
@@ -2676,14 +2678,47 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	// Sharing controls exposure; the gateway's named caller keys authenticate
 	// remote clients just as they do local ones.
 	mux.HandleFunc("POST /api/settings/lan", func(rw http.ResponseWriter, r *http.Request) {
-		var in struct{ On, NewKey bool }
+		var in struct {
+			On, NewKey bool
+			AgentHost  *string
+		}
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			fail(rw, err)
 			return
 		}
+		if in.AgentHost != nil {
+			host := *in.AgentHost
+			if !distribution.Internal || host != "" && !slices.Contains(gateway.AgentLANHosts(), host) {
+				fail(rw, errors.New("Choose a local network address from this computer"))
+				return
+			}
+			if host != "" && access.LANSecret() == "" {
+				fail(rw, errors.New("Enable the local network API key first"))
+				return
+			}
+			if host != "" && gateway.MTLSOn() {
+				fail(rw, errors.New("Local network agent access requires a gateway without client certificates"))
+				return
+			}
+			on := agent.LocalOnGateway(agent.OnGateway(), agent.GatewayURL())
+			if err := settings.SetAgentLANHost(host); err != nil {
+				fail(rw, err)
+				return
+			}
+			out := settingsState()
+			if err := agent.RewireLocal(on); err != nil {
+				out.Rekeyed = err.Error()
+			}
+			writeJSON(rw, out)
+			return
+		}
 		// the agents reaching the gateway now: one in a WSL distro under NAT
 		// is given the sharing key, which this changes
-		on := agent.OnGateway()
+		from, on := agent.GatewayURL(), agent.OnGateway()
+		var local []*agent.Agent
+		if (!in.On || in.NewKey) && settings.Load().AgentLANHost != "" {
+			local = agent.LocalOnGateway(on, from)
+		}
 		if err := access.ConfigureLAN(in.On, in.NewKey); err != nil {
 			fail(rw, err)
 			return
@@ -2695,7 +2730,11 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 			}
 		}
 		out := settingsState()
-		if _, err := agent.Rekey(on); err != nil {
+		_, err := agent.Rekey(on)
+		if len(local) > 0 {
+			err = errors.Join(err, agent.RewireLocal(local))
+		}
+		if err != nil {
 			out.Rekeyed = err.Error()
 		}
 		writeJSON(rw, out)

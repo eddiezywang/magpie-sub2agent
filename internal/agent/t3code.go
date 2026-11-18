@@ -62,7 +62,6 @@ import (
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/codexcat"
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
 )
 
@@ -101,10 +100,10 @@ func t3code(home string) *Agent {
 		detect:   func() bool { return isDir(base) || t3App(home) },
 		ListOnly: true,
 		Sync: func() error {
-			if err := syncJSON(path, t3Instance, func() any { return t3Merged(path, gateway.URL()) }); err != nil {
+			if err := syncJSON(path, t3Instance, func() any { return t3Merged(path, GatewayURL()) }); err != nil {
 				return err
 			}
-			return t3CodexSync(path, gateway.URL())
+			return t3CodexSync(path, GatewayURL())
 		},
 		// its custom models are the models picked for it (#1508)
 		ListsModels: true,
@@ -118,13 +117,13 @@ func t3code(home string) *Agent {
 			if !wired() {
 				return ""
 			}
-			if why := t3CodexOff(path, gateway.URL()); why != "" {
+			if why := t3CodexOff(path, GatewayURL()); why != "" {
 				return why
 			}
 			if !claudeOn() {
 				return ""
 			}
-			if why := wiringOff("T3 Code", path, func(k string) (string, bool) { return t3EnvOf(path, k) }, "ANTHROPIC_BASE_URL", gateway.URL()); why != "" {
+			if why := wiringOff("T3 Code", path, func(k string) (string, bool) { return t3EnvOf(path, k) }, "ANTHROPIC_BASE_URL", GatewayURL()); why != "" {
 				return why
 			}
 			at := here(home)
@@ -147,10 +146,10 @@ func t3code(home string) *Agent {
 					forget(t3CodexOffered)
 					return edit.DelJSON(path, t3Instance)
 				}
-				if err := edit.SetJSON(path, edit.KV{Path: t3Instance, Value: t3Merged(path, gateway.URL())}); err != nil {
+				if err := edit.SetJSON(path, edit.KV{Path: t3Instance, Value: t3Merged(path, GatewayURL())}); err != nil {
 					return err
 				}
-				return t3CodexPut(path, gateway.URL())
+				return t3CodexPut(path, GatewayURL())
 			},
 			Options: func(map[string]string) []Option {
 				return []Option{{Value: magpieID, Label: "magpie", Icon: "magpie", Note: "every magpie model in T3 Code twice: magpie on Claude Code, magpie · Codex on Codex; pick one in T3's model picker"}}

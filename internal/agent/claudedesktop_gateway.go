@@ -48,7 +48,7 @@ func desktopLANURLs() []string {
 func desktopGateway() string {
 	pick := settings.Load().DesktopGateway
 	if pick == "" {
-		return gateway.URL()
+		return GatewayURL()
 	}
 	urls := desktopLANURLs()
 	switch {
@@ -57,7 +57,7 @@ func desktopGateway() string {
 	case len(urls) > 0:
 		return urls[0]
 	}
-	return gateway.URL()
+	return GatewayURL()
 }
 
 // desktopKey is the key Desktop's profile gets at gw.
@@ -79,7 +79,7 @@ func desktopGatewayField(ps []desktopPaths, apply func() error) Field {
 	return Field{
 		Key: "gateway", Label: "gateway",
 		Get: func() string {
-			if g := desktopGateway(); g != gateway.URL() {
+			if g := desktopGateway(); g != GatewayURL() {
 				return g
 			}
 			return ""
@@ -102,7 +102,7 @@ func desktopGatewayField(ps []desktopPaths, apply func() error) Field {
 			if !desktopWiredAny(ps) || len(urls) == 0 {
 				return nil
 			}
-			out := []Option{{Value: "", Label: "This computer", Note: gateway.URL()}}
+			out := []Option{{Value: "", Label: "This computer", Note: GatewayURL()}}
 			for _, u := range urls {
 				out = append(out, Option{Value: u, Label: u})
 			}

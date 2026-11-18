@@ -59,7 +59,7 @@ const (
 // antigravityCatalog is the catalog Antigravity's app is pointed at: the
 // gateway's models, each with its window (gateway.antigravityModels).
 func antigravityCatalog() string {
-	return gateway.URL() + "/v1/models?format=" + gateway.AntigravityFormat
+	return GatewayURL() + "/v1/models?format=" + gateway.AntigravityFormat
 }
 
 // antigravityAdmin is where an organisation's admin_settings.json is kept
@@ -119,7 +119,7 @@ func (f agyFile) wired() bool {
 }
 
 func antigravityGateway() map[string]any {
-	return map[string]any{"enabled": true, "url": gateway.URL(), "apiKey": agentKey("antigravity"), "wireProtocol": "openai"}
+	return map[string]any{"enabled": true, "url": GatewayURL(), "apiKey": agentKey("antigravity"), "wireProtocol": "openai"}
 }
 
 // keepSource stashes a catalog of the user's that a file wired before
@@ -351,12 +351,12 @@ func antigravity(home string) *Agent {
 					return noticeAntigravityAdmin.say("path", p)
 				}
 			}
-			if u := os.Getenv("AGY_LLM_GATEWAY_URL"); u != "" && u != gateway.URL() {
+			if u := os.Getenv("AGY_LLM_GATEWAY_URL"); u != "" && u != GatewayURL() {
 				return noticeAntigravityEnv.say("url", u)
 			}
 			for _, f := range files {
 				if s := wiringOff("Antigravity", f.path, func(k string) (string, bool) { return edit.GetJSON(f.path, "gateway."+k) },
-					"url", gateway.URL(), "apiKey", agentKey("antigravity")); s != "" {
+					"url", GatewayURL(), "apiKey", agentKey("antigravity")); s != "" {
 					return s
 				}
 			}

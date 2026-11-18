@@ -603,7 +603,7 @@ func magpieProviderJSON(shape string) any {
 // narrowed under a different id than its config shape (mimocode shares
 // OpenCode's shape but is seen as itself by magpie visible).
 func magpieProviderJSONFor(shape, catalog string) any {
-	return magpieProviderJSONAt(shape, catalog, gateway.URL())
+	return magpieProviderJSONAt(shape, catalog, GatewayURL())
 }
 
 // magpieProviderJSONAt is magpieProviderJSONFor for an agent that reaches
@@ -1861,15 +1861,15 @@ func copilot(home string) *Agent {
 			}
 			p := copilotProvider(provs)
 			return wiringOff("Copilot CLI", provs, func(k string) (string, bool) { v, ok := p[k].(string); return v, ok },
-				"baseUrl", gateway.URL()+"/v1", "apiKey", agentKey("copilot"))
+				"baseUrl", GatewayURL()+"/v1", "apiKey", agentKey("copilot"))
 		},
-		Sync: func() error { return copilotSync(provs, gateway.URL()+"/v1", agentKey("copilot")) },
+		Sync: func() error { return copilotSync(provs, GatewayURL()+"/v1", agentKey("copilot")) },
 		Fields: []Field{{
 			Key: "model", Label: "model",
 			Get: jsonGet(path, "model"),
 			Set: func(v string) error {
 				if ref, ok := strings.CutPrefix(v, magpieID+"/"); ok && isMagpie(ref) {
-					if err := copilotWrite(provs, gateway.URL()+"/v1", agentKey("copilot")); err != nil {
+					if err := copilotWrite(provs, GatewayURL()+"/v1", agentKey("copilot")); err != nil {
 						return err
 					}
 				}

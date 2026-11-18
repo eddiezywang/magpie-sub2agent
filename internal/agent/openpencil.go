@@ -58,7 +58,6 @@ import (
 
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 )
 
 // openPencilApp is OpenPencil's macOS bundle, as its release builds it
@@ -85,7 +84,7 @@ func openPencil(home, cfg string) *Agent {
 		if !on {
 			return openPencilUnwire(path)
 		}
-		return openPencilWire(path, openPencilEntry(gateway.URL()))
+		return openPencilWire(path, openPencilEntry(GatewayURL()))
 	}
 	return atomic(&Agent{
 		ID: "openpencil", Name: "OpenPencil", Icon: "generic", Aliases: []string{"open-pencil", "openpencil-desktop"},

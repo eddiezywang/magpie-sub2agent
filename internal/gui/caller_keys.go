@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/access"
+	"github.com/yetone/magpie/internal/agent"
 	"github.com/yetone/magpie/internal/budget"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/library"
 	"github.com/yetone/magpie/internal/provider"
+	"github.com/yetone/magpie/internal/settings"
 )
 
 // keyRow is a gateway key as the Gateway page lists it, with what it has
@@ -217,7 +219,15 @@ func callerKeyRoutes(mux *http.ServeMux) {
 			return
 		}
 		access.MigrateLegacyLANKeyBestEffort()
-		secret, err := access.Update(r.PathValue("action"), in)
+		action := r.PathValue("action")
+		var local []*agent.Agent
+		if action == "rotate-key" {
+			s := settings.Load()
+			if s.AgentLANHost != "" && s.LANKeyID == in.Key {
+				local = agent.LocalOnGateway(agent.OnGateway(), agent.GatewayURL())
+			}
+		}
+		secret, err := access.Update(action, in)
 		if err != nil {
 			fail(w, err)
 			return
@@ -227,8 +237,14 @@ func callerKeyRoutes(mux *http.ServeMux) {
 			fail(w, err)
 			return
 		}
+		out := map[string]any{"keys": withLimits(keys), "accountNames": provider.AccountNames(), "accountGroups": accountGroupsJSON(), "secret": secret}
+		if len(local) > 0 {
+			if err := agent.RewireLocal(local); err != nil {
+				out["rekeyed"] = err.Error()
+			}
+		}
 		w.Header().Set("Cache-Control", "no-store")
-		writeJSON(w, map[string]any{"keys": withLimits(keys), "accountNames": provider.AccountNames(), "accountGroups": accountGroupsJSON(), "secret": secret})
+		writeJSON(w, out)
 	})
 	// the account groups a key's accounts may name, "@<id>" or "!@<id>"
 	// (LeiWang_2000 on X): save adds one (no id) or changes it, remove

@@ -69,6 +69,7 @@ async function loadGatewayKeys() {
     gatewayKeysErr = "";
     renderGatewayKeys();
     if (view === "gateway" && providers) selectConnectKey(connectKeyID);
+    if (out.rekeyed) status(out.rekeyed, "err");
   } catch (e) {
     if (read !== gatewayKeysRead) return;
     // a list read before stays: only one never read is said unreadable

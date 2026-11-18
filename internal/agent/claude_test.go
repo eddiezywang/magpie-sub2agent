@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/yetone/magpie/internal/access"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
+	"github.com/yetone/magpie/internal/settings"
 )
 
 func TestClaudeTiers(t *testing.T) {
@@ -289,5 +291,70 @@ func TestClaudeSharingOffWiresGatewayTokenBack(t *testing.T) {
 	}
 	if tok, _ := edit.GetJSON(path, "env.ANTHROPIC_AUTH_TOKEN"); tok != gateway.Token {
 		t.Fatalf("sharing off: key %q, want gateway.Token back", tok)
+	}
+}
+
+func TestClaudeLocalNetworkAddressSwitch(t *testing.T) {
+	if !distribution.Internal {
+		t.Skip("Sub2Agent agent address")
+	}
+	t.Setenv("MAGPIE_ADDR", "")
+	home, path := claudeSettings(t, `{"theme":"dark"}`)
+	if err := provider.Save(provider.Provider{ID: "relay", Name: "Relay", Chat: "https://example.test/v1", Key: "fixture", Models: []string{"m"}}); err != nil {
+		t.Fatal(err)
+	}
+	const host = "10.55.94.156"
+	prev := agentLANHosts
+	agentLANHosts = func() []string { return []string{host} }
+	t.Cleanup(func() { agentLANHosts = prev })
+	a := claude(home)
+	if err := a.Apply("model", "relay/m"); err != nil {
+		t.Fatal(err)
+	}
+	check := func(base, key string) {
+		t.Helper()
+		got, _ := edit.GetJSON(path, "env.ANTHROPIC_BASE_URL")
+		tok, _ := edit.GetJSON(path, "env.ANTHROPIC_AUTH_TOKEN")
+		if got != base || tok != key {
+			t.Fatalf("config endpoint %q, want %q, key matched: %t", got, base, tok == key)
+		}
+	}
+	loopback := gateway.URL()
+	check(loopback, "sub2agent")
+	if err := access.ConfigureLAN(true, false); err != nil {
+		t.Fatal(err)
+	}
+	local := LocalOnGateway([]*Agent{a}, loopback)
+	if len(local) != 1 {
+		t.Fatal("Claude Code was left out of local rewiring")
+	}
+	if err := settings.SetAgentLANHost(host); err != nil {
+		t.Fatal(err)
+	}
+	if err := RewireLocal(local); err != nil {
+		t.Fatal(err)
+	}
+	lan := "http://" + host + ":" + gateway.Port()
+	key := access.LANSecret()
+	if key == "" {
+		t.Fatal("LAN sharing has no key")
+	}
+	check(lan, key)
+	local = LocalOnGateway([]*Agent{a}, lan)
+	if len(local) != 1 {
+		t.Fatal("Claude Code on LAN was left out of local rewiring")
+	}
+	if err := access.ConfigureLAN(false, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := RewireLocal(local); err != nil {
+		t.Fatal(err)
+	}
+	check(loopback, "sub2agent")
+	if settings.Load().AgentLANHost != "" {
+		t.Fatal("turning off sharing retained the LAN address")
+	}
+	if theme, _ := edit.GetJSON(path, "theme"); theme != "dark" {
+		t.Fatal("rewiring changed Claude Code's theme")
 	}
 }

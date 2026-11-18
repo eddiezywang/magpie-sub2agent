@@ -1,11 +1,29 @@
 package agent
 
 import (
+	"net"
+	"slices"
 	"strings"
 
 	"github.com/yetone/magpie/internal/access"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/gateway"
+	"github.com/yetone/magpie/internal/settings"
 )
+
+// GatewayURL is the address written to agents on this computer. The
+// gateway's own control calls keep using gateway.URL.
+var agentLANHosts = gateway.AgentLANHosts
+
+func GatewayURL() string {
+	if distribution.Internal {
+		s := settings.Load()
+		if s.LAN && s.AgentLANHost != "" && slices.Contains(agentLANHosts(), s.AgentLANHost) {
+			return gateway.Scheme() + "://" + net.JoinHostPort(s.AgentLANHost, gateway.Port())
+		}
+	}
+	return gateway.URL()
+}
 
 // keyAt is the key an agent that reaches the gateway at gw sends it. On
 // this machine's loopback that is gateway.Token, which the gateway takes
@@ -54,10 +72,10 @@ func agentKeyAt(agent, gw string) string {
 // on this machine given that address sends the gateway's own token, unless
 // MAGPIE_ADDR pins it to an address beyond loopback, which the gateway
 // takes only a named key from (#1647, ggbdpq).
-func hereKey() string { return keyAt(gateway.URL()) }
+func hereKey() string { return keyAt(GatewayURL()) }
 
 // agentKey is agentKeyAt for the gateway's own address, as hereKey.
-func agentKey(agent string) string { return agentKeyAt(agent, gateway.URL()) }
+func agentKey(agent string) string { return agentKeyAt(agent, GatewayURL()) }
 
 // ourKey says k is a key magpie gives an agent: gateway.Token, the LAN
 // sharing key one that reaches the gateway from elsewhere is given, or the

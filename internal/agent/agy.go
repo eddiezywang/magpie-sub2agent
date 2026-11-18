@@ -49,7 +49,6 @@ import (
 	"github.com/tidwall/jsonc"
 
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
 	"github.com/yetone/magpie/internal/update"
 )
@@ -63,7 +62,7 @@ const agyModels = "customModelsConfig.customModels"
 // (x-goog-api-key) alone. A command copied before, with the plain token,
 // still reaches magpie.
 func AgyLaunch(model string) string {
-	return agyLaunchAt(gateway.URL(), agentKey("agy"), agySettingsFile(), model, runtime.GOOS == "windows")
+	return agyLaunchAt(GatewayURL(), agentKey("agy"), agySettingsFile(), model, runtime.GOOS == "windows")
 }
 
 // agyOverride is the name of magpie's settings file in agy's folder.

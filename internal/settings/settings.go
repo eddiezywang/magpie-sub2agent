@@ -244,6 +244,9 @@ type Settings struct {
 	// same key.
 	LAN    bool   `json:"lan,omitempty"`
 	LANKey string `json:"lanKey,omitempty"`
+	// AgentLANHost is this computer's IPv4 address written to local agents
+	// in LAN mode. Empty uses the gateway's standard address.
+	AgentLANHost string `json:"agentLanHost,omitempty"`
 	// CORSOrigins are the web pages (scheme://host[:port]) and browser
 	// extensions (chrome-extension://<id>, moz-extension://<uuid>,
 	// safari-web-extension://<uuid>) whose scripts may call the gateway
@@ -1664,6 +1667,7 @@ func (s *Settings) KeepOwn(cur Settings) {
 	s.QuotaReads = cur.QuotaReads
 	s.NoAccountDiscovery = cur.NoAccountDiscovery
 	s.LAN, s.AllowIPs, s.MTLS, s.HTTPS = cur.LAN, cur.AllowIPs, cur.MTLS, cur.HTTPS
+	s.AgentLANHost = cur.AgentLANHost
 	s.DesktopGateway = cur.DesktopGateway // an address of this computer
 	s.RouterNote, s.RouterAllTools = cur.RouterNote, cur.RouterAllTools
 	s.FetchPrivate = cur.FetchPrivate
@@ -2183,6 +2187,20 @@ func SetHTTPS(on bool) error {
 		return err
 	}
 	s.HTTPS = on
+	return save(s, false)
+}
+
+// SetAgentLANHost changes the address used for this computer's agents.
+func SetAgentLANHost(host string) error {
+	defer lockFile()()
+	s, err := loadChecked()
+	if err != nil {
+		return err
+	}
+	if host != "" && !s.LAN {
+		return errors.New("Turn on local network sharing first")
+	}
+	s.AgentLANHost = host
 	return save(s, false)
 }
 

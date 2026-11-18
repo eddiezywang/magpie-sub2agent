@@ -43,7 +43,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/yetone/magpie/internal/edit"
-	"github.com/yetone/magpie/internal/gateway"
 )
 
 // raycastApp is Raycast's macOS bundle.
@@ -58,7 +57,7 @@ func raycast(home string) *Agent {
 		if !on {
 			return raycastUnwire(path)
 		}
-		return raycastWire(path, raycastProviderYAML(gateway.URL()))
+		return raycastWire(path, raycastProviderYAML(GatewayURL()))
 	}
 	return &Agent{
 		ID: "raycast", Name: "Raycast", Icon: "raycast", Aliases: []string{"raycast-ai"},

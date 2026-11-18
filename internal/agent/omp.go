@@ -646,7 +646,7 @@ func ompTakesMax(v string) bool {
 // send output_config.effort, which Sonnet 4.5 and Haiku 4.5 refuse. One on
 // Gemini's API goes to the gateway's /v1beta on google-generative-ai
 // (#4277, ompGeminiMode).
-func ompProvider() ompProviderEntry { return ompProviderAt(gateway.URL(), ompVersion()) }
+func ompProvider() ompProviderEntry { return ompProviderAt(GatewayURL(), ompVersion()) }
 
 // ompProviderAt is ompProvider for an omp of version (as ompVersion) that
 // reaches the gateway at gw.

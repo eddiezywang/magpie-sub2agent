@@ -19,7 +19,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/sessions"
 	_ "github.com/yetone/magpie/internal/sqlitedb"
 )
@@ -143,7 +142,7 @@ func cindy() *Agent {
 			}
 			return false
 		},
-		Import: func() string { return CindyLink(gateway.URL()) },
-		Added:  func() (bool, bool) { return cindyAdded(dirs, gateway.URL()) },
+		Import: func() string { return CindyLink(GatewayURL()) },
+		Added:  func() (bool, bool) { return cindyAdded(dirs, GatewayURL()) },
 	}
 }
