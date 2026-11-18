@@ -24,11 +24,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/provider"
 )
 
-const paseoMark = "via magpie"
+const paseoMark = distribution.AgentRouteNote
 
 // paseoModels are magpie's models as Paseo's additionalModels entries.
 func paseoModels() []map[string]any {
@@ -42,9 +43,9 @@ func paseoModels() []map[string]any {
 			continue
 		}
 		seen[id] = true
-		note := strings.TrimSuffix(o.Note, " · "+paseoMark)
+		note := strings.TrimSuffix(o.Note, " · via magpie")
 		desc := paseoMark
-		if note != "" && note != paseoMark {
+		if note != "" && note != "via magpie" && note != paseoMark {
 			desc = note + " · " + paseoMark
 		}
 		rows = append(rows, map[string]any{"id": id, "label": cmp.Or(labels[o.Ref], o.Label, o.Value), "description": desc})
@@ -55,7 +56,7 @@ func paseoModels() []map[string]any {
 // paseoOurs says an entry of additionalModels is magpie's.
 func paseoOurs(e map[string]any) bool {
 	d, _ := e["description"].(string)
-	return d == paseoMark || strings.HasSuffix(d, " · "+paseoMark)
+	return d == paseoMark || d == "via magpie" || strings.HasSuffix(d, " · "+paseoMark) || strings.HasSuffix(d, " · via magpie")
 }
 
 // paseoList is the file's additionalModels, and whether it could be read:

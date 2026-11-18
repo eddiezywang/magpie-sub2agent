@@ -63,7 +63,7 @@ func agentKey(agent string) string { return agentKeyAt(agent, gateway.URL()) }
 // sharing key one that reaches the gateway from elsewhere is given, or the
 // WSL key one in a WSL distro under NAT is.
 func ourKey(k string) bool {
-	if k == gateway.Token {
+	if gateway.IsDefaultToken(k) {
 		return true
 	}
 	return k != "" && (k == access.LANSecret() || k == gateway.WSLKeyMade())
@@ -85,7 +85,7 @@ func gatewayTakes(k string) bool {
 // gateway.Token, the LAN sharing key, or one naming the agent
 // (gateway.TokenFor).
 func gatewayKey(want string) bool {
-	if ourKey(want) || strings.HasPrefix(want, gateway.Token+"-") && !strings.ContainsAny(want, "/:") {
+	if ourKey(want) || gateway.LocalTokenAgent(want) != "" && !strings.ContainsAny(want, "/:") {
 		return true
 	}
 	wk := gateway.WSLKeyMade()
@@ -98,5 +98,11 @@ func gatewayKey(want string) bool {
 // keys), which the gateway takes just the same (PaulT on Discord: Hermes
 // with a key of his own was said not to go through magpie).
 func keyHolds(v, want string) bool {
+	if gateway.IsDefaultToken(v) && gateway.IsDefaultToken(want) {
+		return true
+	}
+	if id := gateway.LocalTokenAgent(v); id != "" && id == gateway.LocalTokenAgent(want) {
+		return true
+	}
 	return v == want || v != "" && gatewayKey(want) && gatewayTakes(v)
 }

@@ -444,7 +444,7 @@ func snowIn(at place) *Agent {
 
 // snowOurKey says k is a key magpie gives Snow CLI.
 func snowOurKey(k string) bool {
-	return k != "" && (ourKey(k) || strings.HasPrefix(k, gateway.Token+"-"))
+	return k != "" && (ourKey(k) || gateway.LocalTokenAgent(k) != "")
 }
 
 // snowIsOurs says a profile (or config.json) is magpie's: its key is one

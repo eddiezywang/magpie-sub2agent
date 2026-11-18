@@ -51,7 +51,19 @@ const DefaultAddr = "127.0.0.1:3425"
 
 // Token is the bearer token agents are told to use. The gateway only
 // listens on loopback and accepts anything, but agents insist on one.
-const Token = "magpie"
+const Token = distribution.Name
+
+// IsDefaultToken also recognizes the placeholder already in older agent configs.
+func IsDefaultToken(key string) bool { return key == Token || key == "magpie" }
+
+// LocalTokenAgent reads the agent name from a current or legacy local token.
+func LocalTokenAgent(key string) string {
+	if id, ok := strings.CutPrefix(key, Token+"-"); ok {
+		return id
+	}
+	id, _ := strings.CutPrefix(key, "magpie-")
+	return id
+}
 
 // TokenFor is the token an agent that says nothing of itself in its
 // User-Agent is told to use, so the gateway still knows it: Alma's requests
@@ -64,7 +76,7 @@ func agentOf(r *http.Request) string {
 	if id := pathAgent(r); id != "" {
 		return id
 	}
-	if id, ok := strings.CutPrefix(callerKey(r), Token+"-"); ok && id != "" {
+	if id := LocalTokenAgent(callerKey(r)); id != "" {
 		return usage.AgentOf(id)
 	}
 	if isClaudeDesktop(r) {
@@ -121,7 +133,7 @@ func startedByAgent(r *http.Request, agent string) bool {
 	if pathAgent(r) != "" {
 		return false
 	}
-	if _, ok := strings.CutPrefix(callerKey(r), Token+"-"); ok {
+	if LocalTokenAgent(callerKey(r)) != "" {
 		return false
 	}
 	return agent != "claude-desktop" && agent != "cursor-local" && agent != ScienceID && !usage.IsAgent(agent)

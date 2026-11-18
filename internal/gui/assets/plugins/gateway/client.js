@@ -365,13 +365,14 @@ function renderGatewayLan() {
 
 // One entry per API the gateway serves: where each SDK's base URL points,
 // the env vars the usual tools read, and a request in four dialects.
+const localGatewayToken = window.bootPrefs?.intranet ? "sub2agent" : "magpie";
 const FLAVORS = {
   openai: {
     name: "OpenAI", base: (u) => u + "/v1", baseEnv: "OPENAI_BASE_URL", keyEnv: "OPENAI_API_KEY",
     note: "Chat Completions, the API most tools speak. Anything with an OpenAI base-URL setting works.",
-    curl: (b, m, k = "magpie") => ({ url: `${b}/chat/completions`, headers: [`Authorization: Bearer ${k}`],
+    curl: (b, m, k = localGatewayToken) => ({ url: `${b}/chat/completions`, headers: [`Authorization: Bearer ${k}`],
       body: `{"model": "${m}",\n "messages": [{"role": "user", "content": "hi"}]}` }),
-    python: (b, m, k = "magpie") => `from openai import OpenAI
+    python: (b, m, k = localGatewayToken) => `from openai import OpenAI
 
 client = OpenAI(base_url="${b}", api_key="${k}")
 r = client.chat.completions.create(
@@ -379,7 +380,7 @@ r = client.chat.completions.create(
     messages=[{"role": "user", "content": "hi"}],
 )
 print(r.choices[0].message.content)`,
-    node: (b, m, k = "magpie") => `import OpenAI from "openai";
+    node: (b, m, k = localGatewayToken) => `import OpenAI from "openai";
 
 const client = new OpenAI({ baseURL: "${b}", apiKey: "${k}" });
 const r = await client.chat.completions.create({
@@ -391,14 +392,14 @@ console.log(r.choices[0].message.content);`,
   responses: {
     name: "Responses", base: (u) => u + "/v1", baseEnv: "OPENAI_BASE_URL", keyEnv: "OPENAI_API_KEY",
     note: "OpenAI's newer API: reasoning, built-in tool items, encrypted reasoning. Codex speaks this.",
-    curl: (b, m, k = "magpie") => ({ url: `${b}/responses`, headers: [`Authorization: Bearer ${k}`],
+    curl: (b, m, k = localGatewayToken) => ({ url: `${b}/responses`, headers: [`Authorization: Bearer ${k}`],
       body: `{"model": "${m}", "input": "hi"}` }),
-    python: (b, m, k = "magpie") => `from openai import OpenAI
+    python: (b, m, k = localGatewayToken) => `from openai import OpenAI
 
 client = OpenAI(base_url="${b}", api_key="${k}")
 r = client.responses.create(model="${m}", input="hi")
 print(r.output_text)`,
-    node: (b, m, k = "magpie") => `import OpenAI from "openai";
+    node: (b, m, k = localGatewayToken) => `import OpenAI from "openai";
 
 const client = new OpenAI({ baseURL: "${b}", apiKey: "${k}" });
 const r = await client.responses.create({ model: "${m}", input: "hi" });
@@ -407,9 +408,9 @@ console.log(r.output_text);`,
   anthropic: {
     name: "Anthropic", base: (u) => u, baseEnv: "ANTHROPIC_BASE_URL", keyEnv: "ANTHROPIC_API_KEY",
     note: "Messages API. Claude Code reads ANTHROPIC_AUTH_TOKEN instead of the key; the Agents tab sets that for you.",
-    curl: (b, m, k = "magpie") => ({ url: `${b}/v1/messages`, headers: [`x-api-key: ${k}`, "anthropic-version: 2023-06-01"],
+    curl: (b, m, k = localGatewayToken) => ({ url: `${b}/v1/messages`, headers: [`x-api-key: ${k}`, "anthropic-version: 2023-06-01"],
       body: `{"model": "${m}", "max_tokens": 1024,\n "messages": [{"role": "user", "content": "hi"}]}` }),
-    python: (b, m, k = "magpie") => `import anthropic
+    python: (b, m, k = localGatewayToken) => `import anthropic
 
 client = anthropic.Anthropic(
     base_url="${b}", api_key="${k}",
@@ -420,7 +421,7 @@ m = client.messages.create(
     messages=[{"role": "user", "content": "hi"}],
 )
 print(m.content[0].text)`,
-    node: (b, m, k = "magpie") => `import Anthropic from "@anthropic-ai/sdk";
+    node: (b, m, k = localGatewayToken) => `import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic({ baseURL: "${b}", apiKey: "${k}" });
 const m = await client.messages.create({
@@ -433,14 +434,14 @@ console.log(m.content[0].text);`,
   gemini: {
     name: "Gemini", base: (u) => u, baseEnv: "GOOGLE_GEMINI_BASE_URL", keyEnv: "GEMINI_API_KEY",
     note: "Google's generateContent API, v1beta. Gemini CLI and the google-genai SDKs speak this.",
-    curl: (b, m, k = "magpie") => ({ url: `${b}/v1beta/models/${m}:generateContent`, headers: [`x-goog-api-key: ${k}`],
+    curl: (b, m, k = localGatewayToken) => ({ url: `${b}/v1beta/models/${m}:generateContent`, headers: [`x-goog-api-key: ${k}`],
       body: `{"contents": [{"parts": [{"text": "hi"}]}]}` }),
-    python: (b, m, k = "magpie") => `from google import genai
+    python: (b, m, k = localGatewayToken) => `from google import genai
 
 client = genai.Client(api_key="${k}", http_options={"base_url": "${b}"})
 r = client.models.generate_content(model="${m}", contents="hi")
 print(r.text)`,
-    node: (b, m, k = "magpie") => `import { GoogleGenAI } from "@google/genai";
+    node: (b, m, k = localGatewayToken) => `import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({
   apiKey: "${k}",
@@ -455,9 +456,9 @@ console.log(r.text);`,
   systemone: {
     name: "System One", base: (u) => u + "/v1", decide: true,
     note: "TypeSafe's decision API: a Jev or Clef model answers typed questions (choice, noul, score) about a state, with how sure it is. Clef also reads images: add \"images\": [\"data:image/png;base64,…\"].",
-    curl: (b, m, k = "magpie") => ({ url: `${b}/systemone`, headers: [`Authorization: Bearer ${k}`],
+    curl: (b, m, k = localGatewayToken) => ({ url: `${b}/systemone`, headers: [`Authorization: Bearer ${k}`],
       body: `{"model": "${m}",\n "state": {"message": "My order never arrived, refund it"},\n "questions": {"team": {"type": "choice",\n   "instructions": "Which team should answer the message?",\n   "criteria": {"billing": "Payments and refunds", "shipping": "Deliveries", "other": "Anything else"}}}}` }),
-    python: (b, m, k = "magpie") => `import requests
+    python: (b, m, k = localGatewayToken) => `import requests
 
 r = requests.post("${b}/systemone",
     headers={"Authorization": "Bearer ${k}"},
@@ -472,7 +473,7 @@ r = requests.post("${b}/systemone",
     })
 a = r.json()["answers"]["team"]
 print(a["choice"], a["confidence"])`,
-    node: (b, m, k = "magpie") => `const r = await fetch("${b}/systemone", {
+    node: (b, m, k = localGatewayToken) => `const r = await fetch("${b}/systemone", {
   method: "POST",
   headers: { Authorization: "Bearer ${k}", "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -598,7 +599,7 @@ function renderConnect() {
     queueMicrotask(() => selectConnectKey(keys[0].id));
   }
   const key = keys.find((k) => k.id === connectKeyID);
-  const secret = key ? (connectSecret?.id === key.id ? connectSecret.secret : "") : remote ? "" : "magpie";
+  const secret = key ? (connectSecret?.id === key.id ? connectSecret.secret : "") : remote ? "" : localGatewayToken;
   const base = f.base(connectURL);
   const fold = $("#foldConnect");
   fold.setAttribute("aria-expanded", String(!connectFolded));
@@ -625,17 +626,17 @@ function renderConnect() {
   const options = keys.map((k) => ({ v: k.id, name: k.name, literalName: true, note: k.masked }));
   if (!remote) options.unshift({ v: "", name: "This computer", note: t("Any key · no key attribution") });
   const keyLabel = remote || key ? "Gateway key" : "API key";
-  if (!g.lan) k.append(el("code", "", "magpie"));
+  if (!g.lan) k.append(el("code", "", localGatewayToken));
   else if (options.length) k.append(connectPick("connectKey", keyLabel, key ? key.name : remote ? t("Choose a gateway key") : t("This computer"),
     options, connectKeyID, (id) => { connectKeyWant = id; keepPick("magpie.connectKey", id); selectConnectKey(id); }));
   else k.append(el("code", "", t("Create a gateway key above to connect")));
   if (key) k.append(copyCallerKeyBtn(key));
-  else if (!remote) k.append(copyBtn("magpie", t("Key")));
+  else if (!remote) k.append(copyBtn(localGatewayToken, t("Key")));
   box.append(...field(t(keyLabel), k, !f.keyEnv ? t(g.lan && (remote || gatewayKeys?.length)
     ? "Choose a gateway key to send as Authorization: Bearer; usage is tracked by key."
     : "Sent as Authorization: Bearer. The gateway trusts everything on loopback, so any value works.") : t(g.lan && (remote || gatewayKeys?.length)
     ? "Choose a gateway key to use as {env}; usage is tracked by key."
-    : "{env}=magpie. The gateway trusts everything on loopback, so any value works.", { env: f.keyEnv })));
+    : "{env}={key}. The gateway trusts everything on loopback, so any value works.", { env: f.keyEnv, key: localGatewayToken })));
 
   const m = el("div", "val");
   m.append(el("code", "", model), copyBtn(model, t("Model id")));

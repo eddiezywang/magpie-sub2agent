@@ -1,5 +1,9 @@
 # Agent wiring
 
+Sub2Agent writes `sub2agent` as the local gateway placeholder and
+`via Sub2Agent` in generated Claude Code and Paseo model descriptions.
+Wiring checks recognize existing `magpie` placeholders and descriptions.
+
 magpie connects a coding agent to its gateway by editing the agent's own
 config. That covers the endpoint, the key `magpie-<agent>` and the model,
 in the agent's own format. When the agent is disconnected, magpie puts back

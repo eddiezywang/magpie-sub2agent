@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/catalog"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/provider"
 )
@@ -18,7 +19,7 @@ import (
 // modelPicker labelled every model by its name alone. Each row is now
 // labelled as every agent's list names the model (provider.Labels), and
 // written again when the setting changes; a description that would repeat
-// the provider the label says is left "via magpie".
+// the provider the label says is left with the distribution’s route note.
 func TestClaudePickerFollowsSuffixMode(t *testing.T) {
 	home := syncHome(t)
 	if err := provider.Save(provider.Provider{ID: "relay", Name: "Relay", Key: "k", Chat: "http://127.0.0.1:1/v1", Models: []string{"glm-4.6", "glm-5"}}); err != nil {
@@ -57,10 +58,10 @@ func TestClaudePickerFollowsSuffixMode(t *testing.T) {
 		glm, mine, mix  string
 		glmNote, mixNot string
 	}{
-		{provider.SuffixOn, "GLM-4.6 · Relay", "My GLM · Relay", "Mix · routing group", "via magpie", "via magpie"},
-		{provider.SuffixOwn, "GLM-4.6 · Relay", "My GLM", "Mix", "via magpie", "routing group · via magpie"},
-		{provider.SuffixOff, "GLM-4.6", "My GLM", "Mix", "Relay · via magpie", "routing group · via magpie"},
-		{provider.SuffixOn, "GLM-4.6 · Relay", "My GLM · Relay", "Mix · routing group", "via magpie", "via magpie"},
+		{provider.SuffixOn, "GLM-4.6 · Relay", "My GLM · Relay", "Mix · routing group", distribution.AgentRouteNote, distribution.AgentRouteNote},
+		{provider.SuffixOwn, "GLM-4.6 · Relay", "My GLM", "Mix", distribution.AgentRouteNote, "routing group · " + distribution.AgentRouteNote},
+		{provider.SuffixOff, "GLM-4.6", "My GLM", "Mix", "Relay · " + distribution.AgentRouteNote, "routing group · " + distribution.AgentRouteNote},
+		{provider.SuffixOn, "GLM-4.6 · Relay", "My GLM · Relay", "Mix · routing group", distribution.AgentRouteNote, distribution.AgentRouteNote},
 	} {
 		if err := provider.SetSuffixMode(c.mode); err != nil {
 			t.Fatal(err)
@@ -116,8 +117,8 @@ func TestClaudePickerSubscriptionSaysItsProvider(t *testing.T) {
 	catalog.Changed = SyncCatalog
 	t.Cleanup(func() { catalog.Changed = nil })
 	for _, c := range []struct{ mode, label, note string }{
-		{provider.SuffixOn, "GPT-5.5 · Codex", "me@example.com · via magpie"},
-		{provider.SuffixOff, "GPT-5.5", "Codex · me@example.com · via magpie"},
+		{provider.SuffixOn, "GPT-5.5 · Codex", "me@example.com · " + distribution.AgentRouteNote},
+		{provider.SuffixOff, "GPT-5.5", "Codex · me@example.com · " + distribution.AgentRouteNote},
 	} {
 		if err := provider.SetSuffixMode(c.mode); err != nil {
 			t.Fatal(err)

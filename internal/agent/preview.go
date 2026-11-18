@@ -16,6 +16,7 @@ import (
 
 	"github.com/yetone/magpie/internal/agentenv"
 	"github.com/yetone/magpie/internal/appdir"
+	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/proc"
 	"github.com/yetone/magpie/internal/provider"
@@ -590,7 +591,7 @@ func mask(l string) string {
 	}
 	val := strings.TrimSpace(l[m[1]:])
 	bare := strings.Trim(val, `"', `)
-	if bare == "" || bare == "magpie" || strings.HasPrefix(bare, "{") || strings.HasPrefix(bare, "$") {
+	if bare == "" || gateway.IsDefaultToken(bare) || strings.HasPrefix(bare, "{") || strings.HasPrefix(bare, "$") {
 		return l
 	}
 	return l[:m[1]] + " ••••"

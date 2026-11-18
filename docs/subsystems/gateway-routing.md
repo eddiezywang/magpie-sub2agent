@@ -1014,7 +1014,9 @@ Settings → Network and sharing → Local network shows the address and masked 
 The copy control retrieves the full key from the existing Gateway keys API.
 The join page and its password exchange return 404 on a shared Sub2Agent
 gateway, including after upgrades with a saved join password. Previously
-issued gateway keys stay in the key store.
+issued gateway keys stay in the key store. Sub2Agent issues new keys with
+the `sk-sub2agent-` prefix and continues to verify stored `sk-magpie-` keys
+with their existing limits and revocation status.
 
 Upstream's `GET /join` (EV_John_Liu on X) lets another computer join: with a
 password set in Settings → Local network → Join with a password

@@ -19,18 +19,20 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/filelock"
 	"github.com/yetone/magpie/internal/provider"
 	"github.com/yetone/magpie/internal/settings"
 )
 
-const Prefix = "sk-magpie-key-"
+const Prefix = distribution.GatewayKeyPrefix
 const legacyLANPrefix = "sk-magpie-"
+const legacyNamedPrefix = "sk-magpie-key-"
 const revokedLANPrefix = "sk-magpie-revoked-"
 
 func Managed(secret string) bool {
-	return strings.HasPrefix(secret, legacyLANPrefix)
+	return strings.HasPrefix(secret, legacyLANPrefix) || distribution.Internal && strings.HasPrefix(secret, Prefix)
 }
 
 // Named: secret has a named gateway key's form (sk-magpie-…), or is the
@@ -98,7 +100,10 @@ func ownSecret(secret string, keys []Key) (string, error) {
 			return "", errors.New("A key can have only letters, digits and ASCII symbols, no spaces")
 		}
 	}
-	if strings.HasPrefix(secret, legacyLANPrefix) {
+	if Managed(secret) {
+		if distribution.Internal {
+			return "", errors.New("Custom keys cannot use a reserved gateway key prefix. Leave the key empty to generate one")
+		}
 		return "", errors.New("A key of your own can't start with sk-magpie-: leave the key empty and magpie makes one")
 	}
 	for _, k := range keys {
@@ -374,8 +379,11 @@ func List() ([]Key, error) {
 		k := &keys[i]
 		if len(k.Secret) > 8 {
 			prefix := legacyLANPrefix
-			if strings.HasPrefix(k.Secret, Prefix) {
-				prefix = Prefix
+			for _, candidate := range []string{Prefix, legacyNamedPrefix} {
+				if strings.HasPrefix(k.Secret, candidate) {
+					prefix = candidate
+					break
+				}
 			}
 			k.Masked = prefix + "…" + k.Secret[len(k.Secret)-6:]
 		}
@@ -975,7 +983,7 @@ func configureLAN(on, rotate bool) error {
 				if err != nil {
 					return err
 				}
-				keys = append(keys, Key{ID: id, Name: "Magpie", LAN: true})
+				keys = append(keys, Key{ID: id, Name: distribution.DisplayName, LAN: true})
 				i = len(keys) - 1
 			}
 			keys[i].Secret = Prefix + token

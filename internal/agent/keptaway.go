@@ -42,7 +42,7 @@ func keeping() kept { return kept{gateway.URL(), access.LANSecret()} }
 // LAN sharing key (ourKey's, as read before).
 func (k kept) ours(v string) bool {
 	v = strings.TrimPrefix(v, "Bearer ")
-	return v == gateway.Token || v != "" && v == k.lan || strings.HasPrefix(v, gateway.Token+"-")
+	return gateway.IsDefaultToken(v) || v != "" && v == k.lan || gateway.LocalTokenAgent(v) != ""
 }
 
 // magpieFile says path, a file edit is about to write (a link's target,

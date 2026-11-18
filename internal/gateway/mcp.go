@@ -129,7 +129,7 @@ func (s *Server) mcpProxy(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			// the gateway's own key, which the caller check put there
-			if strings.EqualFold(k, "x-api-key") && len(v) == 1 && v[0] == Token {
+			if strings.EqualFold(k, "x-api-key") && len(v) == 1 && IsDefaultToken(v[0]) {
 				continue
 			}
 			req.Header[k] = v

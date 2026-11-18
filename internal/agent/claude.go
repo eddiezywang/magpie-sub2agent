@@ -16,6 +16,7 @@ import (
 	"github.com/yetone/magpie/internal/agentenv"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/desktopdir"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/lazyre"
@@ -1106,6 +1107,9 @@ func claudeIn(at place) *Agent {
 				case o.Group != "" && o.Group != RoutingGroups && by != o.Group && !strings.HasSuffix(label, " · "+o.Group):
 					note = o.Group + " · " + note
 				}
+			}
+			if prefix, ok := strings.CutSuffix(note, "via magpie"); ok {
+				note = prefix + distribution.AgentRouteNote
 			}
 			rows = append(rows, map[string]any{"model": spell(mark1M(o.Value)), "label": label, "description": note})
 		}
@@ -3196,7 +3200,7 @@ func magpiesPicker(path string) bool {
 		return false
 	}
 	for _, o := range p.Options {
-		if o.Model == "" || !strings.HasSuffix(o.Description, "via magpie") {
+		if o.Model == "" || !(strings.HasSuffix(o.Description, "via magpie") || strings.HasSuffix(o.Description, distribution.AgentRouteNote)) {
 			return false
 		}
 	}

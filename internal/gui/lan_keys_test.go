@@ -39,7 +39,7 @@ func TestLANSettingSharesCallerKeyStore(t *testing.T) {
 	keys, _ := access.List()
 	key := keys[0]
 	id := key.ID
-	if keys, _ := access.List(); len(keys) != 1 || keys[0].ID != id || keys[0].Name != "Magpie" {
+	if keys, _ := access.List(); len(keys) != 1 || keys[0].ID != id || keys[0].Name != distribution.DisplayName {
 		t.Fatal("LAN shortcut is not a named key", keys)
 	}
 	old, err := access.Update("copy-key", access.Change{Key: id})
@@ -47,6 +47,9 @@ func TestLANSettingSharesCallerKeyStore(t *testing.T) {
 		t.Fatal("LAN settings leaked secret", key, err)
 	}
 	if distribution.Internal {
+		if !strings.HasPrefix(old, "sk-sub2agent-") {
+			t.Fatal("new LAN key has the wrong prefix")
+		}
 		meta, ok := s["lanAccessKey"].(map[string]any)
 		if !ok || meta["id"] != id || meta["masked"] != key.Masked || len(meta) != 2 {
 			t.Fatal("expected masked LAN key metadata")

@@ -77,11 +77,31 @@ func TestIntranetLANUsesAPIKey(t *testing.T) {
 		t.Errorf("models without a key returned %d", got)
 	}
 	key := access.LANSecret()
-	if key == "" {
-		t.Fatal("sharing did not generate a key")
+	if !strings.HasPrefix(key, "sk-sub2agent-") {
+		t.Fatal("sharing did not generate a Sub2Agent key")
 	}
 	if got := send("GET", "/v1/models", remote, "", key); got != http.StatusOK {
 		t.Errorf("models with the generated key returned %d", got)
+	}
+	keys, err := access.Export()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const legacy = "sk-magpie-key-existing-test"
+	keys = append(keys, access.Key{ID: "legacy-test", Name: "Existing key", Secret: legacy})
+	if err := access.Restore(keys); err != nil {
+		t.Fatal(err)
+	}
+	if got := send("GET", "/v1/models", remote, "", legacy); got != http.StatusOK {
+		t.Errorf("models with the existing key returned %d", got)
+	}
+	for _, placeholder := range []string{"sub2agent", "magpie"} {
+		if got := send("GET", "/v1/models", "127.0.0.1:5000", "", placeholder); got != http.StatusOK {
+			t.Errorf("models with loopback placeholder returned %d", got)
+		}
+		if got := send("GET", "/v1/models", remote, "", placeholder); got != http.StatusUnauthorized {
+			t.Errorf("models with remote placeholder returned %d", got)
+		}
 	}
 	if err := access.ConfigureLAN(false, false); err != nil {
 		t.Fatal(err)
