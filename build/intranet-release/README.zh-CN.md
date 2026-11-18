@@ -61,9 +61,9 @@ node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私�
 
 0.177 上的 `sub2agent-release-pull.timer` 每两分钟启动一次拉取任务。任务使用系统出口代理、本机 netrc 和云服务证书。它先验签，再下载并校验制品的大小和 SHA-256，最后原子替换 `latest.json`。失败会保留当前版本并重试，任务拒绝降级或覆盖内容不同的同版本。如需回滚，先停用定时器并停止运行中的拉取任务，再用保留的旧版签名清单切换。
 
-WeMail UAT 的目标配置是将 `/wemail/sub2agent/releases/` 固定反代到 0.177。Windows 下载按钮使用同域的 `releases/latest/windows-amd64`，0.177 使用相对重定向返回当前安装包。老客户端继续沿用原来的清单和版本路径。已发布客户端中的公网回退地址 `124.220.199.224:8899` 独立于本次私有暂存源。
+WeMail UAT 首页的 Windows 按钮直连 0.177 的固定下载地址 `http://172.21.0.177:18989/sub2agent/releases/latest/windows-amd64`。macOS 继续使用首页现有的下载配置。WeMail 域名下的旧更新源仍由 Pod 静态文件提供。已发布客户端可以继续使用 0.177 的清单和版本路径，已从 KF 实测 Windows beta.4 升级到 beta.7。已发布客户端中的公网回退地址 `124.220.199.224:8899` 独立于本次私有暂存源。
 
-用 `systemctl list-timers sub2agent-release-pull.timer` 和 `journalctl -u sub2agent-release-pull.service` 检查拉取状态。完成 WeMail 反代部署后，应分别从 0.177 与 WeMail 链路验证 `latest.json`、Windows 下载和客户端更新。
+用 `systemctl list-timers sub2agent-release-pull.timer` 和 `journalctl -u sub2agent-release-pull.service` 检查拉取状态。从 0.177 验证 `latest.json`、Windows 下载和客户端更新，并从 KF 验证 WeMail 首页的固定下载链接。
 
 客户端启动后和定时检查时读取目录，自动下载并验证；通常在用户重启时安装。旧版内网客户端没有更新通道，需要先手动安装一次支持该功能的版本。签名私钥若遗失，需要重新分发包含新公钥的客户端；需妥善备份。
 
