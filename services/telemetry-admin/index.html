@@ -14,8 +14,23 @@
   <p class="caption">按北京时间汇总 · 数据来自内网采集服务</p>
   <dl class="metrics"><div><dt>活跃安装</dt><dd id="active">—</dd><small>统计周期内的日均值</small></div><div><dt>埋点事件</dt><dd id="events">—</dd></div><div><dt>网关请求</dt><dd id="requests">—</dd><small>已收到的分钟用量汇总</small></div></dl>
   <section aria-labelledby="trend-title">
-    <div class="title"><h2 id="trend-title">每日趋势</h2><label>指标 <select id="metric"><option value="active">活跃安装</option><option value="events">埋点事件</option><option value="requests">网关请求</option></select></label></div>
+    <div class="title"><h2 id="trend-title">每日趋势</h2><label>指标 <select id="metric"><option value="active">活跃安装</option><option value="events">埋点事件</option><option value="requests">网关请求</option><option value="tokens">Token 消耗</option></select></label></div>
     <canvas id="trend" height="230" role="img" aria-label="每日趋势，详细数字见下表"></canvas>
+  </section>
+  <section aria-labelledby="usage-title">
+    <h2 id="usage-title">Token 消耗</h2>
+    <dl class="metrics tokens"><div><dt>总计</dt><dd id="token-total">—</dd></div><div><dt>普通输入</dt><dd id="token-in">—</dd></div><div><dt>输出</dt><dd id="token-out">—</dd></div><div><dt>缓存读取</dt><dd id="token-read">—</dd></div><div><dt>缓存写入</dt><dd id="token-write">—</dd></div></dl>
+    <p class="caption">统计已上报的网关用量。总计包含普通输入、输出、缓存读取和缓存写入。</p>
+  </section>
+  <section>
+    <h2>客户端版本</h2>
+    <p class="caption">每个安装按所选周期内最后一次报告的版本计数。</p>
+    <table><thead><tr><th scope="col">版本</th><th scope="col">安装数</th></tr></thead><tbody id="versions"></tbody></table>
+  </section>
+  <section>
+    <div class="title"><h2>安装明细</h2><label>筛选 <input id="device-filter" type="search" placeholder="安装编号或版本"></label></div>
+    <p class="caption">每行代表一个匿名安装。版本取周期内最后一次上报，用量累计整个周期。</p>
+    <div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">安装编号</th><th scope="col">版本</th><th scope="col">最后活跃</th><th scope="col">请求</th><th scope="col">普通输入</th><th scope="col">输出</th><th scope="col">缓存读取</th><th scope="col">缓存写入</th><th scope="col">总 Token</th></tr></thead><tbody id="devices"></tbody></table></div>
   </section>
   <section><h2>事件分布</h2><table><thead><tr><th scope="col">事件</th><th scope="col">数量</th></tr></thead><tbody id="breakdown"></tbody></table></section>
   <details><summary>每日数据</summary><table><thead><tr><th scope="col">日期</th><th scope="col">活跃安装</th><th scope="col">埋点事件</th><th scope="col">网关请求</th></tr></thead><tbody id="daily"></tbody></table></details>

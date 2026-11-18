@@ -20,3 +20,9 @@ table { width: 100%; border-collapse: collapse; margin-top: .75rem; font-variant
 th, td { text-align: right; border-bottom: 1px solid #e0eaea; padding: .6rem .25rem; }
 th:first-child, td:first-child { text-align: left; }
 summary { cursor: pointer; }
+.metrics.tokens { grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); }
+.tokens dd { font-size: clamp(1.25rem, 3vw, 1.8rem); }
+.table-scroll { overflow-x: auto; }
+.table-scroll table { min-width: 760px; }
+.table-scroll td:first-child { font-family: ui-monospace, monospace; }
+input[type=search] { font: inherit; max-width: 100%; padding: .5rem; border: 1px solid #a2b6b7; border-radius: 5px; }

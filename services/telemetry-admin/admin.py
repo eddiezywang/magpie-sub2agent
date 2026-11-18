@@ -26,8 +26,12 @@ EVENTS = {
     "process_start": "进程启动",
     "other": "其他事件",
 }
-LIMIT = 256 * 1024
+LIMIT = 4 * 1024 * 1024
 DAYS = 90
+TOKENS = ("input_tokens", "output_tokens", "cache_read_tokens",
+          "cache_write_5m_tokens", "cache_write_1h_tokens")
+VERSION = re.compile(r"v?\d{1,5}\.\d{1,5}\.\d{1,5}(?:-[a-zA-Z0-9]+(?:[.-][a-zA-Z0-9]+)*)?")
+DEVICE = re.compile(r"[0-9a-f]{24}")
 
 
 def rows(folder, pattern, earliest):
@@ -41,7 +45,7 @@ def rows(folder, pattern, earliest):
                     yield json.loads(line)
 
 
-def collect(folder, now):
+def collect(folder, now, token):
     if not folder.is_dir():
         raise FileNotFoundError(folder)
     today = now.astimezone(ZONE).date()
@@ -50,6 +54,7 @@ def collect(folder, now):
     earliest = (first - timedelta(days=1)).strftime("%Y%m%d")
     daily = {}
     installs = {}
+    versions = {}
 
     def bucket(timestamp):
         day = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone(ZONE).date()
@@ -60,6 +65,11 @@ def collect(folder, now):
     def counts(day):
         return daily.setdefault(day, {"events": Counter(), "requests": 0, "active": 0})
 
+    def device(day, raw_id):
+        pseudonym = hmac.digest(token.encode(), b"install-id:" + raw_id.encode(), "sha256").hex()[:24]
+        devices = installs.setdefault(day, {})
+        return pseudonym, devices.setdefault(pseudonym, {"requests": 0, "tokens": Counter()})
+
     for row in rows(folder, r"telemetry-(?:archived-)?(\d{8})\.jsonl", earliest):
         day = bucket(row["timestamp"])
         if day is None:
@@ -67,7 +77,13 @@ def collect(folder, now):
         name = row["event"]
         counts(day)["events"][name if name in EVENTS else "other"] += 1
         if row.get("install_id"):
-            installs.setdefault(day, set()).add(row["install_id"])
+            pseudonym, _ = device(day, row["install_id"])
+            version = row.get("app_version")
+            if isinstance(version, str) and len(version) <= 64 and VERSION.fullmatch(version):
+                observed = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
+                key = day, pseudonym
+                if key not in versions or observed >= versions[key][0]:
+                    versions[key] = observed, version
 
     seen = set()
     for row in rows(folder / "minute-summaries", r"summaries-(\d{8})\.jsonl", earliest):
@@ -78,11 +94,20 @@ def collect(folder, now):
         day = bucket(row["minute"])
         if day is None:
             continue
-        counts(day)["requests"] += sum(group["requests"] for group in row["groups"])
-        installs.setdefault(day, set()).add(row["install_id"])
+        _, install = device(day, row["install_id"])
+        for group in row["groups"]:
+            counts(day)["requests"] += group["requests"]
+            install["requests"] += group["requests"]
+            for field in TOKENS:
+                install["tokens"][field] += group.get(field, 0)
 
-    for day, ids in installs.items():
-        counts(day)["active"] = len(ids)
+
+    for day, devices in sorted(installs.items()):
+        counts(day)["active"] = len(devices)
+        counts(day)["devices"] = devices
+        for pseudonym, install in devices.items():
+            if (day, pseudonym) in versions:
+                install["version"] = versions[day, pseudonym][1]
     return {"generated_at": now.isoformat(), "days": daily}
 
 
@@ -108,6 +133,23 @@ def read_snapshot(raw):
             raise ValueError("unknown event name")
         clean[day] = {"events": {key: count(value) for key, value in row["events"].items()},
                       "requests": count(row["requests"]), "active": count(row["active"])}
+        if "devices" in row:
+            clean_devices = {}
+            for pseudonym, detail in row["devices"].items():
+                if not DEVICE.fullmatch(pseudonym):
+                    raise ValueError("invalid pseudonym")
+                tokens = detail["tokens"]
+                clean_detail = {
+                    "requests": count(detail["requests"]),
+                    "tokens": {field: count(tokens.get(field, 0)) for field in TOKENS},
+                }
+                version = detail.get("version")
+                if version is not None:
+                    if len(version) > 64 or not VERSION.fullmatch(version):
+                        raise ValueError("invalid version")
+                    clean_detail["version"] = version
+                clean_devices[pseudonym] = clean_detail
+            clean[day]["devices"] = clean_devices
     return {"generated_at": generated.isoformat(), "days": clean}
 
 
@@ -128,7 +170,7 @@ def save_snapshot(path, data):
 def sync(folder, endpoint, token):
     if not endpoint.startswith(("http://", "https://")):
         raise ValueError("invalid sync URL")
-    data = json.dumps(collect(folder, datetime.now(timezone.utc))).encode()
+    data = json.dumps(collect(folder, datetime.now(timezone.utc), token)).encode()
     request = Request(endpoint, data=data, headers={"Authorization": "Snapshot " + hmac.digest(token.encode(), data, "sha256").hex(),
                                                     "Content-Type": "application/json"})
     class NoRedirect(HTTPRedirectHandler):
