@@ -22,8 +22,7 @@ document.addEventListener('click', e => { if (!e.target.closest('.platform, #pri
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
 
 const base = '/wemail/sub2agent/';
-const releaseBase = base + 'releases/';
-const windowsDownload = releaseBase + 'latest/windows-amd64';
+const windowsDownload = 'http://172.21.0.177:18989/sub2agent/releases/latest/windows-amd64';
 const os = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent;
 const mac = /mac/i.test(os);
 const windows = document.querySelector('[data-platform="windows"]');
@@ -41,11 +40,6 @@ if (!mac) {
   primary.href = windowsDownload;
   primary.removeAttribute('aria-disabled');
 }
-getJSON(releaseBase + 'latest.json').then(release => {
-  if (typeof release.version !== 'string' || !release.assets?.['magpie-windows-amd64.exe']) return;
-  windows.querySelector('small').textContent += ` · ${release.version}`;
-  if (!mac) system.textContent = `Windows · ${release.version}`;
-}).catch(() => {});
 
 const macDownloads = {arm64:'magpie-darwin-arm64.zip', amd64:'magpie-darwin-amd64.zip'};
 for (const key of Object.keys(macDownloads)) document.querySelector(`[data-platform="${key}"]`).hidden = true;
