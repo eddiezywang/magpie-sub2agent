@@ -46,6 +46,20 @@ const identity={install_id:'fixture-device',username:'fixture-user'};
 const group=()=>({...Object.fromEntries(counters.map(k=>[k,0])),agent:'codex',provider:'sub2agent-workbuddy',model:'glm-5.3-flash-maas-fixture',model_source:'served',service_tier:'',rules_revision:'internal-2026-11-17-tig-2',context_tier:'base',attempts:100,requests:98,success:90,failed:8,canceled:2,handed_on:2,input_tokens:1000,output_tokens:500,cache_read_tokens:250,cache_write_5m_tokens:50,cache_write_1h_tokens:20,reasoning_tokens:100,duration_ms_sum:300000,duration_samples:100,ttft_ms_sum:25000,ttft_samples:100});
 const summary=(id='fixture-summary',g=group())=>({id,minute:'2026-11-13T08:15:00Z',groups:[g]});
 const temp=t=>{const d=fs.mkdtempSync(path.join(os.tmpdir(),'usage-v3-'));t.after(()=>fs.rmSync(d,{recursive:true,force:true}));return d;};
+test('TIG standard tier uses the default channel rate unless overridden',t=>{
+ const billing=createBillingPolicy({dataDir:temp(t)});
+ const usage={...group(),provider:'aiep-coding-plan',model:'glm-5.3-flash-zp',service_tier:'standard'};
+ const at=summary().minute;
+ const charge=billing.charge(usage,at);
+ assert.equal(charge.currency,'GLM_POINTS');
+ assert.equal(charge.amount,billing.charge({...usage,service_tier:''},at).amount);
+ assert.equal(billing.charge({...usage,service_tier:'priority'},at).priced,false);
+ const policy=billing.snapshot();
+ const base=policy.models.find(r=>r.provider==='aiep-coding-plan*'&&r.model===usage.model);
+ policy.models.push({...base,service_tier:'standard',credit_rates:{input:0,cache_read:0,output:0}});
+ billing.set({...policy,revision:'tig-standard-fixture'});
+ assert.equal(billing.charge(usage,at).amount,0);
+});
 test('durable minute summaries deduplicate by install/id, reject conflicts and survive restart',t=>{
  const dataDir=temp(t);let s=createSummaryStore({dataDir,now:fixed});
  assert.equal(s.append(identity,summary()),'accepted');assert.equal(s.append(identity,summary()),'duplicate');

@@ -65,7 +65,12 @@ function createBillingPolicy({dataDir,listPrice}){
  function match(policy,provider,model,tier){
   const dep=/(?:-openai)?-(zp|tc|hs)(?:-openai)?$/i.exec(String(model).split('/').pop())?.[1]?.toLowerCase()||'';
   const tig=/^(?:sub2agent-tigcodingplan|aiep-coding-plan)/.test(provider);
-  return policy.models.find(r=>providerMatches(r.provider,provider)&&(!r.deployment||r.deployment===dep)&&!(tig&&dep&&!r.deployment)&&(r.model.endsWith('*')?canonical(model).startsWith(canonical(r.model.slice(0,-1))):canonical(r.model)===canonical(model))&&(r.service_tier||'')===(tier||''));
+  const matchesModel=r=>providerMatches(r.provider,provider)&&(!r.deployment||r.deployment===dep)&&!(tig&&dep&&!r.deployment)&&(r.model.endsWith('*')?canonical(model).startsWith(canonical(r.model.slice(0,-1))):canonical(r.model)===canonical(model));
+  const exact=policy.models.find(r=>matchesModel(r)&&(r.service_tier||'')===(tier||''));
+  if(exact||!tig||!dep||tier!=='standard')return exact;
+  // The gateway may report its default tier explicitly. A TIG rule without
+  // a tier covers that default, while a tier-specific rule takes precedence.
+  return policy.models.find(r=>matchesModel(r)&&r.deployment===dep&&!r.service_tier);
  }
  function charge(g,minute){
   const at=new Date(minute);const r=match(current,g.provider,g.model,g.service_tier);
