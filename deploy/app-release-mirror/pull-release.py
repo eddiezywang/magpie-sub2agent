@@ -69,7 +69,7 @@ def verify_file(file, asset):
 def download(source, netrc, cert, name, destination, max_size):
     subprocess.run(
         ['curl', '--disable', '--fail', '--silent', '--show-error', '--connect-timeout', '12',
-         '--max-time', '600', '--max-filesize', str(max_size), '--netrc-file', netrc,
+         '--max-time', '1800', '--max-filesize', str(max_size), '--netrc-file', netrc,
          '--cacert', cert, '--output', destination, source + name], check=True,
     )
 
