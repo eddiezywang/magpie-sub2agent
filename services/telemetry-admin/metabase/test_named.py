@@ -27,4 +27,17 @@ class NamedExportTest(unittest.TestCase):
         row = result["usage"][0]
         self.assertEqual(row[:2], ["2026-11-19", "fixture-user"])
         self.assertEqual(row[6:8], [2, 10])
-        self.assertEqual(result["activity"][0][-1], "1.2.3")
+        self.assertEqual(result["activity"][0][5], "1.2.3")
+
+    def test_online_interval_crosses_midnight_and_retry_counts_once(self):
+        now = datetime(2026, 11, 18, 16, 5, tzinfo=timezone.utc)
+        flush = {"install_id": "install", "username": "fixture-user", "id": "stable-flush",
+                 "event": "desktop_proxy_usage_flushed", "timestamp": now.isoformat(),
+                 "argv": ["--proxy-usage-ms=600000"]}
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / "minute-summaries").mkdir()
+            (folder / "telemetry-20261118.jsonl").write_text((json.dumps(flush) + "\n") * 2)
+            result = collect(folder, now, "fixture-token")
+        by_day = {row[0]: row[6:] for row in result["activity"]}
+        self.assertEqual(by_day, {"2026-11-18": [0, 300000], "2026-11-19": [1, 300000]})

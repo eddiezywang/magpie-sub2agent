@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS analytics.daily_activity (
   version_seen timestamptz,
   client_version varchar(64)
 );
+ALTER TABLE analytics.daily_activity ADD COLUMN IF NOT EXISTS app_events bigint NOT NULL DEFAULT 0;
+ALTER TABLE analytics.daily_activity ADD COLUMN IF NOT EXISTS online_ms bigint NOT NULL DEFAULT 0;
 CREATE TABLE IF NOT EXISTS analytics.daily_usage (
   day date NOT NULL,
   username text,
@@ -29,7 +31,8 @@ CREATE INDEX IF NOT EXISTS activity_version_lookup
   ON analytics.daily_activity (installation, username, day DESC) WHERE client_version IS NOT NULL;
 
 CREATE OR REPLACE VIEW analytics.user_daily_activity AS
-SELECT day, username, installation, last_seen, version_seen, client_version
+SELECT day, username, installation, last_seen, version_seen, client_version,
+       app_events, online_ms, online_ms / 3600000.0 AS online_hours
 FROM analytics.daily_activity;
 
 CREATE OR REPLACE VIEW analytics.user_daily_usage AS

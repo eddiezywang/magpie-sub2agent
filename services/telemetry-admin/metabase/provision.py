@@ -32,7 +32,7 @@ def provision(config):
     for _ in range(20):
         metadata = api(f"database/{db_id}/metadata")
         tables = {item["name"]: item for item in metadata["tables"]}
-        if {"user_daily_usage", "user_daily_activity"} <= tables.keys():
+        if "user_daily_usage" in tables and any(field["name"] == "online_hours" for field in tables.get("user_daily_activity", {}).get("fields", [])):
             break
         time.sleep(2)
     usage = tables["user_daily_usage"]
@@ -69,33 +69,74 @@ def provision(config):
         "rows": ["username"], "columns": ["last_reported_version"],
         "values": ["sum", "sum_2", "sum_3", "sum_4", "sum_5", "sum_6"],
     }}, description="版本为安装在当天或之前最后一次上报的版本。")
+    token_format = {
+        "graph.label_value_formatting": "compact",
+        "graph.y_axis.title_text": "Token",
+    }
     trend = card("trend", "每日 Token 趋势", usage, "line", {
         "aggregation": [sums[-1]],
         "breakout": [usage_field("day", {"temporal-unit": "day"})],
-    })
+    }, settings=token_format)
     detail = card("detail", "用户名 · 每日模型用量", usage, "table", {
         "order-by": [["desc", usage_field("day")], ["desc", usage_field("total_tokens")]],
     })
     versions = card("versions", "用户名 · 安装与版本记录", activity, "table", {
         "order-by": [["desc", field(activity, "last_seen")]],
     })
+    activity_field = lambda name, options=None: field(activity, name, options)
+    daily_users = card("daily_users", "应用日活 · 去重用户名", activity, "line", {
+        "aggregation": [["distinct", activity_field("username")]],
+        "breakout": [activity_field("day", {"temporal-unit": "day"})],
+        "filter": ["and", [">", activity_field("app_events"), 0],
+                   ["not-null", activity_field("username")]],
+    }, description="每天有桌面事件上报的去重用户名。同一用户名的多台安装计一次。")
+    online = card("online", "每日网关在线时长 · 设备小时", activity, "line", {
+        "aggregation": [["sum", activity_field("online_hours")]],
+        "breakout": [activity_field("day", {"temporal-unit": "day"})],
+    }, description="来自网关时长增量上报。跨午夜按北京时间拆分，多台设备的时长相加。")
+    user_online = card("user_online", "用户在线时长 · 按日和安装", activity, "table", {
+        "filter": [">", activity_field("online_ms"), 0],
+        "order-by": [["desc", activity_field("day")], ["desc", activity_field("online_ms")]],
+    })
+    user_totals = card("user_totals", "用户用量汇总", usage, "table", {
+        "aggregation": sums,
+        "breakout": [usage_field("username")],
+        "order-by": [["desc", ["aggregation", 5]]],
+    })
+    breakdowns = []
+    for key, title in (("model", "按模型统计"), ("provider", "按供应商统计"), ("agent", "按 Agent 统计")):
+        breakdowns.append(card(key + "_totals", title, usage, "table", {
+            "aggregation": sums,
+            "breakout": [usage_field(key)],
+            "order-by": [["desc", ["aggregation", 5]]],
+        }))
     filters = [
         ("date", "日期", "date/all-options", "day", "day"),
         ("username", "用户名", "string/=", "username", "username"),
         ("version", "版本", "string/=", "last_reported_version", "client_version"),
         ("provider", "供应商", "string/=", "provider", None),
         ("model", "模型", "string/=", "model", None),
+        ("agent", "Agent", "string/=", "agent", None),
     ]
     params = [{"id": key, "name": label, "type": kind, "slug": key} for key, label, kind, _, _ in filters]
     dashboard = save("dashboard", "dashboard", {
         "name": "Sub2Agent 用户用量分析", "collection_id": collection, "parameters": params,
         "description": "按北京时间统计最近 90 天。用户名来自客户端操作系统，安装编号可区分重名或未上报的安装。",
     })
-    if not state.get("configured"):
+    if state.get("layout_version") != 2:
+        trend_settings = api(f"card/{trend}")["visualization_settings"]
+        api(f"card/{trend}", {"visualization_settings": {**trend_settings, **token_format}}, "PUT")
+        api(f"dashboard/{dashboard}", {"parameters": params}, "PUT")
         cards = []
-        for i, (card_id, table, row, height) in enumerate([
-            (trend, usage, 0, 5), (pivot, usage, 5, 8), (detail, usage, 13, 8),
-            (versions, activity, 21, 8),
+        current = api(f"dashboard/{dashboard}")
+        existing = {dashcard["card_id"]: dashcard["id"] for dashcard in current["dashcards"]}
+        for i, (card_id, table, col, row, width, height) in enumerate([
+            (daily_users, activity, 0, 0, 12, 6), (online, activity, 12, 0, 12, 6),
+            (trend, usage, 0, 6, 24, 6), (user_totals, usage, 0, 12, 24, 6),
+            (pivot, usage, 0, 18, 24, 8), (detail, usage, 0, 26, 24, 8),
+            (user_online, activity, 0, 34, 24, 7), (versions, activity, 0, 41, 24, 7),
+            (breakdowns[0], usage, 0, 48, 24, 7), (breakdowns[1], usage, 0, 55, 24, 7),
+            (breakdowns[2], usage, 0, 62, 24, 7),
         ]):
             mappings = []
             for key, _, _, usage_col, activity_col in filters:
@@ -103,13 +144,13 @@ def provision(config):
                 if column:
                     mappings.append({"parameter_id": key, "card_id": card_id,
                                      "target": ["dimension", field(table, column)]})
-            cards.append({"id": -i-1, "card_id": card_id, "col": 0, "row": row,
-                          "size_x": 24, "size_y": height, "parameter_mappings": mappings})
+            cards.append({"id": existing.get(card_id, -i-1), "card_id": card_id, "col": col, "row": row,
+                          "size_x": width, "size_y": height, "parameter_mappings": mappings})
         api(f"dashboard/{dashboard}/cards", {"cards": cards}, "PUT")
-        state["configured"] = True
+        state["layout_version"] = 2
         path.write_text(json.dumps(state) + "\n")
     result = api(f"dashboard/{dashboard}")
-    assert len(result["dashcards"]) == 4
+    assert len(result["dashcards"]) == 11
     print(f"dashboard /dashboard/{dashboard}")
 
 

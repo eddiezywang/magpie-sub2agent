@@ -53,14 +53,14 @@ def collect(folder, now, token):
     earliest = (first - timedelta(days=1)).strftime("%Y%m%d")
     if not (folder / "minute-summaries").is_dir():
         raise FileNotFoundError("collector summary directory unavailable")
-    activity, usage, seen = {}, {}, set()
+    activity, usage, seen, seen_events = {}, {}, set(), set()
 
     def activity_for(at, who):
         day = at.astimezone(ZONE).date()
         if not first <= day <= today:
             return None
         key = (day.isoformat(), *who)
-        active = activity.setdefault(key, [at, None, None])
+        active = activity.setdefault(key, [at, None, None, 0, 0])
         active[0] = max(active[0], at)
         return key, active
 
@@ -73,9 +73,33 @@ def collect(folder, now, token):
         if not found:
             continue
         _, active = found
+        event = row.get("event", "")
+        marker = row.get("id") or (row["timestamp"], event, tuple(row.get("argv") or ()))
+        event_key = who, marker
+        if event_key in seen_events:
+            continue
+        seen_events.add(event_key)
+        if event.startswith("desktop_") or (event == "app_start" and row.get("entry_mode") == "desktop"):
+            active[3] += 1
+        if event == "desktop_proxy_usage_flushed":
+            args = row.get("args") or {}
+            duration = args.get("proxy-usage-ms")
+            if duration is None:
+                duration = next((flag.partition("=")[2] for flag in (row.get("argv") or ())
+                                 if isinstance(flag, str) and flag.startswith("--proxy-usage-ms=")), "")
+            if str(duration).isdigit() and 0 < int(duration) <= 7 * 86400000:
+                start = at.astimezone(ZONE) - timedelta(milliseconds=int(duration))
+                end = at.astimezone(ZONE)
+                start = max(start, datetime.combine(first, datetime.min.time(), ZONE))
+                while start < end:
+                    midnight = datetime.combine(start.date() + timedelta(days=1), datetime.min.time(), ZONE)
+                    stop = min(end, midnight)
+                    _, period = activity_for(start, who)
+                    period[4] += int((stop - start) / timedelta(milliseconds=1))
+                    start = stop
         version = row.get("app_version")
         if isinstance(version, str) and 0 < len(version) <= 64 and (active[1] is None or at >= active[1]):
-            active[1:] = at, version
+            active[1:3] = at, version
 
     for row in rows(folder / "minute-summaries", r"summaries-(\d{8})\.jsonl", earliest):
         packet = row["install_id"], row["id"]
@@ -98,8 +122,8 @@ def collect(folder, now, token):
 
     return {
         "generated_at": now.isoformat(),
-        "activity": [[*key, last.isoformat(), version_at.isoformat() if version_at else None, version]
-                     for key, (last, version_at, version) in activity.items()],
+        "activity": [[*key, last.isoformat(), version_at.isoformat() if version_at else None, version, app_events, online_ms]
+                     for key, (last, version_at, version, app_events, online_ms) in activity.items()],
         "usage": [[*key, *(counter[field] for field in METRICS)] for key, counter in usage.items()],
     }
 
