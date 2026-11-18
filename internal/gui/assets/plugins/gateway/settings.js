@@ -601,7 +601,10 @@ function renderLAN(s) {
     if (ns.rekeyed) status(ns.rekeyed, "err");
   })
     .catch((e) => { status(t(e.message), "err"); renderSettings(); });
-  row(t("Share on local network"), t("Agents on other computers on this network, or through a tunnel to this one such as Cloudflare Tunnel, can use magpie’s models with a gateway key from Gateway"), "",
+  const intranet = !!window.bootPrefs?.intranet;
+  row(t("Share on local network"), t(intranet
+    ? "Let other devices connect with an API key."
+    : "Agents on other computers on this network, or through a tunnel to this one such as Cloudflare Tunnel, can use magpie’s models with a gateway key from Gateway"), "",
     segs([["off", t("Off")], ["on", t("On")]], s.lan ? "on" : "off", (v) => set({ on: v === "on" })));
   if (!s.lan) return;
   const { urls, others, sub, head } = lanShown(s.lanURLs || [], s.lanContainer, s.lanContainerHost,
@@ -650,8 +653,24 @@ function renderLAN(s) {
     addressRow.classList.add("lan-address-row");
     update();
   }
+  if (intranet) {
+    const key = s.lanAccessKey;
+    const action = key && !key.off ? copyCallerKeyBtn(key) : el("button", "text", t(key ? "Enable key" : "New key"));
+    if (!key || key.off) {
+      action.type = "button";
+      action.onclick = async () => {
+        if (!key) return set({ on: true, newKey: true });
+        try {
+          await writingPrefs(api("caller-keys/on-key", { key: key.id }));
+          prefs = await api("settings");
+          renderSettings();
+        } catch (e) { status(t(e.message), "err"); }
+      };
+    }
+    row(t("API key"), "", key?.masked, action).classList.add("lan-key-row");
+  }
   if (sub) row(head || t("In a container"), sub, "").classList.add("lan-container");
-  renderJoin(s, box);
+  if (!intranet) renderJoin(s, box);
 }
 
 // renderJoin: Join with a password (EV_John_Liu on X), under the shared

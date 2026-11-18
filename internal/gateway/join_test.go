@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/access"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/settings"
 )
 
@@ -20,6 +21,9 @@ const joinPw = "correct horse battery"
 // bucket full and on a clock the test moves.
 func joinGateway(t *testing.T) (http.Handler, *time.Time) {
 	t.Helper()
+	if distribution.Internal {
+		t.Skip("password joining is only available upstream")
+	}
 	fresh(t)
 	t.Setenv("MAGPIE_ADDR", "")
 	newCaller(t)
@@ -33,6 +37,58 @@ func joinGateway(t *testing.T) (http.Handler, *time.Time) {
 	joinThrottle.Unlock()
 	t.Cleanup(resetJoinThrottle)
 	return lanGuard(New().Handler()), &now
+}
+
+func TestIntranetLANUsesAPIKey(t *testing.T) {
+	if !distribution.Internal {
+		t.Skip("Sub2Agent LAN sharing")
+	}
+	fresh(t)
+	t.Setenv("MAGPIE_ADDR", "")
+	if err := access.ConfigureLAN(true, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := access.SetJoinPassword(joinPw); err != nil {
+		t.Fatal(err)
+	}
+	h := lanGuard(New().Handler())
+	send := func(method, path, from, body, key string) int {
+		r := httptest.NewRequest(method, path, strings.NewReader(body))
+		r.Host = "10.55.81.17:8989"
+		r.RemoteAddr = from
+		if key != "" {
+			r.Header.Set("Authorization", "Bearer "+key)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w.Code
+	}
+	for _, from := range []string{"127.0.0.1:5000", "10.55.81.18:5000"} {
+		for _, req := range []struct{ method, path string }{
+			{"GET", JoinPagePath}, {"GET", joinData}, {"POST", joinData},
+		} {
+			if got := send(req.method, req.path, from, joinBody(joinPw, "old"), ""); got != http.StatusNotFound {
+				t.Errorf("%s %s from %s returned %d", req.method, req.path, from, got)
+			}
+		}
+	}
+	const remote = "10.55.81.18:5000"
+	if got := send("GET", "/v1/models", remote, "", ""); got != http.StatusUnauthorized {
+		t.Errorf("models without a key returned %d", got)
+	}
+	key := access.LANSecret()
+	if key == "" {
+		t.Fatal("sharing did not generate a key")
+	}
+	if got := send("GET", "/v1/models", remote, "", key); got != http.StatusOK {
+		t.Errorf("models with the generated key returned %d", got)
+	}
+	if err := access.ConfigureLAN(false, false); err != nil {
+		t.Fatal(err)
+	}
+	if got := send("GET", "/v1/models", remote, "", key); got != http.StatusForbidden {
+		t.Errorf("models after disabling sharing returned %d", got)
+	}
 }
 
 type joinReq struct {

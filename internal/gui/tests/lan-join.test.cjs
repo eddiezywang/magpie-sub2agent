@@ -63,19 +63,37 @@ const file = async (route, url) => {
   await route.fulfill({ body: await fsp.readFile(f), contentType });
 };
 function settingsServer(lang, posts, over) {
+  const { intranet = false, ...settings } = over;
+  const key = { id: "lan-fixture", masked: "sk-magpie-…012345" };
   const s = {
     theme: "light", lang, tray: "panel", currency: "usd", version: "0.1.400", dir: "/config/magpie",
     gateway: "http://127.0.0.1:3425", proxyNow: "none", proxySource: "none", login: false,
     visionModels: [], imageGenModels: [], allowIPs: [], mtlsCerts: [],
-    lan: true, lanURLs: [BASE], fx: { rate: 7.2, at: new Date().toISOString(), stale: false }, ...over,
+    lan: true, lanURLs: [BASE], fx: { rate: 7.2, at: new Date().toISOString(), stale: false }, ...settings,
   };
   return async (route) => {
     const url = new URL(route.request().url());
     const json = (data, status = 200) => route.fulfill({ json: data, status });
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:true};` });
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:true,intranet:${intranet}};` });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return json({ agents: [], profiles: [], settings: { lang, theme: "light" }, fx: s.fx });
     if (url.pathname === "/api/settings") return json(s);
+    if (url.pathname === "/api/settings/lan") {
+      const body = route.request().postDataJSON();
+      posts.push(body);
+      s.lan = body.on;
+      s.lanAccessKey = body.on ? key : undefined;
+      return json(s);
+    }
+    if (url.pathname === "/api/caller-keys/copy-key") {
+      const body = route.request().postDataJSON();
+      posts.push(body);
+      return body.key === key.id ? json({ secret: KEY }) : json({}, 404);
+    }
+    if (url.pathname === "/api/copy") {
+      posts.push(route.request().postDataJSON());
+      return json({});
+    }
     if (url.pathname === "/api/settings/join") {
       const body = route.request().postDataJSON();
       posts.push(body);
@@ -92,7 +110,8 @@ function settingsServer(lang, posts, over) {
 }
 
 const STRINGS = ["Join with a password", "Other computers open the join link and type this password to get a gateway key of their own and the setup for their agents",
-  "New password", "Set", "Turn off joining", "Join link", "Use a password of at least 8 characters", "Use a password of at most 1024 bytes"];
+  "New password", "Set", "Turn off joining", "Join link", "Use a password of at least 8 characters", "Use a password of at most 1024 bytes",
+  "Let other devices connect with an API key."];
 
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
   test(engine + ": join with a password (EV_John_Liu on X)", async (t) => {
@@ -160,6 +179,43 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       await page.context().close();
     });
 
+    await t.test("Sub2Agent shares and copies a key next to the address", async (sub) => {
+      const posts = [];
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+      sub.after(() => page.close());
+      const errors = [];
+      page.on("pageerror", (err) => errors.push(err.message));
+      await page.route("**/*", settingsServer("zh", posts, { intranet: true, lan: false, joinOn: true, lanURLs: ["http://10.55.81.17:8989"] }));
+      await watchSettingsReads(page);
+      await page.goto("http://127.0.0.1:4999/?view=settings&tab=network");
+      await settingsDrawn(page);
+      const lan = page.locator("#lanList");
+      const on = lan.locator('[data-seg="on"]');
+      assert.equal(await lan.locator(".lan-key-row").count(), 0);
+      await reach(page, on);
+      await on.click();
+      const key = lan.locator(".lan-key-row");
+      await key.waitFor();
+      assert.equal(await lan.locator(".lan-address-text").textContent(), "http://10.55.81.17:8989/v1");
+      assert.equal(await key.locator("code").textContent(), "sk-magpie-…012345");
+      assert.equal(await lan.locator(".join-row, .join-link-row").count(), 0);
+      const copy = key.getByRole("button", { name: "复制网关密钥" });
+      await reach(page, copy);
+      if (process.env.LAN_REVIEW_DIR) {
+        assert.ok(!(await lan.innerText()).includes(KEY));
+        await lan.screenshot({ path: path.join(process.env.LAN_REVIEW_DIR, `${engine}-lan-sharing.png`) });
+      }
+      await copy.click();
+      await page.waitForFunction(() => document.querySelector(".lan-key-row .copy.done"));
+      assert.deepEqual(posts, [{ on: true }, { key: "lan-fixture" }, { text: KEY }]);
+      const off = lan.locator('[data-seg="off"]');
+      await reach(page, off);
+      await off.click();
+      await key.waitFor({ state: "hidden" });
+      assert.deepEqual(posts.at(-1), { on: false });
+      assert.deepEqual(errors, []);
+    });
+
     for (const lang of ["en", "zh"]) {
       await t.test(lang + ": Settings sets the password, shows the link, turns it off", async () => {
         const posts = [];
@@ -182,10 +238,13 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
         await reach(page, field);
         // too short: the gateway's word, in the page's language
         await field.fill("short");
-        await row.locator("button", { hasText: w["Set"] }).click();
+        const set = row.getByRole("button", { name: w["Set"], exact: true });
+        await reach(page, set);
+        await set.click();
         await page.waitForFunction((m) => document.querySelector("#lanList .join-row .sub.err")?.textContent === m, w["Use a password of at least 8 characters"]);
         await page.locator("#lanList .join-row input.join-pw").fill(PW);
-        await page.locator("#lanList .join-row button", { hasText: w["Set"] }).click();
+        await reach(page, set);
+        await set.click();
         const link = page.locator("#lanList .join-link-row code");
         await link.waitFor();
         assert.equal(await link.textContent(), BASE + "/join");
@@ -198,7 +257,9 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
             .concat(document.documentElement.scrollWidth > innerWidth ? ["page scrolls sideways"] : []);
         });
         assert.deepEqual(bad, []);
-        await page.locator("#lanList .join-row button.join-off").click();
+        const off = row.locator("button.join-off");
+        await reach(page, off);
+        await off.click();
         await page.waitForFunction(() => !document.querySelector("#lanList .join-link-row"));
         assert.deepEqual(posts.at(-1), { password: "" });
         assert.deepEqual(errors, []);

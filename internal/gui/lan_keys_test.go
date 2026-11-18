@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/access"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/settings"
 	"github.com/yetone/magpie/internal/usage"
@@ -45,13 +46,23 @@ func TestLANSettingSharesCallerKeyStore(t *testing.T) {
 	if err != nil || strings.Contains(key.Masked, old) {
 		t.Fatal("LAN settings leaked secret", key, err)
 	}
+	if distribution.Internal {
+		meta, ok := s["lanAccessKey"].(map[string]any)
+		if !ok || meta["id"] != id || meta["masked"] != key.Masked || len(meta) != 2 {
+			t.Fatal("expected masked LAN key metadata")
+		}
+		copied := post("/api/caller-keys/copy-key", `{"key":"`+id+`"}`)
+		if copied["secret"] != old {
+			t.Fatal("LAN copy did not return the generated key")
+		}
+	}
 	created := post("/api/caller-keys/add-key", `{"name":"Remote laptop"}`)
 	secret := created["secret"].(string)
 	if who, ok := access.Authenticate(secret); !ok || who.KeyName != "Remote laptop" {
 		t.Fatal("named key is not shared", who, ok)
 	}
 	off := post("/api/settings/lan", `{"on":false,"newKey":true}`)
-	if off["lan"] != nil || off["lanKey"] != nil {
+	if off["lan"] != nil || off["lanKey"] != nil || off["lanAccessKey"] != nil {
 		t.Fatal("legacy rotate request changed settings", off)
 	}
 	if _, ok := access.Authenticate(secret); !ok {

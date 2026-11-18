@@ -1009,7 +1009,14 @@ shared and with a key (`gatewayKeyPage` in `keys.js`). `key_page.go`, and
 [`key_page_test.go`](../../internal/gateway/key_page_test.go);
 `internal/gui/tests/key-page.test.cjs` drives the page itself.
 
-`GET /join` is the same page as the join page (EV_John_Liu on X): with a
+Sub2Agent generates a random gateway API key when LAN sharing is first enabled.
+Settings → Network and sharing → Local network shows the address and masked key.
+The copy control retrieves the full key from the existing Gateway keys API.
+The join page and its password exchange return 404 on a shared Sub2Agent
+gateway, including after upgrades with a saved join password. Previously
+issued gateway keys stay in the key store.
+
+Upstream's `GET /join` (EV_John_Liu on X) lets another computer join: with a
 password set in Settings → Local network → Join with a password
 (`POST /api/settings/join`, `internal/gui/join.go`), another computer
 opens it, types the password and a name for itself, and gets a gateway

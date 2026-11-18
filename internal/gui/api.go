@@ -441,6 +441,8 @@ type settingsJSON struct {
 	// JoinOn: a password is set to join with (join.go); the password
 	// itself is never sent
 	JoinOn bool `json:"joinOn,omitempty"`
+	// LANAccessKey contains the display and copy controls' public metadata.
+	LANAccessKey *lanAccessKeyJSON `json:"lanAccessKey,omitempty"`
 	// Dir is the data folder beside a portable magpie (#508)
 	Portable bool `json:"portable,omitempty"`
 	// Log is the log the desktop app writes (applog), as shown; "" for a
@@ -836,6 +838,12 @@ func codexWindowUnder(st settings.Settings, model string) *codexRunWindow {
 	return &codexRunWindow{Model: model, Window: e.Context, Size: tokensSize(e.Context)}
 }
 
+type lanAccessKeyJSON struct {
+	ID     string `json:"id"`
+	Masked string `json:"masked"`
+	Off    bool   `json:"off,omitempty"`
+}
+
 func settingsState() settingsJSON {
 	s := settingsJSON{Settings: settings.Load(), Version: Version, Dir: tilde(settings.Dir()), Portable: settings.Portable() != "", Gateway: gateway.URL()}
 	s.AddrEnv = os.Getenv("MAGPIE_ADDR")
@@ -850,7 +858,9 @@ func settingsState() settingsJSON {
 	if s.LAN || s.OnNetwork || s.MTLS {
 		s.MTLSCerts, s.MTLSErr = mtlsCerts()
 	}
-	s.JoinOn = access.JoinOn()
+	if !distribution.Internal {
+		s.JoinOn = access.JoinOn()
+	}
 	if s.LAN || gateway.OnNetwork() {
 		s.PublicURL = gateway.PublicURL()
 		s.PublicKind = gateway.URLKind(s.PublicURL)
@@ -893,6 +903,15 @@ func settingsState() settingsJSON {
 	login := loginState()
 	s.Login, s.LoginAllow = login != autostart.Off, login == autostart.NeedsAllowing
 	if s.LAN {
+		if distribution.Internal {
+			keys, _ := access.List()
+			for _, key := range keys {
+				if key.ID == s.LANKeyID || key.LAN {
+					s.LANAccessKey = &lanAccessKeyJSON{ID: key.ID, Masked: key.Masked, Off: key.Off}
+					break
+				}
+			}
+		}
 		s.LANURLs, s.LANContainer = gateway.LANURLs(), gateway.ContainerAddrs()
 		s.LANContainerHost = gateway.ContainerHostURL()
 		s.LANLazyCat, s.LANLazyCatBox = gateway.LazyCatURL(), gateway.LazyCatBox()
@@ -1603,7 +1622,9 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	backupRoutes(mux, w)
 	dataFolderRoutes(mux, w)
 	mtlsRoutes(mux, w)
-	joinRoutes(mux)
+	if !distribution.Internal {
+		joinRoutes(mux)
+	}
 	httpsRoutes(mux, w)
 	uninstallRoutes(mux, w)
 	archiveRoutes(mux)

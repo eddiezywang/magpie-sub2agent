@@ -31,6 +31,7 @@ import (
 	"github.com/yetone/magpie/internal/awake"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/codexrelay"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/filememo"
 	"github.com/yetone/magpie/internal/gwbudget"
 	"github.com/yetone/magpie/internal/gwmw"
@@ -1065,9 +1066,15 @@ func (s *Server) routes() *routeMux {
 	mux.HandleFunc("GET "+keyPageData, s.keyInfo)
 	// the join page, where another computer that knows the join password
 	// gets a gateway key of its own (join.go)
-	mux.HandleFunc("GET "+JoinPagePath, s.joinPage)
-	mux.HandleFunc("GET "+joinData, s.joinOpen)
-	mux.HandleFunc("POST "+joinData, s.joinKey)
+	if distribution.Internal {
+		mux.HandleFunc("GET "+JoinPagePath, http.NotFound)
+		mux.HandleFunc("GET "+joinData, http.NotFound)
+		mux.HandleFunc("POST "+joinData, http.NotFound)
+	} else {
+		mux.HandleFunc("GET "+JoinPagePath, s.joinPage)
+		mux.HandleFunc("GET "+joinData, s.joinOpen)
+		mux.HandleFunc("POST "+joinData, s.joinKey)
+	}
 	// the Claude Code processes the Claude subscription runs, for magpie
 	// claude-code runs (loopback only)
 	mux.HandleFunc("GET "+ClaudeRunsPath, s.claudeRuns)
