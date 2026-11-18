@@ -250,3 +250,10 @@ mirrors the public inbox and publishes the internal aggregation rules to it.
 The exporter merges those packets with the internal source by installation and
 packet ID before aggregation, so a retried packet is not counted twice.
 Existing installed clients need a build with the new fallback to use the endpoint.
+
+The desktop Usage overview estimates WorkBuddy MaaS points for retained calls
+that carry token counts but no vendor-reported credits. It uses the active
+managed POINTS coefficient and the actual served model when supplied. Ordinary
+input, output, cache reads and cache writes each enter the estimate once.
+Unknown cache counts and missing rates do not create an estimate. Estimated
+points are shown separately from vendor credits and currency-valued costs.

@@ -555,6 +555,8 @@ func (r Record) CostAt(p catalog.Price) float64 {
 
 // Totals is a sum of calls.
 type Totals struct {
+	WorkBuddyPoints float64 `json:"workbuddy_points,omitempty"`
+	WorkBuddyPriced int     `json:"workbuddy_priced,omitempty"`
 	// Calls are the requests, Errors those the agent got an error for, and
 	// Retried those answered after a try that failed first (Record.Tries):
 	// a try handed on is in neither count, but its tokens are in the sums.
@@ -913,6 +915,10 @@ const LoopErrType = "reply_loop"
 // answered on a retry, or answered; a try handed on to another is no
 // request of its own.
 func (t *Totals) count(r Record) {
+	if amount, ok := WorkBuddyMaaSPoints(r); ok {
+		t.WorkBuddyPoints += amount
+		t.WorkBuddyPriced++
+	}
 	// a try handed on is billed its credits too, though it is no request
 	if r.Credits != nil {
 		t.Credits += *r.Credits

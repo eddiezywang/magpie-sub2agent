@@ -1,3 +1,8 @@
+function workBuddyPoints(row) {
+  const amount = new Intl.NumberFormat(document.documentElement.lang || undefined, {maximumFractionDigits: 2}).format(row.workbuddy_points || 0);
+  return t("WorkBuddy MaaS · estimated {n} points", { n: amount });
+}
+
 // The Usage page's code (client.js has its markup and hooks): run after
 // app.js, whose helpers and state it shares, and before start.js shows the
 // first page.
@@ -806,7 +811,7 @@ function renderUsage() {
   const hit = u.cache_read && hitRate !== null ? t("hit rate {p}", { p: hitPct(hitRate) }) : "";
   tile(fmtN(u.cache_read), t("cache read"), hit, u.cache_write ? t("{n} written", { n: fmtN(u.cache_write) }) + cacheTTLs(u, fmtN) : "");
   tile(fmtN(u.reasoning), t("reasoning"), t("inside output"));
-  tile(String(u.calls), t(u.calls === 1 ? "call" : "calls"), [u.credited ? ledCredits(u).textContent : "", u.errors ? t("{n} failed", { n: u.errors }) : "", u.retried ? t("{n} answered on a retry", { n: u.retried }) : "", u.canceled ? t("{n} canceled", { n: u.canceled }) : "", u.unpriced ? unpricedCalls(u.unpriced) : ""].filter(Boolean).join(" · "), u.unpriced ? unpricedCallsWhy(u.unpriced) : "");
+  tile(String(u.calls), t(u.calls === 1 ? "call" : "calls"), [u.credited ? ledCredits(u).textContent : "", u.workbuddy_priced ? workBuddyPoints(u) : "", u.errors ? t("{n} failed", { n: u.errors }) : "", u.retried ? t("{n} answered on a retry", { n: u.retried }) : "", u.canceled ? t("{n} canceled", { n: u.canceled }) : "", u.unpriced ? unpricedCalls(u.unpriced) : ""].filter(Boolean).join(" · "), u.unpriced ? unpricedCallsWhy(u.unpriced) : "");
 
   // the timeline: one bar per hour, day or week; output sits on top of input
   const chart = $("#chart");
@@ -852,6 +857,7 @@ function renderUsage() {
       // (WorkBuddy's 积分): an account's, a model's, an agent's (lcyksp
       // on Discord), not only their tokens
       if (g.credited) sub.push(ledCredits(g).textContent);
+      if (g.workbuddy_priced) sub.push(workBuddyPoints(g));
       // magpie's own calls apart from the agents' (#1839): magpie's row
       // says it is, and a model's, a key's or an account's how many of
       // its calls were

@@ -924,6 +924,8 @@ func (t *Totals) plus(d *Totals) {
 	t.Unpriced += d.Unpriced
 	t.Credits += d.Credits
 	t.Credited += d.Credited
+	t.WorkBuddyPoints += d.WorkBuddyPoints
+	t.WorkBuddyPriced += d.WorkBuddyPriced
 	t.Timed += d.Timed
 	t.TTFT += d.TTFT
 	t.DecodeMs += d.DecodeMs

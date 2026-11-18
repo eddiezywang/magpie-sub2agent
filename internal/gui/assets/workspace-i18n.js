@@ -1,6 +1,7 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["WorkBuddy MaaS · estimated {n} points","WorkBuddy MaaS · 预计 {n} 积分","WorkBuddy MaaS · 預計 {n} 積分","WorkBuddy MaaS · 推定 {n} ポイント","WorkBuddy MaaS · geschätzt {n} Punkte"],
     ["How the last request from {agent} was routed","{agent} 最近一次请求的路由过程","{agent} 最近一次請求的路由過程","{agent} の最新リクエストのルーティング","Routing der letzten Anfrage von {agent}"],
     ["Agent configuration","Agent 当前配置","Agent 目前設定","Agent の現在の設定","Aktuelle Agent-Konfiguration"],
     ["7-day window","7 天窗口","7 天視窗","7 日間の枠","7-Tage-Fenster"],
