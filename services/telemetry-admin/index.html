@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>埋点统计 · Sub2Agent</title>
+<link rel="stylesheet" href="/dashboard.css">
+<script src="/dashboard.js" defer></script>
+</head>
+<body>
+<header><strong>Sub2Agent</strong><span>埋点管理</span><small id="sync" role="status">正在读取同步状态</small></header>
+<main>
+  <div class="title"><h1>埋点统计</h1><label>统计周期 <select id="range"><option value="7">最近 7 天</option><option value="30">最近 30 天</option><option value="90">最近 90 天</option></select></label></div>
+  <p class="caption">按北京时间汇总 · 数据来自内网采集服务</p>
+  <dl class="metrics"><div><dt>活跃安装</dt><dd id="active">—</dd><small>统计周期内的日均值</small></div><div><dt>埋点事件</dt><dd id="events">—</dd></div><div><dt>网关请求</dt><dd id="requests">—</dd><small>已收到的分钟用量汇总</small></div></dl>
+  <section aria-labelledby="trend-title">
+    <div class="title"><h2 id="trend-title">每日趋势</h2><label>指标 <select id="metric"><option value="active">活跃安装</option><option value="events">埋点事件</option><option value="requests">网关请求</option></select></label></div>
+    <canvas id="trend" height="230" role="img" aria-label="每日趋势，详细数字见下表"></canvas>
+  </section>
+  <section><h2>事件分布</h2><table><thead><tr><th scope="col">事件</th><th scope="col">数量</th></tr></thead><tbody id="breakdown"></tbody></table></section>
+  <details><summary>每日数据</summary><table><thead><tr><th scope="col">日期</th><th scope="col">活跃安装</th><th scope="col">埋点事件</th><th scope="col">网关请求</th></tr></thead><tbody id="daily"></tbody></table></details>
+</main>
+</body>
+</html>

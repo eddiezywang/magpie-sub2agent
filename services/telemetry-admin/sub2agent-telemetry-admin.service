@@ -1,0 +1,22 @@
+[Unit]
+Description=Sub2Agent telemetry administration
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=sub2agent-telemetry-admin
+WorkingDirectory=/opt/sub2agent-telemetry-admin
+EnvironmentFile=/etc/sub2agent-telemetry-admin/config
+Environment=SNAPSHOT_FILE=/var/lib/sub2agent-telemetry-admin/snapshot.json
+ExecStart=/usr/bin/python3 /opt/sub2agent-telemetry-admin/admin.py
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
