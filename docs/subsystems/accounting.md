@@ -232,3 +232,21 @@ tabs explain the reference rules. After configuration, the security notice is
 not repeated and only channels and model coefficients identified from that
 provider's model list are shown. A missing model list never implies access to
 all three channels.
+
+## Public telemetry fallback
+
+The intranet client probes 0.177 on the existing background delivery worker,
+then uses the HTTPS collector at 124.220.199.224:8890 if the probe fails or
+delivery hits a transport or temporary server error. The primary is retried
+after about one minute. The application startup and gateway request paths do
+not wait for the probes. The existing durable outbox retains unacknowledged
+packets and continues retrying. Billing administration and report endpoints
+remain on the existing intranet service.
+
+The public service uses the same v3 acknowledgement contract. Its SQLite inbox
+acknowledges commits, serves only the supported telemetry routes to clients, and
+exposes a separate token-protected incremental mirror. The BI sync on 0.177
+mirrors the public inbox and publishes the internal aggregation rules to it.
+The exporter merges those packets with the internal source by installation and
+packet ID before aggregation, so a retried packet is not counted twice.
+Existing installed clients need a build with the new fallback to use the endpoint.

@@ -1,0 +1,20 @@
+[Unit]
+Description=Sub2Agent named analytics receiver
+After=docker.service
+Wants=docker.service
+
+[Service]
+DynamicUser=yes
+EnvironmentFile=/etc/sub2agent-metabase/receiver.env
+Environment=PYTHONPATH=/opt/sub2agent-metabase/lib
+LoadCredential=writer.dsn:/etc/sub2agent-metabase/writer.dsn
+Environment=BI_WRITER_DSN_FILE=%d/writer.dsn
+ExecStart=/usr/bin/python3 /opt/sub2agent-metabase/named.py
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

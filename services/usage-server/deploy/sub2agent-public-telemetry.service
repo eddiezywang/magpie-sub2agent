@@ -1,0 +1,22 @@
+[Unit]
+Description=Sub2Agent public telemetry fallback collector
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=sub2agent-public-telemetry
+EnvironmentFile=/etc/sub2agent-public-telemetry/config
+Environment=PUBLIC_TELEMETRY_DB=/var/lib/sub2agent-public-telemetry/inbox.sqlite
+LoadCredential=server.crt:/etc/sub2agent-metabase/tls/server.crt
+LoadCredential=server.key:/etc/sub2agent-metabase/tls/server.key
+Environment=TLS_CERT=%d/server.crt TLS_KEY=%d/server.key
+ExecStart=/usr/bin/node /opt/sub2agent-public-telemetry/public-collector.js
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

@@ -22,10 +22,11 @@ type Options struct {
 	UsageEnabled  bool   `json:"-"`
 	LegacyURL     string `json:"-"`
 	UsageURL      string `json:"-"`
+	PublicURL     string `json:"-"`
 }
 
 func Defaults() Options {
-	return Options{LegacyEnabled: true, UsageEnabled: true, LegacyURL: "http://172.21.0.177:17890/events", UsageURL: "http://172.21.0.177:17890/usage/events"}
+	return Options{LegacyEnabled: true, UsageEnabled: true, LegacyURL: "http://172.21.0.177:17890/events", UsageURL: "http://172.21.0.177:17890/usage/events", PublicURL: publicCollector}
 }
 
 // The historical opt-out now controls reporting as a whole. Distribution-owned
@@ -60,6 +61,7 @@ type Runtime struct {
 	queue        *Queue
 	options      Options
 	sender       Sender
+	failover     *collectorFailover
 	identity     Identity
 	version, dir string
 	mu           sync.Mutex
@@ -109,6 +111,12 @@ func New(dir string, options Options, version string) (*Runtime, error) {
 		return nil, err
 	}
 	r := &Runtime{queue: q, options: options, identity: id, dir: dir, version: version, wake: make(chan struct{}, 1), sender: Sender{LegacyURL: options.LegacyURL, UsageURL: options.UsageURL, Reject: q.Reject}}
+	if options.PublicURL != "" && (options.LegacyEnabled || options.UsageEnabled) {
+		r.failover, err = newCollectorFailover(options.PublicURL, q.Reject)
+		if err != nil {
+			return nil, err
+		}
+	}
 	r.status.LegacyEnabled = options.LegacyEnabled
 	r.status.UsageEnabled = options.UsageEnabled
 	if rules, err := readRules(filepath.Join(dir, "accounting-rules.json")); err == nil {
@@ -328,7 +336,7 @@ func (r *Runtime) flush(ctx context.Context, sendUsage bool) (usageFailed bool) 
 			if len(items) == 0 {
 				break
 			}
-			ids, err := r.sender.Send(ctx, items)
+			ids, err := r.failover.send(ctx, r.sender, items)
 			if err == nil {
 				err = r.queue.Ack(ids)
 			}

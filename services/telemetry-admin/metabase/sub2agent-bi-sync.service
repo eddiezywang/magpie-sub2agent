@@ -1,0 +1,15 @@
+[Unit]
+Description=Sync named Sub2Agent analytics to Tencent Cloud
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=USAGE_DATA=/var/lib/usage-server
+EnvironmentFile=/etc/sub2agent-telemetry-sync/config
+EnvironmentFile=/etc/sub2agent-telemetry-sync/bi-config
+ExecStart=/data/app/llm/miniconda3/bin/python3.11 /opt/sub2agent-telemetry-sync/named.py sync
+TimeoutStartSec=100
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes

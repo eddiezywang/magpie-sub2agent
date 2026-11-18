@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync Sub2Agent telemetry every five minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=5min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
