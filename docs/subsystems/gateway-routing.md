@@ -3326,3 +3326,10 @@ for picker state and [Agent wiring](agent-wiring.md) for the native save behavio
 Delivered-output monitoring is independent of route selection and billing; its
 source, limits and API are documented in
 [workspace throughput](gateway-sessions.md#workspace-throughput-intranet).
+
+### TIG 智谱 Coding Plan 额度窗口
+
+工作台显示单一启用 Key 的智谱 ZP 渠道 5 小时和 7 天窗口。网关按供应商、Key
+指纹和渠道分别保存窗口，识别上游明确返回的额度周期与恢复时间。上游确认的恢复
+时间用于跳过候选，本地推算的结束时间用于展示。窗口结束后，正常请求被上游接受
+才开始推算下一次结束时间。若可用候选都耗尽，已知上下文装不下的候选保持跳过。

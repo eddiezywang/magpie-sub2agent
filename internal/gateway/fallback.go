@@ -1398,6 +1398,9 @@ func probeOne(cs []candidate) []candidate {
 // group weighs nothing by them, and a reading that finds them full no
 // more is what brings it back (renewed).
 func restingOf(c candidate) (Rest, bool) {
+	if rest, ok := tigQuotaRest(c, time.Now()); ok {
+		return rest, true
+	}
 	r, ok := restOf(c.restKey())
 	if !ok && c.restID() != c.restKey() {
 		r, ok = restOf(c.restID())

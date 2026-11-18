@@ -644,7 +644,7 @@ function routingPage(part) {
   // a resting row: a failure that names no kind says the status it
   // answered, and the vendor's own words are over it (restTip), as
   // "failed · back in 16s" alone said nothing of why (GanHei37443 on X)
-  const restSay = (rest) => `${!FAIL[rest.why] || rest.why === "other" ? (rest.status ? rest.status + " · " : "") : ""}${failWord(rest.why, rest)} · ${restWhen(rest)}`;
+  const restSay = (rest) => rest.quotaPeriod ? `${t(rest.quotaPeriod === "week" ? "Weekly quota exhausted" : "Five-hour quota exhausted")} · ${restWhen(rest)}` : `${!FAIL[rest.why] || rest.why === "other" ? (rest.status ? rest.status + " · " : "") : ""}${failWord(rest.why, rest)} · ${restWhen(rest)}`;
   const restTip = (rest) => (typeof rest.error === "string" && rest.error) || "";
   // a try that answered: one whose reply broke off after it began (its 200
   // sent, then the vendor's error, #733) didn't, and has a fail
@@ -3019,12 +3019,13 @@ function routingPage(part) {
       else if (trying.has(id)) {
         // this request's progress beside the account answering it; not
         // when the account answers another request, whose numbers they are
-        const live = r.id === cur.id ? liveParts(r).map(([value]) => value).join(" · ") : "";
+        const activeRequest = trying.get(id);
+        const live = activeRequest.id === cur.id ? liveParts(r).map(([value]) => value).join(" · ") : "";
         // gone quiet, it says the numbers only: "answering…" would read as
         // the vendor still writing
         const hushed = live && r.contentAt && Date.now() - r.contentAt >= liveQuietMs;
         s = hushed ? live
-          : (r.id !== cur.id && agents.size <= 1 ? t("answering another request…") : t("answering…")) + (said && " · " + said) + (live ? " · " + live : "");
+          : (activeRequest.contentAt ? (activeRequest.id !== cur.id ? t("answering another request…") : t("answering…")) : t("Waiting for upstream…")) + (said && " · " + said) + (live ? " · " + live : "");
         named = titleOf(trying.get(id));
       }
       else if (answered.has(id)) { s = (agents.size > 1 ? t("answered {agent}", { agent: agentName(r.agent) }) : t("answered this request")) + (said && " · " + said); named = titleOf(r); }
@@ -3176,7 +3177,7 @@ function routingPage(part) {
       headKey = head;
       logHead.replaceChildren(
         el("span", "", rp ? t("How the request at {time} was routed", { time: clock(r.time) })
-          : pinned ? t("How the request at {time} was routed", { time: clock(r.time) }) : t("How the last request was routed")));
+          : pinned ? t("How the request at {time} was routed", { time: clock(r.time) }) : t("How the last request from {agent} was routed", { agent: agentName(r.agent) })));
       // what masking kept from the vendor, its record a click away
       if ((r.masked?.n || r.masked?.warned) && !rp) logHead.append(maskedBadge(r.masked));
       logHead.append(el("span", "grow"));

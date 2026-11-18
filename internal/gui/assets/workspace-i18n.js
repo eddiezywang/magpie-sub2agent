@@ -1,6 +1,17 @@
 // Internal workspace words use the same dictionary and placeholders as native pages.
 (() => {
   const words = [
+    ["How the last request from {agent} was routed","{agent} 最近一次请求的路由过程","{agent} 最近一次請求的路由過程","{agent} の最新リクエストのルーティング","Routing der letzten Anfrage von {agent}"],
+    ["Agent configuration","Agent 当前配置","Agent 目前設定","Agent の現在の設定","Aktuelle Agent-Konfiguration"],
+    ["7-day window","7 天窗口","7 天視窗","7 日間の枠","7-Tage-Fenster"],
+    ["5-hour window","5 小时窗口","5 小時視窗","5 時間の枠","5-Stunden-Fenster"],
+    ["Window unknown","窗口暂未知","視窗暫未知","枠は不明","Fenster unbekannt"],
+    ["Waiting for first accepted request","等待首笔有效请求","等待首筆有效請求","最初の有効なリクエストを待機中","Wartet auf erste akzeptierte Anfrage"],
+    ["Estimated end {time}","预计 {time} 结束","預計 {time} 結束","終了見込み {time}","Voraussichtliches Ende {time}"],
+    ["Quota exhausted · recovers {time}","额度已用完 · {time} 恢复","額度已用完 · {time} 恢復","上限到達 · {time} に回復","Kontingent erschöpft · wieder ab {time}"],
+    ["Weekly quota exhausted","周额度已用完","週額度已用完","週の上限に達しました","Wochenkontingent erschöpft"],
+    ["Five-hour quota exhausted","5 小时额度已用完","5 小時額度已用完","5 時間の上限に達しました","5-Stunden-Kontingent erschöpft"],
+    ["Waiting for upstream…","等待供应商响应…","等待供應商回應…","プロバイダーの応答を待機中…","Wartet auf Anbieterantwort…"],
     ['TIG usage guide', '行内使用说明 ↗', '行內使用說明 ↗', 'TIG 利用ガイド ↗', 'TIG-Nutzungsanleitung ↗'],
     ['Zhipu · team advanced', '智谱 · 团队高级版', '智譜 · 團隊高級版', '智譜 · チーム上級版', 'Zhipu · Team Advanced'],
     ['TIG plan week', '每周', '每週', '毎週', 'pro Woche'],

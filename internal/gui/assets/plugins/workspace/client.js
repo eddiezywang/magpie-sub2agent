@@ -38,12 +38,29 @@
     draft(){if(active&&providers)renderProviders();},
     loading(){if(active)renderProvidersLoading();}
   }));
+  window.renderWorkspaceQuota=(row,p)=>{
+    if (p.tigQuotaWindows?.length && active) {
+      const windows = el("div", "tig-quota-windows");
+      for (const window of p.tigQuotaWindows) {
+        const expiry = Date.parse(window.until);
+        const time = Number.isFinite(expiry) ? new Intl.DateTimeFormat(document.documentElement.lang || undefined,
+          {timeZone:"Asia/Shanghai", month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", hourCycle:"h23"}).format(expiry) : "";
+        const label = t(window.period === "week" ? "7-day window" : "5-hour window");
+        const condition = !time ? t("Window unknown") : expiry <= Date.now() ? t("Waiting for first accepted request") :
+          t(window.estimated ? "Estimated end {time}" : "Quota exhausted · recovers {time}", {time});
+        windows.append(el("span", "tig-quota-window", label + " · " + condition));
+      }
+      row.append(windows);
+    }
+  };
   function counts(){if(!active||!state?.agents)return;const list=state.agents.filter(a=>!a.hidden);const unknown=list.filter(a=>window.agentConnectionStatus?.(a.id)==='unknown').length;const on=list.filter(a=>a.wired&&window.agentConnectionStatus?.(a.id)!=='unknown').length;main.querySelector('#ws-agent-counts').textContent=t('Connected {on} · Not connected {off}',{on,off:list.length-on-unknown})+(unknown?t(' · Unknown {n}',{n:unknown}):'');guide();const stamp=JSON.stringify(list.map(a=>[a.id,a.wired,window.agentConnectionStatus?.(a.id),a.fields.find(f=>f.key==='model')?.value]));if(stamp!==routeStamp){routeStamp=stamp;routeControls();}}
   const kinds={'flash-first':'Flash first','flagship-first':'Flagship models first',smart:'Hard to strong, easy to cheap',thrifty:'Cheap first',steady:'Never stuck',plan:'Plan first',fast:'Fastest first',even:'Spread evenly'};
   const eligible=()=> (state?.agents||[]).filter(a=>a.wired&&window.agentConnectionStatus?.(a.id)!=='unknown'&&a.fields.some(f=>f.key==='model'&&f.options?.length));
   const target=()=>eligible().find(a=>a.id===main.dataset.agent)||eligible()[0];
   const field=a=>a?.fields.find(f=>f.key==='model');
-  const selected=a=>{const f=field(a),ref=(f&&optionFor(f,f.value)?.ref)||f?.value;return routeData?.groups?.find(g=>[g.ref,'group/'+g.id].includes(ref));};
+  const modelRef=a=>{const f=field(a);return (f&&optionFor(f,f.value)?.ref)||f?.value||'';};
+  const selected=a=>{const ref=modelRef(a).replace(/\[[^\]]+\]$/,'');return routeData?.groups?.find(g=>[g.ref,'group/'+g.id].includes(ref));};
+  const configured=a=>!!modelRef(a);
   const button=(name,run,primary=false)=>{const b=el('button','text'+(primary?' primary':''),t(name));b.type='button';b.onclick=run;return b;};
   function step(i){
     if(i===0){const host=main.querySelector('#ws-provider-host');host.scrollIntoView({block:'nearest'});if(!adding)document.querySelector('#addProvider')?.click();requestAnimationFrame(()=>document.querySelector('#addSheet input')?.focus({preventScroll:true}));}
@@ -55,8 +72,8 @@
     const ps=(providers?.providers||[]).filter(p=>!p.off&&p.ready!==false&&((p.exposed||0)>0||p.models?.some(m=>m.on&&!m.noAPI))),a=target(),g=selected(a);
     const focusedNext=main.querySelector('#ws-next').contains(document.activeElement)?document.activeElement.dataset.action:null;
     const focusedStep=main.querySelector('#ws-guide').contains(document.activeElement)?document.activeElement.closest('[data-step]')?.dataset.step:null;
-    const done=[ps.length>0,eligible().length>0,!!g?.ready&&!g.disabled],first=done.findIndex(x=>!x),box=main.querySelector('#ws-guide');box.replaceChildren();
-    ['Providers','Agent connections','Routing policy'].forEach((name,i)=>{const b=button('',()=>step(i)),copy=el('span','ws-step-copy');b.classList.add('ws-step');b.dataset.step=i;if(first===i)b.setAttribute('aria-current','step');b.classList.toggle('done',done[i]);copy.append(el('span','ws-step-title',t(name)),el('span','ws-step-state',i===0?t('{n} ready',{n:ps.length}):i===1?t('{n} connected',{n:eligible().length}):(g&&t(g.name))||t('Not applied')));b.append(el('span','ws-step-number',String(i+1)),copy);box.append(b);});
+    const done=[ps.length>0,eligible().length>0,configured(a)],first=done.findIndex(x=>!x),box=main.querySelector('#ws-guide');box.replaceChildren();
+    ['Providers','Agent connections','Routing policy'].forEach((name,i)=>{const b=button('',()=>step(i)),copy=el('span','ws-step-copy');b.classList.add('ws-step');b.dataset.step=i;if(first===i)b.setAttribute('aria-current','step');b.classList.toggle('done',done[i]);copy.append(el('span','ws-step-title',t(name)),el('span','ws-step-state',i===0?t('{n} ready',{n:ps.length}):i===1?t('{n} connected',{n:eligible().length}):(g&&t(g.name))||modelRef(a)||t('Not applied')));b.append(el('span','ws-step-number',String(i+1)),copy);box.append(b);});
     if(focusedStep)box.querySelector(`[data-step="${focusedStep}"]`)?.focus({preventScroll:true});
     const next=main.querySelector('#ws-next');next.replaceChildren();box.hidden=first<0&&!!providers&&!!routeData;next.hidden=box.hidden;
     if(!providers||!routeData){next.append(el('span','note',t('Checking workspace configuration…')));return;}
@@ -83,20 +100,20 @@
     const a=target();if(!a){if(focus)main.querySelector('#ws-agents summary').focus({preventScroll:true});box.textContent=t('Connect an Agent to choose a routing group');main.querySelector('#ws-route-members').replaceChildren();return;}
     main.dataset.agent=a.id;const f=field(a),g=selected(a),choose=button('Agent',e=>{e.stopPropagation();toggleMenu(choose,eligible().map(agent=>({name:agent.name,run:()=>{main.dataset.agent=agent.id;paint();guide();}})));});choose.textContent=a.name;choose.append(svg('M4 6l4 4 4-4',12,1.6));choose.setAttribute('aria-haspopup','menu');choose.setAttribute('aria-expanded','false');choose.classList.add('ws-control');choose.dataset.wsFocus='agent';choose.disabled=saving;
     const pick=button('Routing policy',e=>{e.stopPropagation();const items=(routeData?.templates||[]).map(tp=>{const saved=routeData.groups?.find(g=>g.templateKind===tp.kind),reason=saved?.disabled?'Routing group is disabled':saved&&!saved.ready?'Routing group has no available members':tp.need?tp.need==='model'?'No recognized model in this tier; choose members in Routing groups':'Template prerequisites are not met; check Routing groups':'';return {name:t(kinds[tp.kind]||tp.group.name),off:!!reason,why:reason?t(reason):'',tip:tp.group.members.map(id=>routeData.models?.find(m=>m.id===id)?.name||id).join('\n'),run:()=>apply(tp.kind)};});for(const group of routeData?.groups||[])if(!group.templateKind||!kinds[group.templateKind])items.push({name:group.name,off:!group.ready||!!group.disabled,run:()=>applySaved(group)});toggleMenu(pick,items);});
-    pick.textContent=(g&&t(g.name))||optionFor(f,f.value)?.label||f.value||t('Not applied');pick.append(svg('M4 6l4 4 4-4',12,1.6));pick.dataset.wsFocus='strategy';pick.setAttribute('aria-haspopup','menu');pick.setAttribute('aria-expanded','false');pick.classList.add('ws-control');pick.disabled=saving||!routeData;
+    pick.textContent=(g&&t(kinds[g.templateKind]||g.name))||optionFor(f,f.value)?.label||f.value||t('Not applied');pick.append(svg('M4 6l4 4 4-4',12,1.6));pick.dataset.wsFocus='strategy';pick.setAttribute('aria-haspopup','menu');pick.setAttribute('aria-expanded','false');pick.classList.add('ws-control');pick.disabled=saving||!routeData;
     const edit=button('Edit routing groups',()=>{show('groups');if(g)requestAnimationFrame(()=>document.querySelector(`.rt-group[data-id="${CSS.escape(g.id)}"]`)?.scrollIntoView({block:'nearest'}));});edit.dataset.wsFocus='edit';edit.disabled=saving;
-    box.append(el('span','note',t('Applies to')),choose,pick,edit);
+    box.append(el('span','note',t('Agent configuration')),choose,pick,edit);
     if(saving)box.append(el('span','note',t('Applying routing policy…')));
     if(routeError){const n=el('span','ws-route-error',routeError);n.setAttribute('role','alert');box.append(n);const retry=button('Refresh status',async()=>{try{state=await api('state');routeError='';renderAgents();await routeControls();}catch(err){statusErr(err);}});retry.disabled=saving;box.append(retry);}
     const info=main.querySelector('#ws-route-members');info.replaceChildren();
     if(g){info.append(el('span','note',(g.members||[]).map(id=>{const m=routeData.models?.find(m=>m.id===id);return [m?.providerName,m?.name||id,routingBillingText(m?.routingBilling)].filter(Boolean).join(' · ');}).join(' / ')));if(!g.ready||g.disabled)info.append(el('span','note',t('Routing group has no available members')));}
-    else info.append(el('span','note',t('Direct model selection is preserved until you change the policy')));
+    else if(modelRef(a).startsWith('group/')) info.append(el('span','note',t('Routing group has no available members')));
     if(focus)(box.querySelector(`[data-ws-focus="${focus}"]`)||choose).focus({preventScroll:true});
   }
   async function write(run){
     if(saving)return;const a=target();if(!a)return;const release=window.agentConnectionAcquire?.(a.id);if(release===false)return;
     saving=true;routeError='';paint();guide();
-    try{state=await run(a);renderAgents();if(state.notice)status(withNotice(t('Routing policy applied'),state.notice),'warn');}
+    try{state=await run(a);renderAgents();if(state.notice)status(withNotice(t('Routing policy applied'),state.notice),'warn');else status(t('Routing policy applied'));}
     catch(err){routeError=t(err.message);status(routeError,'err');}
     finally{saving=false;release?.();if(active)await routeControls();}
   }

@@ -5483,6 +5483,7 @@ function renderProviders(quiet) {
     // a provider on is listed, and tried, in the order the user puts it in
     // (#499): its logo is the handle, as an agent row's is
     row.append(p.off ? icon(p.icon || "generic") : providerHandle(p, row), who, uses, key, providerSwitch(p), chev);
+    window.renderWorkspaceQuota?.(row, p);
     // right-click: Move to Top, Move Up, Move Down, Move to Bottom (#1614)
     if (!p.off) row.oncontextmenu = (ev) => { ev.preventDefault(); openProviderMenu(row.querySelector(".pv-handle"), p, { x: ev.clientX, y: ev.clientY }); };
     row.onclick = async () => {

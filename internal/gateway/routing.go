@@ -569,6 +569,9 @@ func carriedStatus(status int, body []byte) int {
 
 // failure says why a reply failed.
 func failure(status int, body []byte) string {
+	if status == 429 && tigWindowMessage.Match(wordsOf(body)) {
+		return failQuota
+	}
 	status = carriedStatus(status, body)
 	if status == http.StatusBadGateway && (proxyDown.Match(body) || bytes.Contains(body, []byte(closedUnsentWords)) || bytes.Contains(body, []byte(stalledWords))) {
 		// the proxy didn't take the connection, or the network closed
@@ -795,9 +798,10 @@ func openRouterSharedPool(body []byte) bool {
 
 // Rest is why a candidate sits out after a failure, and until when.
 type Rest struct {
-	Why    string    `json:"why"`    // failCredit, failQuota, failRate, failOther
-	Status int       `json:"status"` // what it answered
-	Until  time.Time `json:"until"`
+	QuotaPeriod string    `json:"quotaPeriod,omitempty"`
+	Why         string    `json:"why"`    // failCredit, failQuota, failRate, failOther
+	Status      int       `json:"status"` // what it answered
+	Until       time.Time `json:"until"`
 	// By is what set how long: "credit" (half an hour, a key longer each
 	// time again: creditLadder), "retry-after" (the
 	// vendor's own headers), "resets" (the time Claude Code gave), "window"
@@ -1410,6 +1414,13 @@ func (s *Server) restAfterMarked(c candidate, status int, header http.Header, bo
 	now := time.Now()
 	d := fallbackCooldown
 	why := failureOf(c, status, body)
+	if key := tigQuotaKey(c); status == 429 && key != "" {
+		if period, until := tigQuotaReset(body, now); period != "" {
+			updateTIGWindows(key, period, until, time.Time{})
+			return Rest{Why: failQuota, Status: status, By: "resets", Until: until, Key: c.restKey(), Model: c.model, QuotaPeriod: period,
+				Error: restError(status, body), said: provider.APIError(body, http.StatusText(status))}
+		}
+	}
 	if why == failCut {
 		// a plugin ended the turn on purpose, its upstream's stream having
 		// died mid-call (plugins#38): the account is as good as it was, the

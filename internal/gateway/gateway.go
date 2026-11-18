@@ -4363,6 +4363,9 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 		}
 		wentTier = at.tier
 		ended = time.Now()
+		if key := tigQuotaKey(c); key != "" && !hw.failed() && !hw.passing && call.Status >= 200 && call.Status < 300 && call.Error == "" && r.Context().Err() == nil {
+			updateTIGWindows(key, "", time.Time{}, began)
+		}
 		try := Try{ID: c.rest, Model: c.model, Effort: wentAt, Picked: picked, Fixed: fixed, RuleEffort: ruled, MappedFrom: mappedFrom, Fast: fast, Start: began, Done: true, Status: call.Status, Millis: ended.Sub(began).Milliseconds(), Error: call.Error, Queued: queued,
 			Served: call.Usage.Served, Upstream: call.Usage.Upstream, Pin: c.p.ClinePassAsked(c.model), Tier: wentTier, TierServed: call.Usage.Tier, Auto: autoPicked(),
 			Net: nt.timing(began, queued), SentBy: sentBy(c.p)}
@@ -5295,6 +5298,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, from provider.Pro
 		// failed: a reply held whole that passed is the whole reply, and
 		// failure over a 24MB one held its client past its timeout
 		if last && len(small) > 0 && pin == "" && other == nil && hw.failed() && !hw.passing && !hw.turnedAway && !hw.refused && !outgrew &&
+			!(tigQuotaKey(c) != "" && tigWindowMessage.Match(wordsOf(hw.errBody()))) &&
 			(try.Fail == failQuota || try.Fail == failCredit || slices.Contains([]string{failQuota, failCredit}, failure(hw.code(), hw.errBody()))) {
 			// every one with room is out of its allowance: those roomy
 			// left out as too small for the request are asked after all,
