@@ -1,5 +1,11 @@
 # Providers and accounts
 
+In Sub2Agent's custom API editor, saving an existing provider with unchanged
+endpoints keeps its saved protocols. Editing model picks can therefore save
+even when provider probes are failing. A new provider or a changed endpoint
+still has to answer protocol detection before it can be saved
+([`autogateway.js`](../../internal/gui/assets/autogateway.js)).
+
 The gateway can send a request to three kinds of upstream:
 
 - A **provider** in `providers.json`: an endpoint with one or more API keys. Google Vertex AI's is signed with the user's Google credentials, or with one API key (express mode).

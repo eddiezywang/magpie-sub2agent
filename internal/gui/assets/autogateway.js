@@ -1,17 +1,28 @@
-// Loaded only for custom API access. A successful response, not a URL guess,
-// decides which protocols are saved. Credentials stay on the local API path.
+// Loaded only for custom API access. Probe new or changed endpoints.
+// Credentials stay on the local API path.
 export function setup(editor, wrap, url, draft, provider, use, typed) {
   const note = document.createElement("div");
   note.className = "hint auto-gateway-status";
-  note.textContent = t("Available protocols are detected when adding; no manual selection is needed.");
+  const protocolFields = ["chat", "responses", "anthropic", "gemini", "decide"];
+  const value = (config, key) => (config?.[key] || "").trim();
+  const savedEndpoints = () => provider && protocolFields.some((key) => value(provider, key)) &&
+    protocolFields.every((key) => value(draft, key) === value(provider, key));
+  const showHint = () => {
+    note.hidden = !!savedEndpoints();
+    note.textContent = t("Available protocols are detected when adding; no manual selection is needed.");
+  };
+  showHint();
+  url.addEventListener("input", showHint);
   wrap.append(note);
   let confirmed = "", pending = null;
   const fingerprint = () => JSON.stringify([url.value.trim(), typed(), draft.extra]);
   return async () => {
     if (pending) return false;
+    if (savedEndpoints()) return true;
     const before = fingerprint();
     if (confirmed === before) return true;
     const base = url.value.trim();
+    note.hidden = false;
     if (!base) { note.textContent = t("Type the base URL first"); url.focus(); return false; }
     const body = { ...typed(), id: provider?.id, base, model: "", picked: (draft.extra || []).slice(0, 30) };
     // Probe each protocol at the entered base, not at stale form endpoints.
