@@ -51,3 +51,69 @@ LEFT JOIN LATERAL (
 
 GRANT USAGE ON SCHEMA analytics TO analytics_reader;
 GRANT SELECT ON analytics.user_daily_activity, analytics.user_daily_usage, analytics.snapshot TO analytics_reader;
+
+CREATE TABLE IF NOT EXISTS analytics.user_first_seen (
+  username text PRIMARY KEY,
+  day date NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION analytics.remember_first_seen() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO analytics.user_first_seen (username, day)
+  SELECT username, min(day) FROM analytics.daily_activity WHERE username IS NOT NULL GROUP BY username
+  ON CONFLICT (username) DO UPDATE SET day = least(analytics.user_first_seen.day, excluded.day)
+  WHERE excluded.day < analytics.user_first_seen.day;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS remember_first_seen ON analytics.snapshot;
+CREATE TRIGGER remember_first_seen AFTER INSERT OR UPDATE ON analytics.snapshot
+FOR EACH ROW EXECUTE FUNCTION analytics.remember_first_seen();
+
+INSERT INTO analytics.user_first_seen (username, day)
+SELECT username, min(day) FROM analytics.daily_activity WHERE username IS NOT NULL GROUP BY username
+ON CONFLICT (username) DO UPDATE SET day = least(analytics.user_first_seen.day, excluded.day)
+WHERE excluded.day < analytics.user_first_seen.day;
+
+CREATE OR REPLACE VIEW analytics.user_growth AS
+WITH additions AS (
+  SELECT day, count(*) AS new_users FROM analytics.user_first_seen GROUP BY day
+), calendar AS (
+  SELECT date_range::date AS day
+  FROM generate_series((SELECT min(day)::timestamp FROM analytics.user_first_seen),
+                       (SELECT max(day)::timestamp FROM analytics.daily_activity),
+                       interval '1 day') date_range
+)
+SELECT calendar.day, coalesce(additions.new_users, 0)::bigint AS new_users,
+       sum(coalesce(additions.new_users, 0)) OVER (ORDER BY calendar.day)::bigint AS total_users
+FROM calendar LEFT JOIN additions USING (day);
+
+CREATE OR REPLACE VIEW analytics.installation_versions AS
+WITH devices AS (
+  SELECT username, installation, max(day) AS day
+  FROM analytics.daily_activity
+  WHERE username IS NOT NULL
+  GROUP BY username, installation
+)
+SELECT d.day, d.username, d.installation, v.client_version, v.version_seen,
+       CASE
+         WHEN v.client_version ~ '^v?0[.][0-9]+[.][0-9]+($|[-+])' THEN '1.0.0 系列以前'
+         WHEN v.client_version ~ '^v?[1-9][0-9]*[.][0-9]+[.][0-9]+($|[-+])' THEN '1.0.0 系列及以上'
+         ELSE '版本未知'
+       END AS version_group
+FROM devices d
+LEFT JOIN LATERAL (
+  SELECT a.client_version, a.version_seen
+  FROM analytics.daily_activity a
+  WHERE a.username = d.username AND a.installation = d.installation AND a.version_seen IS NOT NULL
+  ORDER BY a.version_seen DESC LIMIT 1
+) v ON true;
+
+CREATE OR REPLACE VIEW analytics.user_version_cohort AS
+SELECT DISTINCT ON (username) day, username, client_version, version_group
+FROM analytics.installation_versions
+ORDER BY username, version_seen DESC NULLS LAST, day DESC, installation;
+
+GRANT SELECT ON analytics.user_growth, analytics.installation_versions, analytics.user_version_cohort TO analytics_reader;

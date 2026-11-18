@@ -32,11 +32,15 @@ def provision(config):
     for _ in range(20):
         metadata = api(f"database/{db_id}/metadata")
         tables = {item["name"]: item for item in metadata["tables"]}
-        if "user_daily_usage" in tables and any(field["name"] == "online_hours" for field in tables.get("user_daily_activity", {}).get("fields", [])):
+        required = {"user_daily_usage", "user_daily_activity", "user_growth", "installation_versions", "user_version_cohort"}
+        if all(tables.get(name, {}).get("fields") for name in required):
             break
         time.sleep(2)
     usage = tables["user_daily_usage"]
     activity = tables["user_daily_activity"]
+    growth = tables["user_growth"]
+    installs = tables["installation_versions"]
+    cohorts = tables["user_version_cohort"]
 
     def field(table, name, options=None):
         column = next(item for item in table["fields"] if item["name"] == name)
@@ -110,6 +114,24 @@ def provision(config):
             "breakout": [usage_field(key)],
             "order-by": [["desc", ["aggregation", 5]]],
         }))
+    growth_day = field(growth, "day", {"temporal-unit": "day"})
+    total_users = card("total_users", "累计用户总量", growth, "scalar", {
+        "aggregation": [["max", field(growth, "total_users")]],
+    }, description="从已导入的首批历史记录开始，累计出现过的去重用户名。")
+    user_growth = card("user_growth", "累计用户量增长", growth, "line", {
+        "aggregation": [["max", field(growth, "total_users")]], "breakout": [growth_day],
+    }, description="从已导入记录的首日开始累计，早期首次出现记录持续保留。")
+    new_users = card("new_users", "每日首次出现的用户", growth, "bar", {
+        "aggregation": [["sum", field(growth, "new_users")]], "breakout": [growth_day],
+    }, description="按已导入历史中首次观测到的日期统计。")
+    version_cohort = card("version_cohort", "用户量 · 1.0.0 前后", cohorts, "table", {
+        "aggregation": [["count"]], "breakout": [field(cohorts, "version_group")],
+    }, description="每个用户名只计一次，按最近上报的版本分类。1.0.0 系列包含 beta。")
+    upgrades = card("upgrades", "待升级名单 · 仍装有 1.0.0 以前版本", installs, "table", {
+        "fields": [field(installs, name) for name in ("username", "client_version", "day", "installation")],
+        "filter": ["=", field(installs, "version_group"), "1.0.0 系列以前"],
+        "order-by": [["desc", field(installs, "day")], ["asc", field(installs, "username")]],
+    }, description="按安装列出旧版。用户另一台设备即使已升级，旧版安装仍会列出。")
     filters = [
         ("date", "日期", "date/all-options", "day", "day"),
         ("username", "用户名", "string/=", "username", "username"),
@@ -123,7 +145,15 @@ def provision(config):
         "name": "Sub2Agent 用户用量分析", "collection_id": collection, "parameters": params,
         "description": "按北京时间统计最近 90 天。用户名来自客户端操作系统，安装编号可区分重名或未上报的安装。",
     })
-    if state.get("layout_version") != 2:
+    if state.get("layout_version") != 4:
+        for table in (usage, activity, growth, installs, cohorts):
+            for column in table["fields"]:
+                if column["name"] in {"day", "last_seen", "version_seen"}:
+                    settings = column.get("settings") or {}
+                    api(f'field/{column["id"]}', {"settings": {
+                        **settings, "date_style": "YYYY/M/D",
+                        "date_separator": "-", "time_enabled": None,
+                    }}, "PUT")
         trend_settings = api(f"card/{trend}")["visualization_settings"]
         api(f"card/{trend}", {"visualization_settings": {**trend_settings, **token_format}}, "PUT")
         api(f"dashboard/{dashboard}", {"parameters": params}, "PUT")
@@ -131,26 +161,38 @@ def provision(config):
         current = api(f"dashboard/{dashboard}")
         existing = {dashcard["card_id"]: dashcard["id"] for dashcard in current["dashcards"]}
         for i, (card_id, table, col, row, width, height) in enumerate([
-            (daily_users, activity, 0, 0, 12, 6), (online, activity, 12, 0, 12, 6),
-            (trend, usage, 0, 6, 24, 6), (user_totals, usage, 0, 12, 24, 6),
-            (pivot, usage, 0, 18, 24, 8), (detail, usage, 0, 26, 24, 8),
-            (user_online, activity, 0, 34, 24, 7), (versions, activity, 0, 41, 24, 7),
-            (breakdowns[0], usage, 0, 48, 24, 7), (breakdowns[1], usage, 0, 55, 24, 7),
-            (breakdowns[2], usage, 0, 62, 24, 7),
+            (total_users, growth, 0, 0, 6, 6), (user_growth, growth, 6, 0, 18, 6),
+            (new_users, growth, 0, 6, 12, 6), (daily_users, activity, 12, 6, 12, 6),
+            (online, activity, 0, 12, 12, 6), (trend, usage, 12, 12, 12, 6),
+            (version_cohort, cohorts, 0, 18, 8, 7), (upgrades, installs, 8, 18, 16, 7),
+            (user_totals, usage, 0, 25, 24, 6),
+            (pivot, usage, 0, 31, 24, 8), (detail, usage, 0, 39, 24, 8),
+            (user_online, activity, 0, 47, 24, 7), (versions, activity, 0, 54, 24, 7),
+            (breakdowns[0], usage, 0, 61, 24, 7), (breakdowns[1], usage, 0, 68, 24, 7),
+            (breakdowns[2], usage, 0, 75, 24, 7),
         ]):
             mappings = []
             for key, _, _, usage_col, activity_col in filters:
-                column = usage_col if table is usage else activity_col
+                if table is usage:
+                    column = usage_col
+                elif table is activity:
+                    column = activity_col
+                elif table is growth:
+                    column = "day" if key == "date" else None
+                elif table is installs:
+                    column = {"date": "day", "username": "username"}.get(key)
+                else:
+                    column = "username" if key == "username" else None
                 if column:
                     mappings.append({"parameter_id": key, "card_id": card_id,
                                      "target": ["dimension", field(table, column)]})
             cards.append({"id": existing.get(card_id, -i-1), "card_id": card_id, "col": col, "row": row,
                           "size_x": width, "size_y": height, "parameter_mappings": mappings})
         api(f"dashboard/{dashboard}/cards", {"cards": cards}, "PUT")
-        state["layout_version"] = 2
+        state["layout_version"] = 4
         path.write_text(json.dumps(state) + "\n")
     result = api(f"dashboard/{dashboard}")
-    assert len(result["dashcards"]) == 11
+    assert len(result["dashcards"]) == 16
     print(f"dashboard /dashboard/{dashboard}")
 
 
