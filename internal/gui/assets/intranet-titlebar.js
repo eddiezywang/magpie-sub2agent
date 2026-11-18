@@ -4,7 +4,7 @@
   if (!window.bootPrefs?.intranet || !document.body.classList.contains('window')) return;
   window.askCloseChoice = () => {
     if (confirmAsk) return;
-    const ed = el('div', 'editor close-choice'), head = el('div', 'ehead');
+    const ed = el('div', 'editor close-choice compact'), head = el('div', 'ehead');
     head.append(el('b', '', t('Choose how to close'))); ed.append(head);
     ed.append(el('p', 'close-choice-message', t('The gateway stops when the app quits; connected Agents cannot use it until it starts again.')));
     const bar = el('div', 'bar'), quit = el('button', 'text', t('Quit and stop the gateway')), hide = el('button', 'text primary', t('Hide to background'));

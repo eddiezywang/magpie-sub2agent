@@ -8306,7 +8306,7 @@ function openModal(content, quiet) {
   if (!fresh && !quiet) { void d.offsetWidth; d.classList.add("swap"); } // content changed: a soft refresh, not a re-entrance
   frame(content);
   // a prompt's editor is wider, a provider's grows with the window
-  for (const c of ["wide", "roomy"]) d.classList.toggle(c, content.classList.contains(c));
+  for (const c of ["wide", "roomy", "compact"]) d.classList.toggle(c, content.classList.contains(c));
   // Keep focus through a redraw of an open editor.
   const active = d.contains(document.activeElement) ? document.activeElement : null;
   const focusID = active?.id;

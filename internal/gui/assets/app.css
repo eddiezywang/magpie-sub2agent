@@ -4408,6 +4408,7 @@ body.window.mac .modal-grip { top: calc(-1 * var(--grip-h)); }
    window, as a Mac sheet takes the room its content needs: 600 up to a
    1071px window, then 56% of it, at most 880 */
 .modal .dialog.roomy { width: min(max(600px, 56vw), 880px, 100%); }
+.modal .dialog.compact { width: min(420px, 100%); }
 .modal .dialog.swap { animation: content-in .22s var(--ease); }
 /* In a dialog the editor's head and buttons stay put and only the fields
    between them scroll; both bars are the same height, their contents
