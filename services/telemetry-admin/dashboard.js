@@ -69,7 +69,7 @@ function render() {
 
 async function refresh() {
   try {
-    const response = await fetch('/api/stats');
+    const response = await fetch('api/stats');
     if (!response.ok) throw Error(response.status);
     snapshot = await response.json();
     if (snapshot.generated_at) {

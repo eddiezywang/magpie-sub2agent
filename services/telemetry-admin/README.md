@@ -14,12 +14,12 @@
 `/opt/sub2agent-telemetry-admin`。创建权限为 0600 的
 `/etc/sub2agent-telemetry-admin/config` 并设置 `ADMIN_USER`、`ADMIN_PASSWORD`、
 `SYNC_TOKEN`、`HOST` 和 `PORT`。快照位于 systemd 管理的状态目录。
-当前入口使用 HTTP 8901。HTTP 会以明文传输浏览器登录凭据和展示内容。
+公网入口使用 HTTP 8897。HTTP 会以明文传输浏览器登录凭据和展示内容。
 
 0.177 安装 `admin.py` 到 `/opt/sub2agent-telemetry-sync`，安装同步 service
 和 timer。其配置 `/etc/sub2agent-telemetry-sync/config` 设置 `SYNC_URL` 和与
-腾讯云一致的 `SYNC_TOKEN`。同步使用 HMAC-SHA256 签名，请求中只携带签名。
-服务单位使用 0.177 已安装的 Python 3.11 路径。
+腾讯云一致的 `SYNC_TOKEN`。同步地址为 `http://124.220.199.224:8897/api/snapshot`。同步使用 HMAC-SHA256 签名，请求中只携带签名。
+服务单位使用 0.177 已安装的 Python 3.11 路径。出站走内网代理时，在同一配置中设置 `http_proxy`。
 
 安装后在 0.177 执行 `systemctl start sub2agent-telemetry-sync`，从腾讯云
 回读快照生成时间，确认端到端畅通后检查 timer 和外部访问。
