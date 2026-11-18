@@ -6,7 +6,7 @@
     if (confirmAsk) return;
     const ed = el('div', 'editor close-choice'), head = el('div', 'ehead');
     head.append(el('b', '', t('Choose how to close'))); ed.append(head);
-    ed.append(el('p', 'lib-confirm', t('The gateway stops when the app quits; connected Agents cannot use it until it starts again.')));
+    ed.append(el('p', 'close-choice-message', t('The gateway stops when the app quits; connected Agents cannot use it until it starts again.')));
     const bar = el('div', 'bar'), quit = el('button', 'text', t('Quit and stop the gateway')), hide = el('button', 'text primary', t('Hide to background'));
     quit.type = hide.type = 'button';
     const act = async (action) => { quit.disabled = hide.disabled = true; try { await api(action, {}); } catch (err) { quit.disabled = hide.disabled = false; statusErr(err); } };

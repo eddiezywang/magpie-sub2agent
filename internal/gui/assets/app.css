@@ -3480,6 +3480,7 @@ body.window .ag-sk-icon { width: 22px; height: 22px; border-radius: 6px; }
    owner, 10-29: a 72px column left the left edge twice the right) */
 .editor { padding: 16px 18px 14px; display: grid; grid-template-columns: fit-content(132px) minmax(0, 1fr); gap: 10px 14px; align-items: start; }
 .editor .ehead { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding-bottom: 8px; margin-bottom: 2px; border-bottom: 1px solid var(--line-2); }
+.close-choice .close-choice-message { grid-column: 1 / -1; margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--fg-2); }
 .editor .ehead .ic { width: 20px; height: 20px; }
 .editor .icon-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .editor .icon-pick .icon-now { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px; display: grid; place-items: center; }
