@@ -15,10 +15,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def send_head(self):
         request_path = urllib.parse.urlsplit(self.path).path
         prefix = '/sub2agent/releases/'
+        release_root = pathlib.Path(self.directory) / 'sub2agent/releases'
+        target = pathlib.Path(self.translate_path(self.path))
+        if target.is_relative_to(release_root) and not request_path.startswith(prefix):
+            self.send_error(404)
+            return None
         if request_path.startswith(prefix):
             route = request_path.removeprefix(prefix)
             if route == 'latest/windows-amd64':
-                release_root = pathlib.Path(self.directory) / 'sub2agent/releases'
                 try:
                     manifest = json.loads((release_root / 'latest.json').read_bytes())
                     version = manifest['version']
