@@ -66,13 +66,17 @@ def provision(config):
     usage_field = lambda name, options=None: field(usage, name, options)
     sums = [["sum", usage_field(name)] for name in
             ("requests", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens", "total_tokens")]
-    pivot = card("pivot", "用户 × 客户端版本 · 用量透视", usage, "pivot", {
-        "aggregation": sums,
+    pivot_name = "各用户在不同版本上的 Token 用量"
+    pivot_description = "每行一个用户名，每列一个客户端版本。格子里的数字是所选日期内的总 Token。版本取该安装当天或之前最后一次上报的版本。"
+    pivot_query = {
+        "aggregation": [sums[-1]],
         "breakout": [usage_field("username"), usage_field("last_reported_version")],
-    }, settings={"pivot_table.column_split": {
-        "rows": ["username"], "columns": ["last_reported_version"],
-        "values": ["sum", "sum_2", "sum_3", "sum_4", "sum_5", "sum_6"],
-    }}, description="版本为安装在当天或之前最后一次上报的版本。")
+    }
+    pivot_settings = {"pivot_table.column_split": {
+        "rows": ["username"], "columns": ["last_reported_version"], "values": ["sum"],
+    }}
+    pivot = card("pivot", pivot_name, usage, "pivot", pivot_query, settings=pivot_settings,
+                 description=pivot_description)
     token_format = {
         "graph.label_value_formatting": "compact",
         "graph.y_axis.title_text": "Token",
@@ -145,7 +149,7 @@ def provision(config):
         "name": "Sub2Agent 用户用量分析", "collection_id": collection, "parameters": params,
         "description": "按北京时间统计最近 90 天。用户名来自客户端操作系统，安装编号可区分重名或未上报的安装。",
     })
-    if state.get("layout_version") != 4:
+    if state.get("layout_version") != 5:
         for table in (usage, activity, growth, installs, cohorts):
             for column in table["fields"]:
                 if column["name"] in {"day", "last_seen", "version_seen"}:
@@ -154,6 +158,13 @@ def provision(config):
                         **settings, "date_style": "YYYY/M/D",
                         "date_separator": "-", "time_enabled": None,
                     }}, "PUT")
+        api(f"card/{pivot}", {
+            "name": pivot_name, "description": pivot_description,
+            "dataset_query": {"type": "query", "database": db_id, "query": {
+                "source-table": usage["id"], **pivot_query,
+            }},
+            "visualization_settings": pivot_settings,
+        }, "PUT")
         trend_settings = api(f"card/{trend}")["visualization_settings"]
         api(f"card/{trend}", {"visualization_settings": {**trend_settings, **token_format}}, "PUT")
         api(f"dashboard/{dashboard}", {"parameters": params}, "PUT")
@@ -189,7 +200,7 @@ def provision(config):
             cards.append({"id": existing.get(card_id, -i-1), "card_id": card_id, "col": col, "row": row,
                           "size_x": width, "size_y": height, "parameter_mappings": mappings})
         api(f"dashboard/{dashboard}/cards", {"cards": cards}, "PUT")
-        state["layout_version"] = 4
+        state["layout_version"] = 5
         path.write_text(json.dumps(state) + "\n")
     result = api(f"dashboard/{dashboard}")
     assert len(result["dashcards"]) == 16
