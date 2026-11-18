@@ -1,0 +1,9 @@
+[Unit]
+Description=Check Tencent Cloud for signed Sub2Agent releases
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=2min
+
+[Install]
+WantedBy=timers.target

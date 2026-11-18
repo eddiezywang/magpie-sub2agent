@@ -1,12 +1,4 @@
-import { createHash, createPublicKey, verify } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
-const dir=path.resolve(process.argv[2] || ''), data=JSON.parse(readFileSync(path.join(dir,'latest.json'),'utf8'));
-const allowed=new Set(['magpie-windows-amd64.exe','magpie-darwin-arm64.zip','magpie-darwin-amd64.zip']);
-const version=data.version, names=Object.keys(data.assets||{});
-if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version||'') || !names.length || names.some(n=>!allowed.has(n))) throw Error('invalid manifest');
-const files=names.map(name=>{const asset=data.assets[name], file=path.join(dir,version,name),bytes=readFileSync(file),sha256=createHash('sha256').update(bytes).digest('hex');if(sha256!==asset.sha256||bytes.length!==asset.size)throw Error('size or checksum invalid: '+name);return {name,file,size:bytes.length,sha256};});
-const sums=data.signed?.sums, sig=Buffer.from(data.signed?.sig||'','base64');
-const key=createPublicKey({key:Buffer.concat([Buffer.from('302a300506032b6570032100','hex'),Buffer.from('vZLjKd13KX+3te66w3nBbJRkLGwd81sJNx3UgCrqJ9Y=','base64')]),format:'der',type:'spki'});
-if(sums!==files.map(f=>`${f.sha256}  ${f.name}\n`).join('') || !verify(null,Buffer.from(`magpie release ${version}\n${sums}`),key,sig)) throw Error('release signature invalid');
-console.log(JSON.stringify({version,files}));
+import { verifyRelease } from './release.mjs';
+
+console.log(JSON.stringify(await verifyRelease(path.resolve(process.argv[2] || ''))));

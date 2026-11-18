@@ -7,7 +7,7 @@
 ```powershell
 .\build\intranet.ps1 -SingleFile -Version <版本号>
 node build/intranet-release/prepare.mjs <新构建的sub2agent.exe> <版本号> <管理员私钥路径> <本地发布目录>
-.\deploy\app-release-mirror\publish-all.ps1 -ReleaseDir <本地发布目录> -JumpSession <KF跳板会话ID>
+.\deploy\app-release-mirror\publish-cloud.ps1 -ReleaseDir <本地发布目录>
 ```
 
 macOS 桌面版可在装有 Xcode 命令行工具的 Mac 或 GitHub Actions macOS
@@ -48,7 +48,7 @@ GitHub Actions 手动工作流模板 `build/intranet-release/sub2agent-macos.wor
 
 ```powershell
 node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私钥路径> <本地发布目录> <mac-arm64.zip> <mac-amd64.zip>
-.\deploy\app-release-mirror\publish-all.ps1 -ReleaseDir <本地发布目录> -JumpSession <KF跳板会话ID>
+.\deploy\app-release-mirror\publish-cloud.ps1 -ReleaseDir <本地发布目录>
 ```
 
 以上 macOS 打包流程尚未在 Mac 上验证；发布前必须分别实测安装及原生自动
@@ -56,11 +56,14 @@ node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私�
 证明更新者身份；发布清单仍需由管理员使用现有 Ed25519 私钥签名，客户端还会
 校验文件摘要。不要在提交历史、日志或公开服务器保存密钥和凭据。
 
-将发布目录通过授权内网通道传至 0.177。将版本目录完整复制到 `/opt/sub2agent-plugin-market/www/sub2agent/releases/<版本号>`，确认 SHA-256 后，再使用同目录临时文件和 `rename` 原子替换 `latest.json`。版本目录不得覆盖已有内容；新内容使用新版本号。服务仅提供静态下载，无应用端上传接口。发布前备份 `latest.json`，保留旧版本以便回滚。
+`publish-cloud.ps1` 通过 SSH 上传到腾讯云 `134.175.165.190` 的私有暂存目录。
+`promote.mjs` 验签并核对所有制品的大小与 SHA-256 后推进云端清单。云端只通过认证的 HTTPS 提供发布物料，配置见 `deploy/app-release-mirror/sub2agent-release-stage.service`。
 
-域名源由管理员独立保存并发布相同文件，不应代理到 0.177。先上传版本目录、确认摘要，再更新域名源的 `latest.json`。当前域名源保存在 wemail Pod 的临时静态目录，Pod 重建后副本会丢失，需要重新同步。公网独立副本位于 `124.220.199.224:8899`，其服务实现与部署方式见 `deploy/app-release-mirror`；某些企业网络可能对该公网地址返回拦截页面，因此不保证每台设备都能访问。
+0.177 上的 `sub2agent-release-pull.timer` 每两分钟启动一次拉取任务。任务使用系统出口代理、本机 netrc 和云服务证书。它先验签，再下载并校验制品的大小和 SHA-256，最后原子替换 `latest.json`。失败会保留当前版本并重试，任务拒绝降级或覆盖内容不同的同版本。如需回滚，先停用定时器并停止运行中的拉取任务，再用保留的旧版签名清单切换。
 
-一键脚本先在本机验证发布签名、大小和摘要，再依次发布公网副本、通过 KF 和跳板发布 0.177、通过 KF 将 0.177 的已发布文件复制到 wemail Pod。每个目标先校验完整文件再原子更新版本清单，已存在但内容不同的版本会拒绝覆盖。公网主机需要预先配置 SSH；KF 跳板会话必须已连接到可 SSH 到 0.177 的跳板机。中途失败时已成功的源可能已更新，修复后用同一命令重试；旧版本目录保留。KF 与 Pod/0.177 无法直接从公网 8899 获取文件，不应把公网下载当作成功的跨网络验证。
+WeMail UAT 的目标配置是将 `/wemail/sub2agent/releases/` 固定反代到 0.177。Windows 下载按钮使用同域的 `releases/latest/windows-amd64`，0.177 使用相对重定向返回当前安装包。老客户端继续沿用原来的清单和版本路径。已发布客户端中的公网回退地址 `124.220.199.224:8899` 独立于本次私有暂存源。
+
+用 `systemctl list-timers sub2agent-release-pull.timer` 和 `journalctl -u sub2agent-release-pull.service` 检查拉取状态。完成 WeMail 反代部署后，应分别从 0.177 与 WeMail 链路验证 `latest.json`、Windows 下载和客户端更新。
 
 客户端启动后和定时检查时读取目录，自动下载并验证；通常在用户重启时安装。旧版内网客户端没有更新通道，需要先手动安装一次支持该功能的版本。签名私钥若遗失，需要重新分发包含新公钥的客户端；需妥善备份。
 

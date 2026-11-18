@@ -14,6 +14,33 @@ from serve import Handler
 
 
 class MarketTests(unittest.TestCase):
+    def test_latest_windows_redirect_is_relative_and_uncached(self):
+        with tempfile.TemporaryDirectory() as temp:
+            releases = pathlib.Path(temp) / 'sub2agent/releases'
+            releases.mkdir(parents=True)
+            server = ThreadingHTTPServer(('127.0.0.1', 0), partial(Handler, directory=temp))
+            thread = threading.Thread(target=server.serve_forever)
+            thread.start()
+            try:
+                base = f'http://127.0.0.1:{server.server_port}/sub2agent/releases'
+                for version in ['1.0.0-beta.9', '1.0.0-beta.10']:
+                    dest = releases / version
+                    dest.mkdir()
+                    (dest / 'Sub2Agent-windows-amd64.exe').write_bytes(version.encode())
+                    (releases / 'latest.json').write_text(json.dumps({
+                        'version': version, 'assets': {'magpie-windows-amd64.exe': {}}
+                    }))
+                    with urllib.request.urlopen(base + '/latest.json') as response:
+                        self.assertEqual(response.headers['Cache-Control'], 'no-store')
+                    with urllib.request.urlopen(base + '/latest/windows-amd64') as response:
+                        self.assertEqual(response.url, base + f'/{version}/Sub2Agent-windows-amd64.exe')
+                        self.assertIn('immutable', response.headers['Cache-Control'])
+                        self.assertEqual(response.read(), version.encode())
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join()
+
     def test_hooks_page_bundle_has_only_declared_files(self):
         with tempfile.TemporaryDirectory() as temp:
             base = pathlib.Path(temp)
