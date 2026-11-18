@@ -2,6 +2,9 @@
 (() => {
   const words = [
     ['TIG usage guide', '行内使用说明 ↗', '行內使用說明 ↗', 'TIG 利用ガイド ↗', 'TIG-Nutzungsanleitung ↗'],
+    ['Zhipu · team advanced', '智谱 · 团队高级版', '智譜 · 團隊高級版', '智譜 · チーム上級版', 'Zhipu · Team Advanced'],
+    ['TIG plan week', '每周', '每週', '毎週', 'pro Woche'],
+    ['TIG plan month', '每月', '每月', '毎月', 'pro Monat'],
     ['Zhipu points', '智谱积分', '智譜積分', '智譜ポイント', 'Zhipu-Punkte'],
     ['Tencent weighted tokens', '腾讯加权 Token', '騰訊加權 Token', 'Tencent 加重 Token', 'Tencent gewichtete Token'],
     ['Model usage in the last 30 days', '最近 30 天模型消耗', '最近 30 天模型消耗', '過去 30 日間のモデル使用量', 'Modellnutzung der letzten 30 Tage'],

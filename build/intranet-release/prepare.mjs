@@ -19,5 +19,8 @@ const assets=Object.fromEntries(files.map(f=>[f.name,{url:`${base}${version}/${f
 const release={version,notes:'Sub2Agent 内网版本更新',url:base,assets,signed:{sums,sig}};
 await mkdir(path.join(dest,version),{recursive:true});
 for(const f of files)await copyFile(f.file,path.join(dest,version,f.name));
+// Keep the historical signed asset for installed clients; downloads use the
+// branded filename, with the same bytes and SHA-256.
+await copyFile(input,path.join(dest,version,'Sub2Agent-windows-amd64.exe'));
 await writeFile(path.join(dest,'latest.json'),JSON.stringify(release,null,2)+'\n');
 console.log(JSON.stringify({version,files:files.map(({name,size,sha256})=>({name,size,sha256})),output:dest}));

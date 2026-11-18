@@ -3,7 +3,7 @@
 (() => {
  let serial=0, timer=null;
  const ch=id=>/(?:-openai)?-(zp|hs|tc)(?:-openai)?$/i.exec(String(id||'').split('/').pop())?.[1]?.toLowerCase();
- const names={zp:'Zhipu · team advanced (estimated)',hs:'Volcengine · AFP',tc:'Tencent · TIG reference'};
+ const names={zp:'Zhipu · team advanced',hs:'Volcengine · AFP',tc:'Tencent · TIG reference'};
  const units={zp:'Zhipu points',hs:'AFP',tc:'Tencent weighted tokens'};
  const fmt=n=>Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
  const text=(tag,value,cls)=>{const e=document.createElement(tag);if(cls)e.className=cls;e.textContent=value;return e};

@@ -227,3 +227,8 @@ exposes only the unexpired managed plan configuration and channel rates; if
 the catalog is unavailable the editor does not invent limits. The overview
 combines detected channels across providers and displays each user-wide total
 once. Model consumption is separately available for the trailing 30 days.
+Before a TIG key is added, the security notice and three selectable channel
+tabs explain the reference rules. After configuration, the security notice is
+not repeated and only channels and model coefficients identified from that
+provider's model list are shown. A missing model list never implies access to
+all three channels.

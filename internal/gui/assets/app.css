@@ -5296,6 +5296,10 @@ body .row.agent .ag-prefs .row.pref .who { display: block; }
 .coding-plan-notice { grid-column: 1 / -1; padding: 14px 16px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; line-height: 1.65; }
 .coding-plan-notice p { margin: 6px 0; }
 .coding-plan-notice button { margin: 6px 16px 0 0; }
+.coding-plan-notice .tig-plan-tabs { margin: 8px 0; width: fit-content; }
+.coding-plan-notice .tig-plan-tabs button { margin: 0; }
+.coding-plan-notice .tig-plan-tabs .opt.on { background: var(--card); box-shadow: 0 1px 2px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .06); }
+.coding-plan-notice .tig-plan-rates { max-height: 220px; overflow-y: auto; }
 
 .zht-gateways { grid-column: 1 / -1; display: grid; gap: 12px; margin: 0 0 16px; }
 .zht-gateways label { display: grid; grid-template-columns: 145px minmax(0, 1fr); align-items: center; gap: 12px; font-size: 12px; }
