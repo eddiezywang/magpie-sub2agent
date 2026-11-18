@@ -57,7 +57,7 @@ node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私�
 校验文件摘要。不要在提交历史、日志或公开服务器保存密钥和凭据。
 
 `publish-cloud.ps1` 通过 SSH 上传到腾讯云 `134.175.165.190` 的私有暂存目录。
-`promote.mjs` 验签并核对所有制品的大小与 SHA-256 后推进云端清单。云端只通过认证的 HTTPS 提供发布物料，配置见 `deploy/app-release-mirror/sub2agent-release-stage.service`。
+`pull-release.py` 用 OpenSSL 3 验签并核对所有制品的大小与 SHA-256 后推进云端清单。云端只通过认证的 HTTPS 提供发布物料，配置见 `deploy/app-release-mirror/sub2agent-release-stage.service`。
 
 0.177 上的 `sub2agent-release-pull.timer` 每两分钟启动一次拉取任务。任务使用系统出口代理、本机 netrc 和云服务证书。它先验签，再下载并校验制品的大小和 SHA-256，最后原子替换 `latest.json`。失败会保留当前版本并重试，任务拒绝降级或覆盖内容不同的同版本。如需回滚，先停用定时器并停止运行中的拉取任务，再用保留的旧版签名清单切换。
 

@@ -15,7 +15,7 @@ try {
         scp -q -o BatchMode=yes $file.file "${hostName}:$staging/$($metadata.version)/"
         if ($LASTEXITCODE -ne 0) { throw 'Cloud asset transfer failed' }
     }
-    ssh -o BatchMode=yes $hostName "flock /run/sub2agent-release-stage.lock node /opt/sub2agent-release-stage/promote.mjs $destination $staging"
+    ssh -o BatchMode=yes $hostName "flock /run/sub2agent-release-stage.lock python3 /opt/sub2agent-release-stage/pull-release.py $destination $staging"
     if ($LASTEXITCODE -ne 0) { throw 'Cloud release promotion failed' }
 } finally {
     ssh -o BatchMode=yes $hostName "rm -rf -- $staging"
