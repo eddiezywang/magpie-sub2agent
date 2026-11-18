@@ -15,6 +15,10 @@
 // the gateway's trace, and from then on the page keeps itself (it watches
 // its own hidden, the language and the window). dirty and discard are a
 // routing group being edited, asked of it before the reader leaves.
+// groupSlug: a routing group's id as provider.GroupSlug derives it, the
+// dots kept (gpt-6.1-sol, #968).
+function groupSlug(s) { return s.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/\.{2,}/g, ".").replace(/^[-.]+|[-.]+$/g, ""); }
+
 magpie.plugin("routing", (ctx) => {
   ctx.slots.add("page", {
     key: "routing",

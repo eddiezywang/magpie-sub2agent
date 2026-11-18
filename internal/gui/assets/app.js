@@ -15007,9 +15007,6 @@ function editorError(msg, kind = "err") {
 }
 
 function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
-// groupSlug: a routing group's id as provider.GroupSlug derives it, the
-// dots kept (gpt-6.1-sol, #968).
-function groupSlug(s) { return s.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/\.{2,}/g, ".").replace(/^[-.]+|[-.]+$/g, ""); }
 // withScheme: a typed address with its scheme certain, as provider.WithScheme
 // has it: http or https already there stays, in any letter case, and is never
 // given a second; one saved twice ("http://http://host") is one again; none
