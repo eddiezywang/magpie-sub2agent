@@ -16,6 +16,12 @@ remain explicit; Record cannot distinguish missing token usage from genuine zero
 Only gateway records enter this plane: probes, local rejections, synced and
 independently reported rows are excluded. Session-reading consent is unchanged.
 
+The CIB 智汇通 API Key section in Usage Overview counts gateway tokens from the
+retained Usage ledger, including cache reads and writes. The reader's time zone
+defines today and the inclusive seven- and thirty-day windows. All time covers
+the ledger's retained history, and the chart shows daily values within the
+chosen window. See [the token trend implementation](../../internal/usage/token_trend.go).
+
 The transport schema is `sub2agent-usage/3`, with `summaries` rather than per-request
 `events`. Its shared identity includes **username and install_id**. Username comes
 from USERNAME/USER, with unknown as a last resort; collectors must keep unknown

@@ -2,6 +2,12 @@
 // kernel adds them to i18n.js's (magpie.strings).
 magpie.strings({
   zh: {
+    "All time": "累计",
+    "Last 7 days": "近 7 天",
+    "Last 30 days": "近 30 天",
+    "Daily token usage": "每日 Token 用量",
+    "Token usage unavailable": "暂时无法读取 Token 用量",
+    "Gateway token usage recorded in this ledger, including cache tokens.": "统计本用量账本中的网关调用，包含缓存 Token。",
     "Model speed": "模型速度",
     "Medians of the answered requests that wrote {n} tokens or more": "写出 {n} 个及以上 token 的已完成请求的中位数",
     "Set price…": "设置价格…",

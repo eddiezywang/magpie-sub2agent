@@ -39,18 +39,19 @@ const LEDGER = {
   by: {}, bucket: "hour", series: [], agents: [],
 };
 
-function server(lang) {
+function server(lang, zht) {
   return async (route) => {
     const url = new URL(route.request().url());
     const json = (data) => route.fulfill({ json: data });
     // zh and zh-TW in 万 and 亿, as the reporter reads them (183.2万 in · 8793.3万 cache)
     const settings = { lang, theme: "light", chineseUnits: lang.startsWith("zh") };
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:false};` });
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:false,intranet:${!!zht}};` });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return json({ agents: [], profiles: [], settings, fx: { rate: 7.2, at: new Date().toISOString() } });
     if (url.pathname === "/api/settings") return json(settings);
     if (url.pathname === "/api/usage/quotas") return json([]);
     if (url.pathname === "/api/usage/requests") return json(LEDGER);
+    if (url.pathname === "/api/usage/cib-zht" && zht) return json(zht);
     if (url.pathname === "/api/usage") return json(USAGE);
     if (url.pathname === "/api/providers") return json({ providers: [], presets: [], excluded: [], models: [], gateway: { running: false } });
     if (url.pathname === "/api/sessions") return json({ sessions: [], dirs: [] });
@@ -77,6 +78,38 @@ const goUsage = async (p) => {
   if (await nav.count()) await nav.click();
   else await p.evaluate(() => show("usage"));
 };
+
+test("CIB token usage shows K/M/B totals and switches daily line ranges", async (t) => {
+  const browser = await chromium.launch({ channel: "chromium" });
+  t.after(() => browser.close());
+  const data = {
+    today: 1250, week: 2_400_000, month: 81_000_000, total: 1_300_000_000,
+    series: Array.from({ length: 30 }, (_, i) => ({ date: `2026-11-${String(i + 1).padStart(2, "0")}`, tokens: i * 1000 })),
+  };
+  for (const width of [1100, 420]) {
+    const p = await browser.newPage({ viewport: { width, height: 720 }, locale: "zh-CN" });
+    const errors = [];
+    p.on("pageerror", error => errors.push(error.message));
+    await p.route("**/*", server("zh", data));
+    await p.goto("http://magpie.test/");
+    await goUsage(p);
+    const panel = p.locator("#zhtTokenUsage");
+    await panel.locator("polyline").waitFor();
+    assert.deepEqual(await panel.locator("dd").allTextContents(), ["1.25K", "2.4M", "81M", "1.3B"]);
+    assert.equal(await panel.locator(".zht-token-point").count(), 30);
+    assert.equal(await panel.locator(".zht-token-point title").last().textContent(), "2026-11-30 · 29,000 Token");
+    const week = panel.locator('button[value="7"]');
+    await week.click();
+    assert.equal(await week.getAttribute("aria-pressed"), "true");
+    assert.equal(await panel.locator(".zht-token-point").count(), 7);
+    await panel.locator('button[value="30"]').click();
+    assert.equal(await panel.locator(".zht-token-point").count(), 30);
+    assert.equal(await panel.evaluate(el => el.scrollWidth <= el.clientWidth), true);
+    assert.deepEqual(errors, []);
+    if (process.env.CIB_SCREENSHOT && width === 1100) await panel.screenshot({ path: process.env.CIB_SCREENSHOT });
+    await p.close();
+  }
+});
 
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
   test(engine + ": the Overview's lists fold, the totals count the cache on request, the Requests card's cache is whole", async (t) => {
