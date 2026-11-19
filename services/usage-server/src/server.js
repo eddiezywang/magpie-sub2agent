@@ -427,6 +427,9 @@ function createUsageServer(options = {}) {
       return;
     }
     const mailMatch = /^\/mail-preferences\/([^/]+)$/.exec(pathname);
+    // GET keeps serving clients released before the push-only client, which
+    // poll the stored choice; POST serves both wire forms: the old client's
+    // enabled+revision+operation and the push-only client's bare enabled.
     if (mailMatch && (req.method === 'GET' || req.method === 'POST')) {
       if (!verifyBilling(req)) { sendJson(res, 401, {error:'unauthorized'}); return; }
       let user; try { user=decodeURIComponent(mailMatch[1]).trim().toLowerCase(); } catch { sendJson(res,400,{error:'invalid_user'}); return; }
@@ -435,11 +438,11 @@ function createUsageServer(options = {}) {
         if (url.search) { sendJson(res,400,{error:'invalid_query'}); return; }
         sendJson(res,200,mailPreferences.get(user)); return;
       }
-      const q=url.searchParams, keys=[...q.keys()];
-      if (keys.length!==3 || new Set(keys).size!==3 || !['enabled','revision','operation'].every(k=>q.has(k)) || !/^(true|false)$/.test(q.get('enabled')) || !/^(0|[1-9]\d*)$/.test(q.get('revision')) || !/^[A-Za-z0-9_-]{16,128}$/.test(q.get('operation'))) { sendJson(res,400,{error:'invalid_query'}); return; }
-      const revision=Number(q.get('revision')); if(!Number.isSafeInteger(revision)){sendJson(res,400,{error:'invalid_query'});return;}
-      const result=mailPreferences.set(user,q.get('enabled')==='true',revision,q.get('operation'));
-      sendJson(res,result.conflict?409:200,result); return;
+      const q=url.searchParams, keys=[...q.keys()].sort();
+      const bare=keys.length===1&&q.has('enabled')&&/^(true|false)$/.test(q.get('enabled'));
+      const legacy=keys.length===3&&['enabled','operation','revision'].every(k=>q.has(k))&&/^(true|false)$/.test(q.get('enabled'))&&/^(0|[1-9]\d*)$/.test(q.get('revision'))&&/^[A-Za-z0-9_-]{16,128}$/.test(q.get('operation'));
+      if (!bare&&!legacy) { sendJson(res,400,{error:'invalid_query'}); return; }
+      sendJson(res,200,mailPreferences.set(user,q.get('enabled')==='true',legacy?q.get('operation'):undefined)); return;
     }
     const tigMatch = /^\/reports\/([^/]+)\/tig-plans\.json$/.exec(pathname);
     if (tigMatch && req.method === 'GET') {

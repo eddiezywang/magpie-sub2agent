@@ -9,154 +9,93 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 type fakeMailRemote struct {
-	state     MailRemoteState
-	fail      bool
-	lastOp    string
-	beforeSet func()
+	err   error
+	users map[string]bool
 }
 
-func (f *fakeMailRemote) Get(context.Context, string) (MailRemoteState, error) {
-	if f.fail {
-		return MailRemoteState{}, errors.New("offline")
+func (f *fakeMailRemote) Set(_ context.Context, user string, enabled bool) error {
+	if f.err != nil {
+		return f.err
 	}
-	return f.state, nil
+	if f.users == nil {
+		f.users = map[string]bool{}
+	}
+	f.users[user] = enabled
+	return nil
 }
-func (f *fakeMailRemote) Set(_ context.Context, _ string, on bool, rev int64, op string) (MailRemoteState, error) {
-	if f.fail {
-		return MailRemoteState{}, errors.New("offline")
-	}
-	if f.beforeSet != nil {
-		f.beforeSet()
-		f.beforeSet = nil
-	}
-	if op == f.lastOp {
-		return f.state, nil
-	}
-	if rev != f.state.Revision {
-		r := f.state
-		r.Conflict = true
-		return r, nil
-	}
-	f.lastOp = op
-	f.state = MailRemoteState{Exists: true, Enabled: on, Revision: rev + 1}
-	return f.state, nil
-}
-func TestMailPreferenceDefaultAndOfflineConflict(t *testing.T) {
-	ctx := context.Background()
+
+func TestMailPreferenceRemembersTheChoiceLocally(t *testing.T) {
 	dir := t.TempDir()
-	remote := &fakeMailRemote{fail: true}
-	m, err := NewMailPreferences(dir, "Alice", remote)
+	m, err := NewMailPreferences(dir, "Alice", &fakeMailRemote{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := m.Status()
-	if !s.Enabled || s.Known {
-		t.Fatalf("default %+v", s)
+	if !m.Enabled() {
+		t.Fatal("default is on")
 	}
-	if err = m.Set(false); err != nil {
+	if err = m.Set(context.Background(), false); err != nil {
 		t.Fatal(err)
 	}
-	if m.Sync(ctx) == nil {
-		t.Fatal("offline should fail")
+	if m.Enabled() {
+		t.Fatal("choice not kept")
 	}
-	m, err = NewMailPreferences(dir, "alice", remote)
+	reloaded, err := NewMailPreferences(dir, "alice", &fakeMailRemote{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ = m.Status()
-	if s.Enabled || !s.Pending {
-		t.Fatalf("offline choice lost %+v", s)
-	}
-	remote.fail = false
-	remote.state = MailRemoteState{Exists: true, Enabled: true, Revision: 3}
-	if err = m.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
-	s, _ = m.Status()
-	if !s.Conflict || s.Pending || s.Enabled || remote.state.Revision != 3 {
-		t.Fatalf("unknown revision overwrote server %+v %+v", s, remote.state)
-	}
-	if err = m.Set(false); err != nil {
-		t.Fatal(err)
-	}
-	if err = m.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
-	s, ok := m.Status()
-	if s.Enabled || s.Pending || s.Conflict || !ok || remote.state.Revision != 4 {
-		t.Fatalf("explicit resolution %+v %+v", s, remote.state)
+	if reloaded.Enabled() {
+		t.Fatal("choice lost on reload")
 	}
 }
-func TestMailPreferenceInitialSyncAndStaleRetry(t *testing.T) {
-	ctx := context.Background()
-	remote := &fakeMailRemote{}
-	m, err := NewMailPreferences(t.TempDir(), "bob", remote)
+
+func TestMailPreferenceKeepsTheChoiceWhenTheReportFails(t *testing.T) {
+	m, err := NewMailPreferences(t.TempDir(), "alice", &fakeMailRemote{err: errors.New("offline")})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = m.Sync(ctx); err != nil {
-		t.Fatal(err)
+	if err = m.Set(context.Background(), false); err == nil {
+		t.Fatal("a failed report was hidden")
 	}
-	s, ok := m.Status()
-	if !s.Enabled || s.Pending || !ok || remote.state.Revision != 1 {
-		t.Fatalf("default not reported %+v", s)
-	}
-	if err = m.Set(false); err != nil {
-		t.Fatal(err)
-	}
-	remote.state = MailRemoteState{Exists: true, Enabled: true, Revision: 2}
-	if err = m.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
-	s, _ = m.Status()
-	if !s.Conflict || s.Enabled || remote.state.Revision != 2 {
-		t.Fatalf("stale update applied %+v %+v", s, remote.state)
+	if m.Enabled() {
+		t.Fatal("a failed report undid the choice")
 	}
 }
-func TestMailPreferenceChangeDuringSend(t *testing.T) {
-	ctx := context.Background()
-	remote := &fakeMailRemote{}
-	m, err := NewMailPreferences(t.TempDir(), "bob", remote)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = m.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if err = m.Set(false); err != nil {
-		t.Fatal(err)
-	}
-	remote.beforeSet = func() {
-		if err := m.Set(true); err != nil {
-			t.Fatal(err)
+
+func TestMailPreferenceRejectsAnUnusableUser(t *testing.T) {
+	for _, user := range []string{"", "unknown", "a/b", `a\b`, "a\nb"} {
+		if _, err := NewMailPreferences(t.TempDir(), user, &fakeMailRemote{}); err == nil {
+			t.Errorf("user %q accepted", user)
 		}
 	}
-	if err = m.Sync(ctx); err != nil {
+}
+
+func TestMailPreferenceReadsTheOldClientFile(t *testing.T) {
+	dir := t.TempDir()
+	old := `{"user":"alice","enabled":false,"known":true,"revision":4,"pending":false,"conflict":false}`
+	if err := os.WriteFile(filepath.Join(dir, "mail-preference.json"), []byte(old), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	s, _ := m.Status()
-	if !s.Pending || !s.Enabled || s.Revision != 2 {
-		t.Fatalf("newer change lost %+v", s)
-	}
-	if err = m.Sync(ctx); err != nil {
+	m, err := NewMailPreferences(dir, "alice", &fakeMailRemote{})
+	if err != nil {
 		t.Fatal(err)
 	}
-	s, ok := m.Status()
-	if s.Pending || !s.Enabled || !ok || remote.state.Revision != 3 {
-		t.Fatalf("newer change not sent %+v", s)
+	if m.Enabled() {
+		t.Fatal("the old file's choice was not read")
 	}
 }
-func TestMailRemoteSignsExactUpdateAndReadsConflict(t *testing.T) {
+
+func TestMailRemoteSignsTheReport(t *testing.T) {
 	key := strings.Repeat("12", 32)
-	seen := false
+	seen, status := false, http.StatusOK
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" || r.URL.Path != "/mail-preferences/alice" || r.URL.Query().Get("enabled") != "false" || r.URL.Query().Get("revision") != "3" {
+		if r.Method != "POST" || r.URL.Path != "/mail-preferences/alice" || r.URL.Query().Get("enabled") != "false" {
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.String())
 		}
 		raw, _ := hex.DecodeString(key)
@@ -166,98 +105,15 @@ func TestMailRemoteSignsExactUpdateAndReadsConflict(t *testing.T) {
 			t.Error("invalid signature")
 		}
 		seen = true
-		w.WriteHeader(http.StatusConflict)
-		_, _ = w.Write([]byte(`{"exists":true,"enabled":true,"revision":4,"conflict":true}`))
+		w.WriteHeader(status)
 	}))
 	defer srv.Close()
 	remote := billingMailRemote{base: srv.URL + "/usage/events", key: key, client: srv.Client()}
-	got, err := remote.Set(context.Background(), "alice", false, 3, "abcdefghijklmnop")
-	if err != nil || !seen || !got.Conflict || got.Revision != 4 || !got.Enabled {
-		t.Fatalf("result %+v %v", got, err)
+	if err := remote.Set(context.Background(), "alice", false); err != nil || !seen {
+		t.Fatalf("report failed: seen=%t err=%v", seen, err)
 	}
-}
-func TestMailPreferenceReportsAndSecondDeviceAdopts(t *testing.T) {
-	key := strings.Repeat("12", 32)
-	revision := int64(0)
-	enabled := false
-	writes := 0
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, _ := hex.DecodeString(key)
-		mac := hmac.New(sha256.New, raw)
-		fmt.Fprintf(mac, "sub2agent-billing-v1\n%s\n%s\n%s\n%s", r.Method, r.URL.RequestURI(), r.Header.Get("X-Sub2Agent-Timestamp"), r.Header.Get("X-Sub2Agent-Nonce"))
-		if !hmac.Equal([]byte(hex.EncodeToString(mac.Sum(nil))), []byte(r.Header.Get("X-Sub2Agent-Signature"))) {
-			http.Error(w, "bad signature", 401)
-			return
-		}
-		if r.URL.Path != "/mail-preferences/alice" {
-			http.Error(w, "wrong user", 400)
-			return
-		}
-		if r.Method == "POST" {
-			expected, err := strconv.ParseInt(r.URL.Query().Get("revision"), 10, 64)
-			if err != nil || expected != revision {
-				w.WriteHeader(http.StatusConflict)
-				fmt.Fprintf(w, `{"exists":true,"enabled":%t,"revision":%d,"conflict":true}`, enabled, revision)
-				return
-			}
-			enabled = r.URL.Query().Get("enabled") == "true"
-			revision++
-			writes++
-		}
-		fmt.Fprintf(w, `{"exists":%t,"enabled":%t,"revision":%d}`, revision > 0, enabled, revision)
-	}))
-	defer srv.Close()
-	remote := billingMailRemote{base: srv.URL + "/usage/events", key: key, client: srv.Client()}
-	ctx := context.Background()
-	first, err := NewMailPreferences(t.TempDir(), "alice", remote)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = first.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if !enabled || writes != 1 {
-		t.Fatalf("default not reported: %t %d", enabled, writes)
-	}
-	if err = first.Set(false); err != nil {
-		t.Fatal(err)
-	}
-	if err = first.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if enabled || writes != 2 {
-		t.Fatalf("opt-out not reported: %t %d", enabled, writes)
-	}
-	second, err := NewMailPreferences(t.TempDir(), "ALICE", remote)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = second.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
-	state, synced := second.Status()
-	if state.Enabled || !synced || writes != 2 {
-		t.Fatalf("second device overwrote opt-out: %+v %t %d", state, synced, writes)
-	}
-}
-
-func TestMailPreferenceFailedRefreshIsNotReportedSynced(t *testing.T) {
-	remote := &fakeMailRemote{}
-	m, err := NewMailPreferences(t.TempDir(), "alice", remote)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = m.Sync(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if _, synced := m.Status(); !synced {
-		t.Fatal("initial sync failed")
-	}
-	remote.fail = true
-	if err = m.Sync(context.Background()); err == nil {
-		t.Fatal("offline refresh succeeded")
-	}
-	if state, synced := m.Status(); synced || !state.Enabled {
-		t.Fatalf("offline state: %+v synced=%v", state, synced)
+	status = http.StatusServiceUnavailable
+	if err := remote.Set(context.Background(), "alice", false); err == nil {
+		t.Fatal("a non-200 reply was accepted")
 	}
 }

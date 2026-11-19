@@ -426,7 +426,6 @@ func Run(version string, showMain bool, link string) error {
 		// leaves both to it: the failover goes on through the new one, and
 		// so do the threads.
 		OnShutdown: func() {
-			stopMailPreference()
 			usage.NotifyAppQuit()
 			proc.EndProbes()
 			if handedOver.Load() {
@@ -760,7 +759,6 @@ func Run(version string, showMain bool, link string) error {
 	if ownPage {
 		startAppPage(h, gw)
 	}
-	defer stopMailPreference()
 	return h.app.Run()
 }
 

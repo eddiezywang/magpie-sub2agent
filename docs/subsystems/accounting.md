@@ -136,20 +136,27 @@ Migration design: [minute-summary contract](../proposals/minute-usage.md), which
 
 On 2026-11-14 the signature verifier was deployed to the 0.177 usage service on ports 17890 and 17891. The signed client is available in release `0.1.3913-sub2agent.6` on the port 18989 release service. Verification on KF confirmed that unsigned report requests return 401 on both ports, while the released client reaches the report handler with a signed request for a nonexistent test user; no real report was read. Service health and the existing aggregation-rules endpoint remained available, and replayed signatures were rejected. Previous direct report links and clients without signing are no longer accepted. The prior server source is backed up on the host in `/opt/usage-server-backups/before-billing-auth-f6588ef.tgz`.
 
-The usage server's `mail-preferences.js` stores a per-account boolean and
-monotonic revision with an idempotent operation ID. A stale revision cannot
-replace a newer choice; invalid or unreadable storage fails closed. The store
-is exposed at the billing-signed GET/POST `/mail-preferences/{username}`
-endpoint. Its identity is the existing OS username, not verified individual
-identity; the shared billing key is not a per-user credential. The endpoint
-does not send email. See
-`services/usage-server/test/mail-preferences.test.js`.
-The client-side `MailPreferences` state machine persists explicit choices and
-an operation ID separately from telemetry, fetches the server revision before
-its first write and retains offline choices. A stale revision is surfaced as a
-conflict rather than silently overwriting another device. Its signed HTTP
-transport uses the billing service and does not carry credentials to the page.
-The desktop starts a retry worker on launch, refreshes the server value every 30 seconds, and exposes the setting in Settings. A failed sync is shown as pending; a conflict requires an explicit choice. Sending mail remains a future server feature.
+The usage server's `mail-preferences.js` stores a per-account boolean with a
+monotonic revision and operation ID, the shape clients released before the
+push-only client validate and poll. The billing-signed
+`GET /mail-preferences/{username}` keeps returning that stored choice for
+them; its `POST` accepts both wire forms, their
+`enabled`+`revision`+`operation` and the push-only client's bare `enabled`,
+writing either and returning `{exists,enabled,revision}`. The revision is no
+longer compared: the service owns the real state and the last reporter wins;
+the operation ID still makes a lost-response retry idempotent, and a replay
+that changes the choice fails. Invalid or unreadable storage fails closed;
+identities remain the existing OS username, not verified individual identity,
+and the shared billing key is not a per-user credential. The endpoint does
+not send email. See `services/usage-server/test/mail-preferences.test.js`.
+The client-side `MailPreferences` in the push-only release persists the
+choice separately from telemetry and reports each change over the signed
+billing transport, which carries no credentials to the page; it never reads
+the service's state back. A local file written by an older client loads with
+its extra fields ignored. A choice stays recorded when its report fails and
+is reported again on the next toggle, so server and client releases are
+independent. The desktop exposes the bare toggle in Settings and shows no
+sync state; Sending mail remains a future server feature.
 
 
 ## TIG Zhipu Coding Plan estimates
