@@ -1,6 +1,7 @@
 # Usage server source baseline
 
 Deployment inventory and release procedure: [0.177 deployment](DEPLOYMENT-0177.md).
+Public billing replica on 134.175.165.190: [134 deployment](DEPLOYMENT-134.md).
 
 Source imported from the existing authorized internal deployment on 2026-11-13.
 Only application code and its package manifest were copied. No environment,

@@ -241,7 +241,10 @@ delivery hits a transport or temporary server error. The primary is retried
 after about one minute. The application startup and gateway request paths do
 not wait for the probes. The existing durable outbox retains unacknowledged
 packets and continues retrying. Billing administration and report endpoints
-remain on the existing intranet service.
+remain on the existing intranet service, which is mirrored read-only on the
+public billing replica at 134.175.165.190:5173 fed by a chunked token-
+authenticated push over root's forward proxy
+([134 deployment](../../services/usage-server/DEPLOYMENT-134.md)).
 
 The public service uses the same v3 acknowledgement contract. Its SQLite inbox
 acknowledges commits, serves only the supported telemetry routes to clients, and

@@ -1,0 +1,15 @@
+[Unit]
+Description=Usage-data sync receiver (0.177 -> 134 replica feed)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/usage-server
+Environment=USAGE_SYNC_PORT=5174
+EnvironmentFile=/etc/sub2agent/usage-sync.env
+ExecStart=/usr/bin/node receiver.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

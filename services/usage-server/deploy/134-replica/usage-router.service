@@ -1,0 +1,14 @@
+[Unit]
+Description=Public front router for the 134 billing replica (5173)
+After=network.target usage-server.service usage-sync-receiver.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/usage-server
+Environment=ROUTER_PORT=5173
+ExecStart=/usr/bin/node router.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
