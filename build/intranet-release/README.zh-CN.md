@@ -2,11 +2,17 @@
 
 新版客户端按域名 `http://uat.rcrai.weoa.com/wemail/sub2agent/releases/`、内网 `http://172.21.0.177:18989/sub2agent/releases/`、独立服务器 `http://124.220.199.224:8899/sub2agent/releases/` 的顺序访问。版本检查比较所有可访问且签名有效的版本，选择最新版本，版本相同时优先选择前面的源；安装包也按此顺序回退。任一源可用即可更新。所有文件必须通过内置 Ed25519 公钥和 SHA-256 校验。已发布的旧客户端仍只使用 0.177。签名私钥保存在管理员工作站，不放到服务器或代码库。
 
-管理员先构建、验证并准备版本：
+## 发布说明
+
+每次发版都在 `build/intranet-release/notes/<版本号>.md` 提交一份 UTF-8 Markdown changelog。以当前线上版本为基线，概述本版用户可见的新增、修复和必要的升级说明。准备脚本会把 Markdown 写入 `latest.json` 的 `notes` 字段，客户端检查更新时从该字段读取说明。
+
+上传前确认清单中的版本和说明对应。云端发布后，等 0.177 自动拉取，再回读更新源的 `latest.json`，核对版本和完整的 `notes`。如需更正已经发布的说明，按新的版本号准备和发布。
+
+管理员先构建、验包，再生成带发布说明的清单：
 
 ```powershell
 .\build\intranet.ps1 -SingleFile -Version <版本号>
-node build/intranet-release/prepare.mjs <新构建的sub2agent.exe> <版本号> <管理员私钥路径> <本地发布目录>
+node build/intranet-release/prepare.mjs <新构建的sub2agent.exe> <版本号> <管理员私钥路径> <本地发布目录> <changelog.md>
 .\deploy\app-release-mirror\publish-cloud.ps1 -ReleaseDir <本地发布目录>
 ```
 
@@ -47,7 +53,7 @@ GitHub Actions 手动工作流模板 `build/intranet-release/sub2agent-macos.wor
 与同版本 Windows 文件一起生成**一份**签名版本清单：
 
 ```powershell
-node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私钥路径> <本地发布目录> <mac-arm64.zip> <mac-amd64.zip>
+node build/intranet-release/prepare.mjs <windows.exe> <版本号> <管理员私钥路径> <本地发布目录> <changelog.md> <mac-arm64.zip> <mac-amd64.zip>
 .\deploy\app-release-mirror\publish-cloud.ps1 -ReleaseDir <本地发布目录>
 ```
 

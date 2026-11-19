@@ -22,6 +22,10 @@ follow 2–4. A session that must stay connected across steps keeps the root
 shell as its foreground program; long work runs backgrounded with output to a
 root-owned file, then polls it.
 
+## Sub2Agent 发布说明
+
+每次发布前，在 `build/intranet-release/notes/<版本号>.md` 写明相对于上个已发布版本的用户可见变化。发布准备脚本读取该 Markdown 并写入 `latest.json` 的 `notes` 字段。上传前核对本地清单，自动拉取后从实际更新源回读，确认说明与该版本对应。详细步骤见[发布手册](build/intranet-release/README.zh-CN.md#发布说明)。
+
 ## Internal fork workflow
 
 - Commit and push proactively after each independently verified development
