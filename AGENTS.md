@@ -1,5 +1,27 @@
 # Notes for coding agents
 
+## Operating on 0.177 (172.21.0.177)
+
+0.177 is the shared intranet server for WeMail AND Sub2Agent, reached through
+the KF network. Any action on it affects both products. The mandatory protocol,
+with no exceptions:
+
+1. Open `wecli test-jump` on KF (session per task, reuse across rounds).
+2. `ssh eddiewang@172.21.0.177` — **the eddiewang account is login-only.** It
+   must never run commands, never run `sudo -n <cmd>` one-shots, never touch
+   the proxy, and never make outbound connections. Every operation beyond
+   reaching the shell is forbidden under this account.
+3. `sudo su - root` — run all operations in root's login environment.
+4. root's login environment configures `http_proxy` by default. Outbound
+   access to 134.175.165.190 or any other external target goes through that
+   proxy (reference `$http_proxy`, never echo or copy its value into logs,
+   scripts or skills).
+
+Probes, health checks, transfers and deployments all count as operations and
+follow 2–4. A session that must stay connected across steps keeps the root
+shell as its foreground program; long work runs backgrounded with output to a
+root-owned file, then polls it.
+
 ## Internal fork workflow
 
 - Commit and push proactively after each independently verified development

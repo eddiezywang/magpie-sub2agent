@@ -188,7 +188,7 @@ func wslFromNodeModules(d distro, pkg string, scripts bool, bin, real string) *u
 	} else {
 		npm = "npm"
 	}
-	u.cmd = withScripts([]string{npm, "install", "-g", "--prefix", prefix}, "npm", pkg, scripts)
+	u.cmd = withScripts(npmGlobalInstall(npm, prefix), "npm", pkg, scripts)
 	return u
 }
 

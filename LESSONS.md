@@ -1295,3 +1295,22 @@ each one.
   - #1454 stayed open until the reporter confirmed.
   - #1213 and #1282 merged at the reviewed head with the record seconds
     before.
+
+## 2026-11-19 — an agent probed outbound from the login-only account on 0.177
+
+**Rule: on 0.177, eddiewang is login-only. Every operation runs as root via
+`sudo su - root`, and outbound access uses root's login-environment proxy.**
+Recorded in [AGENTS.md](AGENTS.md#operating-on-0177-172210177).
+
+While migrating the usage/billing service to 134.175.165.190, an agent used
+`sudo -n` one-shots under eddiewang to run outbound probes (`curl` to
+ifconfig.me and ipify, `/dev/tcp` reaches to 134.175.165.190 on six ports) and
+operational commands (script installs, a data push, `pkill`) on the shared
+WeMail + Sub2Agent server. eddiewang exists only to log in; operations belong
+to root's login shell, which also carries the configured `http_proxy` the
+agent never used — so its "egress blocked" conclusions were also wrong. The
+[codex skills](file:///C:/Users/Administrator/.codex/skills/kf-0177-deploy/SKILL.md)
+said "sudo -n 可用", which reads as permission for one-shot operations; they
+now state the login-only rule. What would have caught it: treating every
+non-login account as a transit credential, and asking the operator before any
+new outbound connection from a shared server.

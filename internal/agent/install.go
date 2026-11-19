@@ -142,14 +142,20 @@ const nvmVersion = "v0.40.8"
 // default execution policy refuses to run. Each step is parted by ";", as
 // Windows PowerShell 5.1 has no "&&".
 func npmInstall(pkg, goos string, node bool) InstallCmd {
-	plain := "npm install -g " + pkg
+	// the office registry first, where it answers; npm's own is npm's
+	// default, what the command falls back to when it doesn't
+	reg := ""
+	if r := npmRegistryFor(); r != "" {
+		reg = "--registry=" + r + " "
+	}
+	plain := "npm install -g " + reg + pkg
 	switch {
 	case node:
 		return InstallCmd{Via: "npm", Command: plain}
 	case goos == "windows":
 		return InstallCmd{Via: "npm", Node: "winget", Command: "winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements; " +
 			"$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'); " +
-			"npm.cmd install -g " + pkg}
+			"npm.cmd install -g " + reg + pkg}
 	}
 	how := "nvm"
 	if goos == "darwin" {

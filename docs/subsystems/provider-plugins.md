@@ -619,6 +619,24 @@ Trae's existing nonce-scoped loopback callback remains supported while its
 provider is disabled by distribution policy. TIG and ZHT use API keys and
 do not present a browser OAuth callback form.
 
+### WorkBuddy enterprise hosts preparation
+
+The WorkBuddy enterprise names (copilot.tencent.com, www.workbuddy.cn) answer
+office DNS only with the gateway pinned in the system hosts file. The old
+Sub2Agent desktop app wrote those entries before every WorkBuddy sign-in;
+machines that never ran that app sign in against unresolvable names and the
+sheet reports the sign-in service as unreachable. The intranet distribution
+runs the old script again: `StartPluginSignInWith` for `sub2agent-workbuddy`
+and `sub2agent-workbuddy-cib` executes the embedded
+[`workbuddy_hosts.ps1`](../../internal/provider/workbuddy_hosts.ps1) on Windows
+before the plugin is asked for its login page. The script probes the office
+gateways, rewrites only entries marked `# Sub2Agent WorkBuddy` (a foreign line
+is never touched), backs the hosts file up, refuses a file changed under it,
+and elevates through UAC with the script passed in memory, never from a
+writable temp file. Unreachable gateways or a denied prompt fail the sign-in
+start with a retryable message; every other provider and every non-Windows
+machine skips the step. The command line's sign-in takes the same door.
+
 ### Read-only migration from the old Sub2Agent profile
 
 Startup runs `provider.ImportSub2AgentAuth` after settings migration and before

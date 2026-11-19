@@ -61,8 +61,9 @@ function mailPreference(root) {
     });
     if (!state) for(const button of choice.querySelectorAll('button')) button.disabled=true;
     item.val.append(choice);
-    const message=!state?'Preference unavailable':state.conflict?'Changed on another device; select again to confirm':state.synced?'Preference synced':'Waiting to sync';
-    item.r.querySelector('.say').textContent=t('Email delivery is not available yet.')+' · '+t(message);
+    // the choice's sync state lives with the service; the row only says the
+    // sending itself is not live yet
+    item.r.querySelector('.say').textContent=t('Email delivery is not available yet.');
   };
   const refresh=async()=>{
     if (mailRead || !item.r.isConnected || document.querySelector('#view-settings').hidden) return;

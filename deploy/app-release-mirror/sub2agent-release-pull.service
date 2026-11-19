@@ -1,0 +1,10 @@
+[Unit]
+Description=Pull signed Sub2Agent releases from Tencent Cloud
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+UMask=0022
+ExecStart=/bin/bash -lc 'exec /usr/bin/flock -n /run/sub2agent-release-pull.lock /opt/python311/bin/python3.11 /opt/sub2agent-release-pull/pull-release.py /opt/sub2agent-plugin-market/www/sub2agent/releases https://134.175.165.190/ /etc/sub2agent-release-pull/netrc /etc/sub2agent-release-pull/cloud.crt'
+TimeoutStartSec=95min

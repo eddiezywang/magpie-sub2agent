@@ -4,12 +4,48 @@ import argparse
 import http.server
 import json
 import pathlib
+import re
 import urllib.parse
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def list_directory(self, path):
         self.send_error(404)
+
+    def send_head(self):
+        request_path = urllib.parse.urlsplit(self.path).path
+        prefix = '/sub2agent/releases/'
+        release_root = pathlib.Path(self.directory) / 'sub2agent/releases'
+        target = pathlib.Path(self.translate_path(self.path))
+        if target.is_relative_to(release_root) and not request_path.startswith(prefix):
+            self.send_error(404)
+            return None
+        if request_path.startswith(prefix):
+            route = request_path.removeprefix(prefix)
+            if route == 'latest/windows-amd64':
+                try:
+                    manifest = json.loads((release_root / 'latest.json').read_bytes())
+                    version = manifest['version']
+                    name = 'Sub2Agent-windows-amd64.exe'
+                    if (not re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?', version)
+                            or 'magpie-windows-amd64.exe' not in manifest['assets']
+                            or not (release_root / version / name).is_file()):
+                        raise ValueError('Windows installer unavailable')
+                except (OSError, ValueError, KeyError, TypeError):
+                    self.send_error(503, 'Windows installer unavailable')
+                    return None
+                self.send_response(302)
+                self.send_header('Location', f'../{version}/{name}')
+                self.send_header('Content-Length', '0')
+                self.end_headers()
+                return None
+            if route != 'latest.json' and not re.fullmatch(
+                r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/(?:magpie-windows-amd64\.exe|'
+                r'Sub2Agent-windows-amd64\.exe|magpie-darwin-(?:arm64|amd64)\.zip)', route
+            ):
+                self.send_error(404)
+                return None
+        return super().send_head()
 
     def do_GET(self):
         if urllib.parse.urlsplit(self.path).path == '/healthz':
@@ -31,7 +67,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
-        if self.path.endswith('.zip'):
+        request_path = urllib.parse.urlsplit(self.path).path
+        if request_path in ('/sub2agent/releases/latest.json', '/sub2agent/releases/latest/windows-amd64'):
+            self.send_header('Cache-Control', 'no-store')
+        elif request_path.endswith('.zip') or re.fullmatch(r'/sub2agent/releases/[^/]+/[^/]+\.exe', request_path):
             self.send_header('Cache-Control', 'public, max-age=31536000, immutable')
         else:
             self.send_header('Cache-Control', 'no-cache')

@@ -29,6 +29,12 @@ func StartPluginSignInWith(id string, method int, inputs map[string]string, o Si
 	if settings.AccountDiscoveryOff() {
 		return SignInState{}, errAccountDiscoveryOff
 	}
+	// The enterprise WorkBuddy names answer office DNS only from the hosts
+	// entries the old desktop app used to write at its sign-in; pin them
+	// before the plugin's login fetch reaches an unresolvable name.
+	if err := prepareWorkBuddyHosts(id); err != nil {
+		return SignInState{}, err
+	}
 	s := &signInFlow{done: make(chan struct{})}
 	if err := s.pickProxy(PluginID(id), o); err != nil {
 		return SignInState{}, err
