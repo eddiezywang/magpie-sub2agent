@@ -105,6 +105,7 @@ func requestContent(agent, session string, from, to, at time.Time) contentJSON {
 
 func usageRoutes(mux *http.ServeMux, w Windows) {
 	if distribution.Internal {
+		supplierUsageRoutes(mux)
 		mux.HandleFunc("GET /api/accounting/tig-plans", func(rw http.ResponseWriter, r *http.Request) {
 			plans, err := catalog.ManagedTIGPlans()
 			if err != nil {
