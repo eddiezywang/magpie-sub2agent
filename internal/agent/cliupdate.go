@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"log"
 	"net/http"
@@ -463,7 +462,7 @@ func fromNodeModules(pkg string, scripts bool, bin, real string) *updater {
 			return nil
 		}
 	}
-	u.cmd = withScripts([]string{npm, "install", "-g", "--prefix", prefix}, "npm", pkg, scripts)
+	u.cmd = withScripts(npmGlobalInstall(npm, prefix), "npm", pkg, scripts)
 	return u
 }
 
@@ -711,11 +710,21 @@ func latestVersion(u *updater) string {
 var npmRegistry = "https://registry.npmjs.org/"
 
 func npmLatest(pkg string) (string, error) {
-	c := &http.Client{Timeout: 8 * time.Second}
+	if npmIntranetOn {
+		// the office registry first; one that answers but hasn't copied
+		// pkg (yet), or that is down, hands the ask to npm's own, asked
+		// directly where source's internal route bars it
+		if r := npmRegistryFor(); r != "" {
+			if v, err := npmPackumentLatest(r, pkg); err == nil {
+				return v, nil
+			}
+		}
+		return npmLatestAt(npmRegistry, pkg)
+	}
 	req, _ := http.NewRequest("GET", npmRegistry+pkg+"/latest", nil)
 	req.Header.Set("User-Agent", "magpie")
 	req.Header.Set("Accept", "application/json")
-	resp, err := source.Do(c, req)
+	resp, err := source.Do(&http.Client{Timeout: 8 * time.Second}, req)
 	if err != nil {
 		return "", err
 	}
@@ -1138,10 +1147,6 @@ var updateTimeout = 10 * time.Minute
 // UpdateCLI brings the agent's CLI up to date the way it was installed, and
 // says what it is afterwards.
 func (a *Agent) UpdateCLI() (CLI, error) {
-	if distribution.Internal {
-		return CLI{}, fmt.Errorf("agent updates are managed outside this distribution")
-	}
-
 	if a.WSL != "" {
 		return a.updateWSL()
 	}
