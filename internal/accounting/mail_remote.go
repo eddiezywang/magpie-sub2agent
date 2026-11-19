@@ -2,6 +2,7 @@ package accounting
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,21 +17,24 @@ type billingMailRemote struct {
 	client    *http.Client
 }
 
-// Set posts the choice. The signed reply carries nothing the app needs,
-// because the service owns the real state.
-func (b billingMailRemote) Set(ctx context.Context, user string, enabled bool) error {
+func (b billingMailRemote) request(ctx context.Context, user string, params url.Values) (MailRemoteState, error) {
+	var result MailRemoteState
 	u, err := endpoint(b.base)
 	if err != nil {
-		return err
+		return result, err
 	}
 	u.Path = "/mail-preferences/" + user
-	u.RawQuery = url.Values{"enabled": {strconv.FormatBool(enabled)}}.Encode()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), nil)
+	method := http.MethodGet
+	if params != nil {
+		method = http.MethodPost
+		u.RawQuery = params.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
 	if err != nil {
-		return err
+		return result, err
 	}
 	if err = SignBillingRequest(req, b.key, time.Now()); err != nil {
-		return err
+		return result, err
 	}
 	c := http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	if b.client != nil {
@@ -39,14 +43,29 @@ func (b billingMailRemote) Set(ctx context.Context, user string, enabled bool) e
 	}
 	res, err := c.Do(req)
 	if err != nil {
-		return fmt.Errorf("mail preference service unavailable")
+		return result, fmt.Errorf("mail preference service unavailable")
 	}
 	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 65537))
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("mail preference service HTTP %d", res.StatusCode)
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusConflict {
+		return result, fmt.Errorf("mail preference service HTTP %d", res.StatusCode)
 	}
-	return nil
+	raw, err := io.ReadAll(io.LimitReader(res.Body, 65537))
+	if err != nil || len(raw) > 65536 || json.Unmarshal(raw, &result) != nil {
+		return result, fmt.Errorf("invalid mail preference response")
+	}
+	if res.StatusCode == http.StatusConflict {
+		result.Conflict = true
+	}
+	if result.Revision < 0 {
+		return result, fmt.Errorf("invalid mail preference revision")
+	}
+	return result, nil
+}
+func (b billingMailRemote) Get(ctx context.Context, user string) (MailRemoteState, error) {
+	return b.request(ctx, user, nil)
+}
+func (b billingMailRemote) Set(ctx context.Context, user string, on bool, revision int64, op string) (MailRemoteState, error) {
+	return b.request(ctx, user, url.Values{"enabled": {strconv.FormatBool(on)}, "revision": {strconv.FormatInt(revision, 10)}, "operation": {op}})
 }
 
 // NewDefaultMailPreferences uses the same user label and managed service as

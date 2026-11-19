@@ -46,20 +46,33 @@ function gateway(root, s) {
   val.append(field, save, segs([["on",t("On")],["paused",t("Paused")]], s.gatewayPaused ? "paused" : "on", v => setGatewayPaused(v === "paused")));
   if (portError) val.append(el("div", "sub err", portError));
 }
-let mail = {enabled: true};
+let mailState = null, mailRead = false, mailRevision = 0, mailTimer, mailResume;
 function mailPreference(root) {
-  // The choice is recorded and reported; the service owns the real state and
-  // never reports it back here.
-  const item = row(root, "billing-email", "Daily billing email", t("Email delivery is not available yet."));
-  const draw = () => item.val.replaceChildren(segs([[false, t("Off")], [true, t("On")]], mail.enabled, async on => {
-    if (on === mail.enabled) return;
-    const previous = mail.enabled;
-    mail.enabled = on; draw();
-    try { await api("mail-preference", {enabled: on}); }
-    catch (err) { mail.enabled = previous; draw(); statusErr(err); }
-  }));
-  draw();
-  api("mail-preference").then(r => { if (r && r.enabled !== mail.enabled) { mail.enabled = r.enabled; draw(); } }).catch(() => {});
+  const item=row(root,"billing-email","Daily billing email");
+  const draw=()=>{
+    if (!item.r.isConnected) return;
+    item.val.replaceChildren();
+    const state=mailState, choice=segs([[false,t("Off")],[true,t("On")]],state?.enabled ?? true,async on=>{
+      const version=++mailRevision, previous=mailState;
+      mailState={...state,enabled:on,pending:true,synced:false,conflict:false};draw();
+      try { const next=await api("mail-preference",{enabled:on});if(version===mailRevision)mailState=next; }
+      catch(err){if(version===mailRevision)mailState=previous;statusErr(err);}
+      draw(); refresh();
+    });
+    if (!state) for(const button of choice.querySelectorAll('button')) button.disabled=true;
+    item.val.append(choice);
+    // the choice's sync state lives with the service; the row only says the
+    // sending itself is not live yet
+    item.r.querySelector('.say').textContent=t('Email delivery is not available yet.');
+  };
+  const refresh=async()=>{
+    if (mailRead || !item.r.isConnected || document.querySelector('#view-settings').hidden) return;
+    mailRead=true;const version=mailRevision;
+    try {const next=await api('mail-preference');if(version===mailRevision)mailState=next;}
+    catch {if(version===mailRevision)mailState=null;}
+    finally {mailRead=false;draw();clearTimeout(mailTimer);if(item.r.isConnected&&!document.querySelector('#view-settings').hidden)mailTimer=setTimeout(refresh,5000);else if(mailResume!==refresh)mailResume?.();}
+  };
+  mailResume=refresh;draw();refresh();
 }
 export function render(s) {
   if (!s) return;

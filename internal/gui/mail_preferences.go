@@ -7,16 +7,20 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
+	"time"
 
 	"github.com/yetone/magpie/internal/accounting"
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/distribution"
 )
 
-// The daily billing email is sent by the managed service, which owns the
-// real state. This app only records the user's choice and reports it; the
-// page never learns anything back from the service.
-var mailStore atomic.Pointer[accounting.MailPreferences]
+type mailPreferenceWorker struct {
+	preferences *accounting.MailPreferences
+	wake        chan struct{}
+	cancel      context.CancelFunc
+}
+
+var mailWorker atomic.Pointer[mailPreferenceWorker]
 
 func startMailPreference() {
 	if !distribution.Internal {
@@ -26,28 +30,61 @@ func startMailPreference() {
 	if user == "" {
 		user = os.Getenv("USER")
 	}
-	store, err := accounting.NewDefaultMailPreferences(appdir.Config(), user)
+	preferences, err := accounting.NewDefaultMailPreferences(appdir.Config(), user)
 	if err != nil {
 		return
 	}
-	mailStore.Store(store)
+	ctx, cancel := context.WithCancel(context.Background())
+	w := &mailPreferenceWorker{preferences: preferences, wake: make(chan struct{}, 1), cancel: cancel}
+	if !mailWorker.CompareAndSwap(nil, w) {
+		cancel()
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		defer mailWorker.CompareAndSwap(w, nil)
+		for {
+			_ = w.preferences.Sync(ctx)
+			select {
+			case <-ctx.Done():
+				return
+			case <-w.wake:
+			case <-ticker.C:
+			}
+		}
+	}()
+}
+func stopMailPreference() {
+	if w := mailWorker.Swap(nil); w != nil {
+		w.cancel()
+	}
+}
+func (w *mailPreferenceWorker) signal() {
+	select {
+	case w.wake <- struct{}{}:
+	default:
+	}
 }
 
-func mailView(m *accounting.MailPreferences) struct {
-	Enabled bool `json:"enabled"`
-} {
-	return struct {
-		Enabled bool `json:"enabled"`
-	}{m.Enabled()}
+type mailPreferenceView struct {
+	Enabled  bool `json:"enabled"`
+	Synced   bool `json:"synced"`
+	Pending  bool `json:"pending"`
+	Conflict bool `json:"conflict"`
 }
 
+func mailView(w *mailPreferenceWorker) mailPreferenceView {
+	s, synced := w.preferences.Status()
+	return mailPreferenceView{Enabled: s.Enabled, Synced: synced, Pending: s.Pending, Conflict: s.Conflict}
+}
 func handleMailPreference(w http.ResponseWriter, r *http.Request) {
 	if !distribution.Internal {
 		http.NotFound(w, r)
 		return
 	}
-	store := mailStore.Load()
-	if store == nil {
+	worker := mailWorker.Load()
+	if worker == nil {
 		http.Error(w, "mail preference unavailable", http.StatusServiceUnavailable)
 		return
 	}
@@ -65,12 +102,11 @@ func handleMailPreference(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid mail preference", http.StatusBadRequest)
 			return
 		}
-		// the push keeps its own timeout and must not die with the page's
-		// request
-		if err := store.Set(context.Background(), *in.Enabled); err != nil {
-			http.Error(w, "unable to report mail preference", http.StatusBadGateway)
+		if err := worker.preferences.Set(*in.Enabled); err != nil {
+			http.Error(w, "unable to save mail preference", http.StatusInternalServerError)
 			return
 		}
+		worker.signal()
 	}
-	writeJSON(w, mailView(store))
+	writeJSON(w, mailView(worker))
 }
