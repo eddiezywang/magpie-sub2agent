@@ -39,6 +39,30 @@ test('receipt distinguishes unpriced usage, plan tokens and points from zero USD
  const mixed=render({POINTS:220,PLAN_TOKENS:110},1);assert.match(mixed,/分项统计/);assert.match(mixed,/含待定价用量/);assert.doesNotMatch(mixed,/\$0/);
  const free=render({USD:0},0);assert.match(free,/\$0/);assert.doesNotMatch(free,/待定价/);
 });
+test('CNY receipts distinguish unpriced models from small amounts and omit plan units', () => {
+ const modelBase = { tokens: 10, calls: 1 };
+ const svg = renderReportCardSvg({
+   user: { name: 'fixture-user' },
+   period: { type: 'daily', generated_at: '2026-11-18T12:00:00Z' },
+   day: {
+     date: '2026-11-18', cost: 0.0001, calls: 2, unpriced: 1, days: [],
+     agents: [{
+       id: 'fixture-agent', name: 'Fixture', cost: 0.0001, unpriced: 1,
+       models: [
+         { ...modelBase, model: 'pending-model', cost: 0, unpriced: 1 },
+         { ...modelBase, model: 'tiny-model', cost: 0.0001, unpriced: 0 },
+       ],
+     }],
+   },
+   billing: { amounts_by_currency: { POINTS: 900, PLAN_TOKENS: 800 } },
+   valuation: { usd_to_cny: 6.7152, unpriced_attempts: 1 },
+ });
+ assert.match(svg, />待定价</);
+ assert.match(svg, /&lt;¥0\.01/);
+ assert.doesNotMatch(svg, />¥0\.00</);
+ assert.doesNotMatch(svg, /积分|计划折算 token/);
+});
+
 const {createBillingPolicy}=require('../src/billing-policy');
 const {createUsageServer}=require('../src/server');
 const fixed=()=>new Date('2026-11-13T08:20:00Z');

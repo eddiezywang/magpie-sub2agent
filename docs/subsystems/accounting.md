@@ -107,9 +107,9 @@ are not accepted. Administrator prices take precedence over the catalog snapshot
 Normal reports
 include a billing breakdown as well as their existing JSON/SVG/PNG shape.
 Receipt images identify the username and show unpriced usage as pending pricing,
-never as zero dollars. Points and plan-token amounts retain their own units;
-mixed currencies are itemized, not summed. The primary receipt shows API-equivalent
-CNY at the dated server-maintained `report-currency.json` exchange rate. Its
+never as zero dollars. The CNY receipt shows the official API price equivalent
+at the dated server-maintained `report-currency.json` exchange rate. Points and
+plan-token amounts retain their own units in the report data. Its
 authenticated `/admin/report-currency` API updates that reference. Original USD
 cost fields and enterprise POINTS/PLAN_TOKENS remain separate. These usage reports
 are not settlement invoices. The original receipt fonts are JetBrains Mono and

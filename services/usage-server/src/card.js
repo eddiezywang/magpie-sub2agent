@@ -230,7 +230,13 @@ function receipt(report) {
   const unpriced = day ? day.unpriced : totals.unpriced_requests;
   const billing = report.billing;
   const valuation=report.valuation;
-  const costText=value=>valuation ? '¥'+((Number(value)||0)*valuation.usd_to_cny).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}) : money(value);
+  const costText = (value, missing = 0) => {
+    if (!value && missing > 0) return '待定价';
+    if (!valuation) return money(value);
+    const cny = (Number(value) || 0) * valuation.usd_to_cny;
+    if (cny > 0 && cny < 0.005) return '<¥0.01';
+    return '¥' + cny.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
   const amounts = Object.entries(billing?.amounts_by_currency || {});
   const pending = valuation?.unpriced_attempts ?? billing?.unpriced_attempts ?? unpriced ?? 0;
   const unitName = unit => unit === 'VOLC_AFP' ? '火山 AFP' : unit === 'TC_POINTS' ? 'TIG 腾讯参考积分' : unit === 'GLM_POINTS' ? '智谱积分' : unit === 'POINTS' ? '积分' : unit === 'PLAN_TOKENS' ? '计划折算 token' : 'USD';
@@ -259,11 +265,11 @@ function receipt(report) {
     return {
       name: upper(agentId === '' || agentId === 'unknown' ? '未标明 AGENT' : (day ? g.name : agentId)),
       icon: day ? (g.icon === 'generic' ? '' : g.icon) : (g.icon || ''),
-      value: noDollarBreakdown ? '—' : costText(day ? g.cost : g.cost_usd),
+      value: noDollarBreakdown ? '—' : costText(day ? g.cost : g.cost_usd, day ? g.unpriced : 0),
       models: models.map((m) => ({
         name: upper(day ? m.model : m.model),
         icon: day ? (m.icon || '') : (m.icon || ''),
-        value: noDollarBreakdown ? '—' : !day && m.priced === false ? '未配价' : costText(day ? m.cost : m.cost_usd),
+        value: noDollarBreakdown ? '—' : !day && m.priced === false ? '待定价' : costText(day ? m.cost : m.cost_usd, day ? m.unpriced : 0),
       })),
       more: hidden ? `还有 ${hidden} 个` : '',
     };
@@ -283,7 +289,6 @@ function receipt(report) {
   const active = duration(stats.active_ms);
   if (active) statRows.push({ label: '使用时长', value: active });
   if (errors > 0) statRows.push({ label: '错误', value: count(errors) });
-  if(valuation)for(const [unit,amount] of amounts)if(unit!=='USD')statRows.push({label:unitName(unit),value:count(amount)});
   if (weekly) {
     const had = day
       ? day.days.filter((d) => d.date >= day.from && d.date <= day.date && d.calls > 0).length
@@ -305,7 +310,7 @@ function receipt(report) {
       { label: '开具', value: cnDateTime(period.generated_at) },
     ],
     totalLabel: valuation ? 'API 总费用' : billing ? '用量折算' : 'API 总费用',
-    total: valuation ? pending>0 && !cost ? '待定价' : costText(cost) : billing ? amounts.length === 1 ? amountText(amounts[0]) : amounts.length > 1 ? '分项统计' : pending > 0 ? '待定价' : '无已计价用量' : money(cost),
+    total: valuation ? costText(cost, pending) : billing ? amounts.length === 1 ? amountText(amounts[0]) : amounts.length > 1 ? '分项统计' : pending > 0 ? '待定价' : '无已计价用量' : money(cost),
     totalNote: valuation ? '按 API 价格折算'+(pending>0?' · 部分待定价':'') : billing ? (amounts.map(amountText).join(' · ') || '未定价不代表免费') + (pending > 0 ? ' · 含待定价用量' : '') : '按 API 价格折算 · 非发票',
     stats: statRows,
     agentHead: ['AGENT / 模型', '费用'],
