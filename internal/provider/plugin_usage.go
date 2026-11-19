@@ -156,7 +156,7 @@ func quotaOfPlugin(q SubscriptionQuota, u plugin.Usage) SubscriptionQuota {
 		sortResetCards(q.Resets.Each)
 	}
 	for _, x := range u.Windows {
-		w := QuotaWindow{Name: x.Name, ResetSecs: x.ResetSecs, Display: x.Display,
+		w := QuotaWindow{Name: x.Name, ResetSecs: x.ResetSecs, ResetText: x.ResetText, Display: x.Display,
 			Amount: x.Amount, Limit: x.Limit, Unit: x.Unit,
 			Span: time.Duration(x.Span * float64(time.Second)), Model: strings.ToLower(x.Model), Aside: x.Aside,
 			Pool: x.Pool, Family: x.Family}

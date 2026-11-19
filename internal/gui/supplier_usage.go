@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
 	"github.com/yetone/magpie/internal/usage"
 	"github.com/yetone/magpie/internal/usageapi"
@@ -18,6 +20,26 @@ type usageSupplier struct {
 func supplierUsageRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/usage/suppliers", coldTurn(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, configuredUsageSuppliers(provider.All()))
+	}))
+	mux.HandleFunc("GET /api/usage/suppliers/tig/keys", coldTurn(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, tigUsageProviders(provider.All()))
+	}))
+	mux.HandleFunc("GET /api/usage/suppliers/tig/key", coldTurn(func(w http.ResponseWriter, r *http.Request) {
+		providerID, keyID := r.URL.Query().Get("provider"), r.URL.Query().Get("key")
+		for _, p := range tigUsageProviders(provider.All()) {
+			if p.Provider != providerID {
+				continue
+			}
+			for _, key := range p.Keys {
+				if key.ID == keyID {
+					now := usage.Clock()
+					windows, periods := tigUsagePeriods(now, key.Windows)
+					writeJSON(w, tigUsageKey{windows, usage.TIGKeyUsageOf(now, providerID, keyID, periods)})
+					return
+				}
+			}
+		}
+		http.NotFound(w, r)
 	}))
 	mux.HandleFunc("GET /api/usage/suppliers/{id}", coldTurn(func(w http.ResponseWriter, r *http.Request) {
 		id, channel := r.PathValue("id"), r.URL.Query().Get("channel")
@@ -39,6 +61,67 @@ func supplierUsageRoutes(mux *http.ServeMux) {
 		}
 		http.NotFound(w, r)
 	}))
+}
+
+type tigUsageKey struct {
+	Windows []tigUsageWindow  `json:"windows"`
+	Usage   usage.TIGKeyUsage `json:"usage"`
+}
+
+type tigUsageWindow struct {
+	Period string    `json:"period"`
+	Status string    `json:"status"`
+	Start  time.Time `json:"start,omitzero"`
+	Reset  time.Time `json:"reset,omitzero"`
+}
+
+func tigUsagePeriods(now time.Time, observations []gateway.TIGQuotaWindow) ([]tigUsageWindow, map[string]usage.TIGKeyPeriod) {
+	windows := make([]tigUsageWindow, 0, len(observations))
+	periods := make(map[string]usage.TIGKeyPeriod, len(observations))
+	for _, o := range observations {
+		w := tigUsageWindow{Period: o.Period, Status: "unknown"}
+		duration := 7 * 24 * time.Hour
+		if o.Period == "fiveHours" {
+			duration = 5 * time.Hour
+		}
+		if o.Until.After(now) {
+			w.Reset, w.Status = o.Until, "observed"
+			if o.Estimated {
+				w.Status = "estimated"
+				w.Start = o.Until.Add(-duration)
+				if !w.Start.After(now) && !w.Start.Before(o.ObservedAfter) {
+					periods[o.Period] = usage.TIGKeyPeriod{From: w.Start}
+				} else {
+					w = tigUsageWindow{Period: o.Period, Status: "unknown"}
+				}
+			}
+		} else if !o.Until.IsZero() {
+			w.Status = "expired"
+		}
+		if _, ok := periods[o.Period]; !ok && o.Period == "fiveHours" {
+			periods[o.Period] = usage.TIGKeyPeriod{From: now.Add(-duration), Rolling: true}
+		}
+		windows = append(windows, w)
+	}
+	return windows, periods
+}
+
+type tigUsageProvider struct {
+	Provider string                `json:"provider"`
+	Keys     []gateway.TIGKeyUsage `json:"keys"`
+}
+
+func tigUsageProviders(providers []provider.Provider) []tigUsageProvider {
+	out := make([]tigUsageProvider, 0)
+	for _, p := range providers {
+		if !hasSupplierID(p, "aiep-coding-plan") && !hasSupplierID(p, "sub2agent-tigcodingplan") {
+			continue
+		}
+		if keys := gateway.TIGKeyUsages(p); len(keys) > 0 {
+			out = append(out, tigUsageProvider{Provider: p.ID, Keys: keys})
+		}
+	}
+	return out
 }
 
 func configuredUsageSuppliers(providers []provider.Provider) []usageSupplier {

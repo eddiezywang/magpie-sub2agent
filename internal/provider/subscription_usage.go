@@ -31,6 +31,7 @@ type QuotaWindow struct {
 	Name      string     `json:"name"`
 	Used      float64    `json:"used"`
 	ResetsAt  *time.Time `json:"resetsAt,omitempty"`
+	ResetText string     `json:"resetText,omitempty"`
 	ResetSecs int64      `json:"resetSecs,omitempty"`
 	Display   string     `json:"display,omitempty"`
 	// Text is set on a window that is its Display alone, with no share

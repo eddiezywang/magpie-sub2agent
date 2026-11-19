@@ -3,9 +3,9 @@ package usage
 import (
 	"cmp"
 	"slices"
-	"strings"
 	"time"
 
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/provider"
 )
 
@@ -13,31 +13,38 @@ const supplierModelLimit = 16
 
 // SupplierUsage summarizes the current gateway ledger for one configured source.
 type SupplierUsage struct {
-	From       string           `json:"from"`
-	To         string           `json:"to"`
-	LedgerFrom *time.Time       `json:"ledgerFrom,omitempty"`
-	Today      SupplierCounters `json:"today"`
-	Week       SupplierCounters `json:"week"`
-	Month      SupplierCounters `json:"month"`
-	Total      SupplierCounters `json:"total"`
-	Selected   SupplierCounters `json:"selected"`
-	Activity   []TokenDay       `json:"activity"`
-	Peak       *TokenDay        `json:"peak,omitempty"`
-	Streak     int              `json:"streak"`
-	Longest    int              `json:"longest"`
-	Models     []SupplierModel  `json:"models"`
-	Timeline   []SupplierBucket `json:"timeline"`
+	From         string           `json:"from"`
+	To           string           `json:"to"`
+	LedgerFrom   *time.Time       `json:"ledgerFrom,omitempty"`
+	RateRevision string           `json:"rateRevision,omitempty"`
+	RateFrom     time.Time        `json:"rateFrom,omitzero"`
+	Today        SupplierCounters `json:"today"`
+	Week         SupplierCounters `json:"week"`
+	Month        SupplierCounters `json:"month"`
+	Total        SupplierCounters `json:"total"`
+	Selected     SupplierCounters `json:"selected"`
+	Activity     []TokenDay       `json:"activity"`
+	Peak         *TokenDay        `json:"peak,omitempty"`
+	Streak       int              `json:"streak"`
+	Longest      int              `json:"longest"`
+	Models       []SupplierModel  `json:"models"`
+	Timeline     []SupplierBucket `json:"timeline"`
 }
 
 type SupplierCounters struct {
-	Tokens      int64   `json:"tokens"`
-	Calls       int     `json:"calls"`
-	CacheRead   int64   `json:"cacheRead"`
-	KnownPrompt int64   `json:"knownPrompt"`
-	Credits     float64 `json:"credits"`
-	Credited    int     `json:"credited"`
-	MaaSPoints  float64 `json:"maasPoints"`
-	MaaSCovered int     `json:"maasCovered"`
+	Tokens        int64   `json:"tokens"`
+	Calls         int     `json:"calls"`
+	CacheRead     int64   `json:"cacheRead"`
+	KnownPrompt   int64   `json:"knownPrompt"`
+	Credits       float64 `json:"credits"`
+	Credited      int     `json:"credited"`
+	MaaSPoints    float64 `json:"maasPoints"`
+	MaaSCovered   int     `json:"maasCovered"`
+	TIGAmount     float64 `json:"tigAmount,omitempty"`
+	TIGCovered    int     `json:"tigCovered,omitempty"`
+	TIGUnpriced   int     `json:"tigUnpriced,omitempty"`
+	TIGTokens     int64   `json:"tigTokens,omitempty"`
+	OffPeakTokens int64   `json:"offPeakTokens,omitempty"`
 }
 
 func (t *SupplierCounters) add(d SupplierCounters) {
@@ -49,6 +56,11 @@ func (t *SupplierCounters) add(d SupplierCounters) {
 	t.Credited += d.Credited
 	t.MaaSPoints += d.MaaSPoints
 	t.MaaSCovered += d.MaaSCovered
+	t.TIGAmount += d.TIGAmount
+	t.TIGCovered += d.TIGCovered
+	t.TIGUnpriced += d.TIGUnpriced
+	t.TIGTokens += d.TIGTokens
+	t.OffPeakTokens += d.OffPeakTokens
 }
 
 type SupplierModel struct {
@@ -64,9 +76,17 @@ type SupplierBucket struct {
 // SupplierUsageOf uses the shared ledger index. The hourly buckets start at
 // local midnight and follow elapsed hours, including repeated DST hours.
 func SupplierUsageOf(ids map[string]bool, channel string, days int, zone *time.Location) SupplierUsage {
+	if zone == nil {
+		zone = time.Local
+	}
 	ledger := readLogSnapshot()
 	renames, cleared := provider.UsageRenames(), readCleared()
-	return foldSupplierUsage(Clock().In(zone), cleared.clearedSince(ledger.firstOwn), channel, days, func(yield func(Record)) {
+	now := Clock().In(zone)
+	var rates catalog.TIGBilling
+	if channel != "" {
+		rates = catalog.ReadTIGBilling(now)
+	}
+	return foldSupplierUsage(now, cleared.clearedSince(ledger.firstOwn), channel, days, rates, func(yield func(Record)) {
 		ledger.visit(time.Time{}, func(r Record) {
 			r.renameBy(renames)
 			if ids[r.Provider] && !cleared.hides(&r) {
@@ -79,16 +99,11 @@ func SupplierUsageOf(ids map[string]bool, channel string, days int, zone *time.L
 // TIGModelChannel recognizes both spellings of the protocol suffix without
 // treating a model maker's name as a deployment identifier.
 func TIGModelChannel(id string) string {
-	id = strings.TrimSuffix(strings.ToLower(id), "-openai")
-	for _, channel := range []string{"zp", "hs", "tc"} {
-		if strings.HasSuffix(id, "-"+channel) {
-			return channel
-		}
-	}
-	return ""
+	_, channel := catalog.TIGModel(id)
+	return channel
 }
 
-func foldSupplierUsage(now, first time.Time, channel string, days int, visit func(func(Record))) SupplierUsage {
+func foldSupplierUsage(now, first time.Time, channel string, days int, rates tigKeyPricer, visit func(func(Record))) SupplierUsage {
 	if days != 1 && days != 7 && days != 30 {
 		days = 7
 	}
@@ -96,7 +111,8 @@ func foldSupplierUsage(now, first time.Time, channel string, days int, visit fun
 	start, week, month := today.AddDate(0, 0, 1-days), today.AddDate(0, 0, -6), today.AddDate(0, 0, -29)
 	activityStart := heatmapSince(now)
 	out := SupplierUsage{From: start.Format(time.DateOnly), To: today.Format(time.DateOnly),
-		Activity: []TokenDay{}, Models: []SupplierModel{}, Timeline: []SupplierBucket{}}
+		Activity: []TokenDay{}, Models: []SupplierModel{}, Timeline: []SupplierBucket{},
+		RateRevision: rates.Revision(), RateFrom: rates.Effective()}
 	if !first.IsZero() {
 		out.LedgerFrom = &first
 	}
@@ -108,6 +124,16 @@ func foldSupplierUsage(now, first time.Time, channel string, days int, visit fun
 			return
 		}
 		d := supplierCounters(r)
+		if channel != "" && !r.Time.Before(start) && (d.Tokens > 0 || !r.Failed()) {
+			if c, ok := rates.Charge(tigChargeInput(r)); ok {
+				d.TIGAmount, d.TIGCovered, d.TIGTokens = c.Amount, 1, d.Tokens
+				if c.OffPeak {
+					d.OffPeakTokens = d.Tokens
+				}
+			} else {
+				d.TIGUnpriced = 1
+			}
+		}
 		out.Total.add(d)
 		if !r.Time.Before(today) {
 			out.Today.add(d)

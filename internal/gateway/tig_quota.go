@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/edit"
 	"github.com/yetone/magpie/internal/lazyre"
 	"github.com/yetone/magpie/internal/provider"
@@ -74,12 +75,13 @@ func tigPeriod(period string) time.Duration {
 }
 
 func tigProvider(p provider.Provider) bool {
-	return p.Preset == "aiep-coding-plan" || strings.HasPrefix(p.ID, "aiep-coding-plan") || strings.HasPrefix(p.ID, "sub2agent-tigcodingplan")
+	return p.Preset == "aiep-coding-plan" || p.Preset == "sub2agent-tigcodingplan" ||
+		strings.HasPrefix(p.ID, "aiep-coding-plan") || strings.HasPrefix(p.ID, "sub2agent-tigcodingplan")
 }
 
 func tigQuotaKey(c candidate) string {
-	model := strings.TrimSuffix(strings.ToLower(c.model), "-openai")
-	if !tigProvider(c.p) || !strings.HasSuffix(model, "-zp") || c.p.Key == "" {
+	_, channel := catalog.TIGModel(c.model)
+	if !tigProvider(c.p) || channel != "zp" || c.p.Key == "" {
 		return ""
 	}
 	return c.p.ID + "#" + provider.KeyID(c.p.Key) + "/zp"
@@ -163,16 +165,42 @@ func TIGQuotaWindows(p provider.Provider) []TIGQuotaWindow {
 	if !tigProvider(p) || len(keys) != 1 {
 		return nil
 	}
-	key := tigQuotaKey(candidate{p: p.WithKey(keys[0]), model: "glm-5.3-flash-zp"})
-	if key == "" {
-		return nil
-	}
 	tigWindows.Lock()
 	defer tigWindows.Unlock()
 	loadTIGWindows()
+	return tigWindowsFor(p.ID, provider.KeyID(keys[0].Key))
+}
+
+// TIGKeyUsage identifies an enabled key using the same fingerprint as the
+// gateway ledger and the persisted observations.
+type TIGKeyUsage struct {
+	ID      string           `json:"id"`
+	Name    string           `json:"name,omitempty"`
+	Windows []TIGQuotaWindow `json:"windows"`
+}
+
+func TIGKeyUsages(p provider.Provider) []TIGKeyUsage {
+	if !tigProvider(p) {
+		return nil
+	}
+	keys := p.KeysOn()
+	tigWindows.Lock()
+	defer tigWindows.Unlock()
+	loadTIGWindows()
+	out := make([]TIGKeyUsage, 0, len(keys))
+	for _, key := range keys {
+		id := provider.KeyID(key.Key)
+		out = append(out, TIGKeyUsage{ID: id, Name: key.Name, Windows: tigWindowsFor(p.ID, id)})
+	}
+	return out
+}
+
+// tigWindowsFor reads under the caller's lock.
+func tigWindowsFor(providerID, keyID string) []TIGQuotaWindow {
+	windows := tigWindows.data[providerID+"#"+keyID+"/zp"]
 	out := make([]TIGQuotaWindow, 0, 2)
 	for _, period := range []string{"fiveHours", "week"} {
-		window := tigWindows.data[key][period]
+		window := windows[period]
 		window.Period = period
 		out = append(out, window)
 	}

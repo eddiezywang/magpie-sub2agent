@@ -1270,8 +1270,9 @@ type UsageResets struct {
 
 type UsageWindow struct {
 	Name      string   `json:"name"`
-	Used      *float64 `json:"used"`     // percent; nil when the plugin didn't say
-	ResetsAt  string   `json:"resetsAt"` // RFC 3339
+	Used      *float64 `json:"used"`                // percent; nil when the plugin didn't say
+	ResetsAt  string   `json:"resetsAt"`            // RFC 3339
+	ResetText string   `json:"resetText,omitempty"` // vendor's display text, without interpreted timing
 	ResetSecs int64    `json:"resetSecs"`
 	Display   string   `json:"display"`
 	Amount    float64  `json:"amount"` // of Limit, in Unit: the window's own count, used

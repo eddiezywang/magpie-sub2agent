@@ -1,5 +1,11 @@
  'use strict';
 const fs=require('node:fs');const path=require('node:path');const crypto=require('node:crypto');
+const tigPeak={utc_offset_minutes:480,weekdays:[1,2,3,4,5],start_hour:14,end_hour:18,peak_factor:1,off_peak_factor:0.5};
+function isTigPeak(at){
+ const local=new Date(at.getTime()+tigPeak.utc_offset_minutes*60000);
+ const hour=local.getUTCHours();
+ return tigPeak.weekdays.includes(local.getUTCDay())&&hour>=tigPeak.start_hour&&hour<tigPeak.end_hour;
+}
 const initial={revision:'internal-2026-11-17-tig-2',models:[
  {provider:'sub2agent-workbuddy*',model:'hy4free',currency:'POINTS',coefficient:0,above:[],promotion:true},
  ...Object.entries({'glm-5.3-flash-maas':1,'hy3-maas':1,'deepseek-v4-flash-maas':2,'deepseek-v4.1-flash-maas':2,'minimax-m3-maas':2.5,'glm-5.3-maas':7,'deepseek-v4-pro-maas':8.5}).map(([model,coefficient])=>({provider:'sub2agent-workbuddy*',model,source:'MaaS',currency:'POINTS',coefficient,above:[]})),
@@ -54,13 +60,22 @@ function createBillingPolicy({dataDir,listPrice}){
  const revisionFile=revision=>path.join(dir,crypto.createHash('sha256').update(revision).digest('hex')+'.json');
  const atomic=(f,obj)=>{const t=f+'.pending';const fd=fs.openSync(t,'w',0o600);try{fs.writeFileSync(fd,JSON.stringify(obj)+'\n');fs.fsyncSync(fd);}finally{fs.closeSync(fd);}fs.renameSync(t,f);};
  let current=fs.existsSync(file)?validate(JSON.parse(fs.readFileSync(file,'utf8'))):validate(initial);
+ let effectiveAt;
  function set(next){
   next=validate(next);const archived=revisionFile(next.revision);
   if(fs.existsSync(archived)&&JSON.stringify(JSON.parse(fs.readFileSync(archived,'utf8')))!==JSON.stringify(next))throw new Error('Revision is immutable; use a new revision');
-  atomic(archived,next);atomic(file,next);current=next;return snapshot();
+  if(!fs.existsSync(archived))atomic(archived,next);
+  if(!effectiveAt||current.revision!==next.revision){
+   atomic(file,next);current=next;effectiveAt=fs.statSync(file).mtime.toISOString();
+  }
+  return snapshot();
  }
  function snapshot(){return JSON.parse(JSON.stringify(current));}
- if(!fs.existsSync(file))set(current);else if(!fs.existsSync(revisionFile(current.revision)))atomic(revisionFile(current.revision),current);
+ if(!fs.existsSync(file))set(current);
+ else{
+  effectiveAt=fs.statSync(file).mtime.toISOString();
+  if(!fs.existsSync(revisionFile(current.revision)))atomic(revisionFile(current.revision),current);
+ }
  function rules(){return {revision:current.revision,models:current.models.map(r=>({provider:r.provider,model:r.model,service_tier:r.service_tier||'',above:r.above}))};}
  function match(policy,provider,model,tier){
   const dep=/(?:-openai)?-(zp|tc|hs)(?:-openai)?$/i.exec(String(model).split('/').pop())?.[1]?.toLowerCase()||'';
@@ -90,21 +105,28 @@ function createBillingPolicy({dataDir,listPrice}){
   let factor=1;
   if(r.credit_rates){
    if(g.cache_unknown_calls>0 || g.cache_unknown_input_tokens>0)return {priced:false,reason:'cache_usage_unknown'};
-   const china=new Date(at.getTime()+8*3600000), day=china.getUTCDay(), hour=china.getUTCHours();
-   const peak=day>=1&&day<=5&&hour>=14&&hour<18; factor=peak?1:0.5;
+   factor=isTigPeak(at)?tigPeak.peak_factor:tigPeak.off_peak_factor;
    const cr=r.credit_rates, amount=((g.input_tokens+g.cache_write_5m_tokens+g.cache_write_1h_tokens)*cr.input+g.cache_read_tokens*cr.cache_read+g.output_tokens*cr.output)/10000*factor;
    return {priced:true,currency:'GLM_POINTS',amount,revision:current.revision,factor};
   }
   // Billing rule only: Monday-Friday 14:00 <= China time <18:00. It
   // neither changes remaining quota nor invents a vendor reset response.
-  const china=new Date(at.getTime()+8*3600000);const weekday=china.getUTCDay(),hour=china.getUTCHours();
-  if(r.weekday_afternoon_factor!==undefined&&weekday>=1&&weekday<=5&&hour>=14&&hour<18)factor=r.weekday_afternoon_factor;
+  if(r.weekday_afternoon_factor!==undefined&&isTigPeak(at))factor=r.weekday_afternoon_factor;
   const total=g.input_tokens+g.output_tokens+g.cache_read_tokens+g.cache_write_5m_tokens+g.cache_write_1h_tokens;
   const selected=!r.above.length||g.context_tier==='base'?r.usd_rates:r.tiers?.[g.context_tier];
   if(r.currency==='USD'&&selected){const amount=(g.input_tokens*selected.input+g.output_tokens*selected.output+g.cache_read_tokens*selected.cache_read+g.cache_write_5m_tokens*selected.cache_write_5m+g.cache_write_1h_tokens*selected.cache_write_1h)/1e6*factor;return {priced:true,currency:'USD',amount,revision:current.revision,factor};}
   if(r.coefficient!==undefined)return {priced:true,currency:r.currency,amount:total*r.coefficient*factor/(r.currency==='VOLC_AFP'?10000:1),revision:current.revision,factor};
   return {priced:false,reason:'missing_rate'};
  }
- return {snapshot,set,rules,charge,routing:()=>({revision:current.revision,expires_at:new Date(Date.now()+86400000).toISOString(),models:current.models.filter(r=>r.coefficient!==undefined||r.credit_rates).map(r=>({provider:r.provider,model:r.model,score:r.routing_score??r.coefficient,currency:r.currency,coefficient:r.coefficient,credit_rates:r.credit_rates,deployment:r.deployment,source:r.source,valid_until:r.valid_until||undefined}))})};
+ function routing(){
+  const models=current.models.filter(r=>r.coefficient!==undefined||r.credit_rates).map(r=>({
+   provider:r.provider,model:r.model,score:r.routing_score??r.coefficient,currency:r.currency,
+   coefficient:r.coefficient,credit_rates:r.credit_rates,deployment:r.deployment,source:r.source,
+   valid_until:r.valid_until||undefined,service_tier:r.service_tier||undefined,above:r.above,
+   weekday_afternoon_factor:r.deployment?r.weekday_afternoon_factor:undefined,
+  }));
+  return {revision:current.revision,effective_at:effectiveAt,expires_at:new Date(Date.now()+86400000).toISOString(),tig_peak:tigPeak,models};
+ }
+ return {snapshot,set,rules,charge,routing};
 }
 module.exports={createBillingPolicy,canonical,providerMatches,validate};

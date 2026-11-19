@@ -219,6 +219,18 @@ model has the same canonical identity; a different returned model remains
 unpriced. Older summaries without the optional field retain their previous
 interpretation. Deploy the accepting server before sending the new field.
 
+The intranet routing catalog also publishes the active billing revision's
+activation time and the peak schedule used by its charge function. The local
+TIG quota estimate uses that snapshot and the current gateway ledger. It
+counts only matching Zhipu requests under the selected key fingerprint, and
+withholds full coverage if the available ledger or rate revision starts after
+the window started. Unattributed requests, conflicting returned models and
+unknown cache breakdown leave the window partially covered. A normal upstream
+quota 429 establishes a recovery time. The first successful call after recovery
+supplies an estimated next start. The five-hour rolling estimate can be shown
+as a reference when the window start is unknown. The weekly estimate needs a
+window start. Neither changes the user-wide reporting or outbound telemetry.
+
 The intranet Usage overview detects TIG channels from the current provider's
 model list and shows reference limits, server model coefficients, estimated
 observed user totals and a near-limit warning for the rolling five-hour

@@ -63,9 +63,12 @@ export default async function createCib(input) {
       const window = _internal.enterpriseUsageOf(data);
       delete window.resetsAt;
       delete window.span;
+      const resetText = typeof data.cycleResetTime === 'string' ? data.cycleResetTime.trim() : '';
+      if (resetText && resetText.length <= 128 && !/[\x00-\x1f\x7f]/.test(resetText))
+        window.resetText = resetText;
       const remaining = Math.max(0, data.limitNum - data.credit);
       window.display = `剩余 ${Number(remaining.toFixed(4))} / ${data.limitNum}（已用 ${data.credit}）` +
-        (data.cycleResetTime ? `；重置 ${data.cycleResetTime}` : '');
+        (window.resetText ? `；重置 ${window.resetText}` : '');
       return {plan: 'CIB 企业积分', windows: [window], signIn};
     } catch { return {error: 'CIB 积分余额查询失败', signIn: 'kept'}; }
   };

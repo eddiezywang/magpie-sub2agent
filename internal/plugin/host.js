@@ -3260,6 +3260,7 @@ async function usageOf(provider, account, signal) {
       name: text(w?.name),
       used: w?.used == null ? null : Math.max(0, num(w?.used)), // past 100 when overspent; null: not said
       resetsAt: when(w?.resetsAt),
+      resetText: text(w?.resetText).slice(0, 128),
       resetSecs: Math.max(0, Math.round(num(w?.resetSecs))),
       display: text(w?.display),
       amount: Math.max(0, num(w?.amount)),

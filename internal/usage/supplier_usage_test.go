@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/yetone/magpie/internal/catalog"
 )
 
 func TestSupplierUsageByModelAndCalendarDay(t *testing.T) {
@@ -21,7 +23,7 @@ func TestSupplierUsageByModelAndCalendarDay(t *testing.T) {
 		{Time: now, Model: "glm-5.3-zp", Input: 900, Rejected: true},
 		{Time: now.Add(time.Second), Model: "glm-5.3-zp", Input: 900},
 	}
-	got := foldSupplierUsage(now, records[3].Time, "zp", 1, func(yield func(Record)) {
+	got := foldSupplierUsage(now, records[3].Time, "zp", 1, catalog.TIGBilling{}, func(yield func(Record)) {
 		for _, record := range records {
 			yield(record)
 		}
@@ -42,7 +44,7 @@ func TestSupplierUsageByModelAndCalendarDay(t *testing.T) {
 
 func TestSupplierUsageLimitsSeriesWithoutLosingTokens(t *testing.T) {
 	now := time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC)
-	got := foldSupplierUsage(now, now, "", 7, func(yield func(Record)) {
+	got := foldSupplierUsage(now, now, "", 7, catalog.TIGBilling{}, func(yield func(Record)) {
 		for i := 0; i < 20; i++ {
 			yield(Record{Time: now, Model: fmt.Sprintf("m%02d", i), Input: 10})
 		}
