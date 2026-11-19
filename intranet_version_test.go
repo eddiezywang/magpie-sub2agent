@@ -5,7 +5,7 @@ package main
 import "testing"
 
 func TestIntranetDefaultVersion(t *testing.T) {
-	if version != "1.0.0-beta.2" {
-		t.Fatalf("intranet default version = %q, want 1.0.0-beta.2", version)
+	if version != "1.0.0-beta.9" {
+		t.Fatalf("intranet default version = %q, want 1.0.0-beta.9", version)
 	}
 }

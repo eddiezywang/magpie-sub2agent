@@ -114,6 +114,16 @@ func usageRoutes(mux *http.ServeMux, w Windows) {
 			rw.Header().Set("Cache-Control", "no-store")
 			writeJSON(rw, plans)
 		})
+		mux.HandleFunc("GET /api/usage/cib-zht", coldTurn(func(rw http.ResponseWriter, r *http.Request) {
+			const preset = "cib-zht-apikey"
+			ids := map[string]bool{preset: true}
+			for _, p := range provider.All() {
+				if p.Preset == preset {
+					ids[p.ID] = true
+				}
+			}
+			writeJSON(rw, usage.ProviderTokenTrend(ids, usageapi.ZoneOf(r)))
+		}))
 		mux.HandleFunc("GET /api/accounting/report", func(rw http.ResponseWriter, r *http.Request) {
 			q := r.URL.Query()
 			body, ct, err := accounting.BillingReport(r.Context(), q.Get("period"), q.Get("format"), q.Get("date"))

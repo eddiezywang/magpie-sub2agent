@@ -13,9 +13,37 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/sessions"
 	"github.com/yetone/magpie/internal/usage"
 )
+
+func TestZHTTokenUsageRoute(t *testing.T) {
+	if !distribution.Internal {
+		t.Skip("CIB is an intranet provider")
+	}
+	sandboxHome(t)
+	now := holdUsageClock(t, time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC))
+	for _, record := range []usage.Record{
+		{Time: now.Add(-time.Hour), Provider: "cib-zht-apikey", Model: "glm-5.3-aliyun", Input: 100, Output: 25, CacheRead: 80, CacheWrite: 20, Status: 200},
+		{Time: now.AddDate(0, 0, -31), Provider: "cib-zht-apikey", Model: "glm-5.3-aliyun", Input: 1000, Status: 200},
+		{Time: now.Add(-time.Hour), Provider: "workbuddy", Model: "glm-5.3-aliyun", Input: 999, Status: 200},
+		{Time: now.Add(-time.Hour), Provider: "cib-zht-apikey", Model: "glm-5.3-aliyun", Input: 999, Status: 200, Source: usage.SourceReported},
+	} {
+		usage.Append(record)
+	}
+	mux := http.NewServeMux()
+	usageRoutes(mux, folderOnly{})
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/usage/cib-zht?tz=UTC", nil))
+	var trend usage.TokenTrend
+	if err := json.Unmarshal(w.Body.Bytes(), &trend); w.Code != http.StatusOK || err != nil {
+		t.Fatalf("token trend: %d %s (%v)", w.Code, w.Body, err)
+	}
+	if trend.Today != 225 || trend.Week != 225 || trend.Month != 225 || trend.Total != 1225 || len(trend.Series) != 30 {
+		t.Fatalf("wrong CIB usage: %+v", trend)
+	}
+}
 
 // holdUsageClock stops usage.Clock at at for the test and gives at back, for
 // the test to stamp its calls by: midnight then never falls between a call

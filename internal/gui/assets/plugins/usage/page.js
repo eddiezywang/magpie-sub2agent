@@ -188,6 +188,7 @@ async function loadUsage(asked) {
   if (usageTab === "sessions") return loadSessions();
   if (usageTab === "requests") return loadLedger(asked && ledger && ledgerWant === ledParams({ offset: ledOffset, limit: LED_PAGE }) ? "open" : false);
   if (usageTab === "context") return window.loadContext?.();
+  loadZHTTokens();
   // the figures on hand are this period's: opened again (its tab pressed
   // while on it, the Overview's tab) they stay, and are read again behind
   // them as the timer reads them, so the page neither empties nor moves
@@ -4814,6 +4815,7 @@ function refreshUsage(now = false) {
       } else if (usageTab === "context") {
         await window.loadContext?.();
       } else {
+        loadZHTTokens(want);
         // the reader asking reads the allowances afresh, a Claude account's by
         // running Claude Code's own /usage (the backend runs it at most once in 30s)
         let q = null;
