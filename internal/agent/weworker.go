@@ -79,7 +79,7 @@ func weworker(home string) *Agent {
 		return rec.Kept || rec.Fields["model"] != ""
 	}
 	return atomic(&Agent{
-		ID: "weworker", Name: "WeWorker", Icon: "weworker",
+		ID: "weworker", Name: "WeWorker", Icon: "weworker-color",
 		Dir: dir, Path: path, Spelled: prefixed,
 		Restore: before.restore,
 		Check: func() string {

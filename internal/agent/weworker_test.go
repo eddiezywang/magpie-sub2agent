@@ -54,7 +54,7 @@ func TestWeWorker(t *testing.T) {
 	a := weworkerOf(t)
 	dir := filepath.Join(home, ".weworker")
 	path := filepath.Join(dir, "settings.json")
-	if a.Name != "WeWorker" || a.Icon != "weworker" || a.Bin != "" || a.Dir != dir || a.Path != path {
+	if a.Name != "WeWorker" || a.Icon != "weworker-color" || a.Bin != "" || a.Dir != dir || a.Path != path {
 		t.Fatalf("%+v", a)
 	}
 	// no file, no row
