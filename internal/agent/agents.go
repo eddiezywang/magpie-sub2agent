@@ -183,7 +183,7 @@ func codexNoAccount() bool {
 // others are clients that reach the gateway without being agents magpie
 // sets up: known only by their requests, to be drawn with a logo.
 var others = []*Agent{
-	{ID: "magpie", Name: "magpie", Icon: "magpie", UA: []string{"magpie"}},
+	{ID: "magpie", Name: "magpie", Icon: "magpie", UA: []string{distribution.Name, distribution.Name + "-", "magpie"}},
 	{ID: "curl", Name: "curl", Icon: "curl", UA: []string{"curl"}},
 	// PI-Desktop (vastsa/PI-Desktop) runs Pi's own library, which says
 	// "pi (…)"; given a User-Agent of its own in its provider's settings
@@ -295,6 +295,7 @@ func onMachineAll(home, cfg string) []*Agent {
 		stepcode(home),
 		mothx(home),
 		penguin(home),
+		weworker(home),
 		aside(home),
 		omo(home),
 		primeAgent(home),
@@ -1402,7 +1403,13 @@ func pi(home string) *Agent { return piIn(here(home)) }
 // distro's (see wsl.go), its models.json naming the gateway as it reaches
 // it from there.
 func piIn(at place) *Agent {
-	a := piLike(at, "pi", "Pi", piDir(at))
+	// Pi's own User-Agent says pi only when its host passes it on; the
+	// desktop build's requests do not, so its key names it (agentKeyAt)
+	// and the gateway reads the agent off the token alone. The key is
+	// taken once per wiring: the gateway's own tests hold the kept list
+	// to near-zero allocations on a cache hit.
+	key := agentKeyAt("pi", at.gw())
+	a := piLikeKeyed(at, "pi", "Pi", piDir(at), func() string { return key })
 	a.UA = []string{"pi-"}
 	return a
 }

@@ -112,6 +112,27 @@ func TestURLOfWildcard(t *testing.T) {
 	}
 }
 
+// The bare placeholder names the gateway, no agent: Go 1.26's CutPrefix
+// returns the whole string when the prefix is missing, and the wired key
+// ("magpie", now "sub2agent") was read as an agent named after the gateway,
+// which counted every such request under the gateway itself.
+func TestLocalTokenAgentBarePlaceholder(t *testing.T) {
+	for _, key := range []string{Token, "magpie", Token + "-", "magpie-"} {
+		if got := LocalTokenAgent(key); got != "" {
+			t.Fatalf("LocalTokenAgent(%q) = %q, want none", key, got)
+		}
+	}
+	for _, c := range []struct{ key, want string }{
+		{TokenFor("pi"), "pi"},
+		{TokenFor("claude"), "claude"},
+		{"magpie-pi", "pi"},
+	} {
+		if got := LocalTokenAgent(c.key); got != c.want {
+			t.Fatalf("LocalTokenAgent(%q) = %q, want %q", c.key, got, c.want)
+		}
+	}
+}
+
 // An agent whose User-Agent is only the AI SDK's (Alma) is known by
 // the token it was given; the others still by their User-Agent.
 func TestAgentOf(t *testing.T) {

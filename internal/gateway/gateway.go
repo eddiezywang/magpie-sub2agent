@@ -61,8 +61,14 @@ func LocalTokenAgent(key string) string {
 	if id, ok := strings.CutPrefix(key, Token+"-"); ok {
 		return id
 	}
-	id, _ := strings.CutPrefix(key, "magpie-")
-	return id
+	// Go 1.26's CutPrefix returns the whole string when the prefix is
+	// missing; the bare placeholder ("magpie", now "sub2agent") names no
+	// agent, and every request wired with it was counted under the
+	// gateway's own name.
+	if id, ok := strings.CutPrefix(key, "magpie-"); ok {
+		return id
+	}
+	return ""
 }
 
 // TokenFor is the token an agent that says nothing of itself in its
