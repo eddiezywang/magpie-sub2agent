@@ -3,15 +3,15 @@ export function notice(editor, preset, provider) {
   const box = document.createElement("section");
   box.className = "coding-plan-notice";
   const title = document.createElement("strong");
-  title.textContent = "大模型运维助手 · 企微安全须知";
+  title.textContent = "澶фā鍨嬭繍缁村姪鎵?路 浼佸井瀹夊叏椤荤煡";
   box.append(title);
   for (const text of [
-    "您好！您申请的公有云大模型密钥已下发，请严格遵守以下安全要求：",
-    "1. 仅限非敏感代码，仅用于不包含敏感代码的系统研发；",
-    "2. 严禁上传重要数据、一级数据、业务数据、客户信息、系统设计文档等敏感资料，或使用本服务处理涉及商业秘密、客户隐私及国家安全的相关信息，涉及敏感数据请用行内专有云服务；",
-    "3. 违规需自行担责并接受严肃处理，请妥善保管密钥，切勿泄露、转借。",
-    `地址填写网关 ${preset.anthropic}，不要追加 /v1/messages。应用会自动拼接请求路径，并使用 Authorization: Bearer 鉴权。`,
-    "API Key 请填写 AIEP 平台申请的 Coding Plan Key（别名含 codeplan / codingplan）；可在平台申请密钥或查看剩余额度。",
+    "鎮ㄥソ锛佹偍鐢宠鐨勫叕鏈変簯澶фā鍨嬪瘑閽ュ凡涓嬪彂锛岃涓ユ牸閬靛畧浠ヤ笅瀹夊叏瑕佹眰锛?,
+    "1. 浠呴檺闈炴晱鎰熶唬鐮侊紝浠呯敤浜庝笉鍖呭惈鏁忔劅浠ｇ爜鐨勭郴缁熺爺鍙戯紱",
+    "2. 涓ョ涓婁紶閲嶈鏁版嵁銆佷竴绾ф暟鎹€佷笟鍔℃暟鎹€佸鎴蜂俊鎭€佺郴缁熻璁℃枃妗ｇ瓑鏁忔劅璧勬枡锛屾垨浣跨敤鏈湇鍔″鐞嗘秹鍙婂晢涓氱瀵嗐€佸鎴烽殣绉佸強鍥藉瀹夊叏鐨勭浉鍏充俊鎭紝娑夊強鏁忔劅鏁版嵁璇风敤琛屽唴涓撴湁浜戞湇鍔★紱",
+    "3. 杩濊闇€鑷鎷呰矗骞舵帴鍙椾弗鑲冨鐞嗭紝璇峰Ε鍠勪繚绠″瘑閽ワ紝鍒囧嬁娉勯湶銆佽浆鍊熴€?,
+    `鍦板潃濉啓缃戝叧 ${preset.anthropic}锛屼笉瑕佽拷鍔?/v1/messages銆傚簲鐢ㄤ細鑷姩鎷兼帴璇锋眰璺緞锛屽苟浣跨敤 Authorization: Bearer 閴存潈銆俙,
+    "API Key 璇峰～鍐?AIEP 骞冲彴鐢宠鐨?Coding Plan Key锛堝埆鍚嶅惈 codeplan / codingplan锛夛紱鍙湪骞冲彴鐢宠瀵嗛挜鎴栨煡鐪嬪墿浣欓搴︺€?,
   ]) {
     const paragraph = document.createElement("p");
     paragraph.textContent = text;
@@ -29,7 +29,7 @@ export function notice(editor, preset, provider) {
   fetch('/api/accounting/tig-plans').then(r => { if (!r.ok) throw Error('unavailable'); return r.json(); }).then(data => {
     if (!rules.isConnected) return;
     content.replaceChildren();
-    const names = {zp:t('Zhipu · team advanced'),hs:t('Volcengine · AFP'),tc:t('Tencent · TIG reference')};
+    const names = {zp:t('Zhipu 路 team advanced'),hs:t('Volcengine 路 AFP'),tc:t('Tencent 路 TIG reference')};
     const channels = provider ? [...new Set((provider.models || []).map(m => channel(m.id)).filter(Boolean))] : ['zp','hs','tc'];
     if (!channels.length) { content.textContent = t('No recognized plan channels'); return; }
     const tabs = document.createElement('div'); tabs.className = 'segs tig-plan-tabs'; tabs.setAttribute('role', 'tablist');
@@ -41,7 +41,7 @@ export function notice(editor, preset, provider) {
       panel.replaceChildren();
       const plan = data.config?.plans?.[id];
       if (!plan || !Array.isArray(plan.windows)) { panel.textContent = t('Usage unavailable; waiting for the billing service'); return; }
-      const row = document.createElement('p'); row.textContent = names[id] + ' · ' + plan.windows.map(w => `${windowName(w.id)} ${Number(w.limit).toLocaleString()} ${planUnit(plan.unit)}`).join(' / '); panel.append(row);
+      const row = document.createElement('p'); row.textContent = names[id] + ' 路 ' + plan.windows.map(w => `${windowName(w.id)} ${Number(w.limit).toLocaleString(intlLang())} ${planUnit(plan.unit)}`).join(' / '); panel.append(row);
       const details = document.createElement('details'), summary = document.createElement('summary'); summary.textContent = t('Model coefficients'); details.append(summary);
       if (id === 'zp') { const explanation = document.createElement('p'); explanation.textContent = t('Input / cached input / output coefficients. Points per 10,000 tokens; off-peak is half. Estimate only; actual charge depends on TIG.'); details.append(explanation); }
       const list = document.createElement('div'); list.className = 'tig-plan-rates';
@@ -49,7 +49,7 @@ export function notice(editor, preset, provider) {
       for (const rate of data.rates || []) {
         const key = canonical(rate.model); if (rate.deployment !== id || seen.has(key) || provider && !selectedModels.has(key)) continue; seen.add(key);
         const item = document.createElement('p'), c = rate.credit_rates;
-        item.textContent = `${rate.model} · ${c ? `${c.input} / ${c.cache_read} / ${c.output}` : rate.coefficient} ${planUnit(rate.currency)}`; list.append(item);
+        item.textContent = `${rate.model} 路 ${c ? `${c.input} / ${c.cache_read} / ${c.output}` : rate.coefficient} ${planUnit(rate.currency)}`; list.append(item);
       }
       if (!seen.size) list.textContent = t('Billing rule unknown');
       details.append(list); panel.append(details);
@@ -77,15 +77,15 @@ export async function models(box, provider) {
     if (!response.ok) return;
     const report = (await response.json()).config;
     if (!line.isConnected) return;
-    const names = {zp: t('Zhipu · team advanced'), hs: t('Volcengine · AFP'), tc: t('Tencent · TIG reference')};
+    const names = {zp: t('Zhipu 路 team advanced'), hs: t('Volcengine 路 AFP'), tc: t('Tencent 路 TIG reference')};
     const descriptions = ids.flatMap(id => {
       const windows = report.plans?.[id]?.windows;
       if (!Array.isArray(windows)) return [];
-      return [names[id] + ' · ' + windows.map(w => {
+      return [names[id] + ' 路 ' + windows.map(w => {
         const name = windowName(w.id);
-        return name + ' ' + Number(w.limit).toLocaleString() + ' ' + planUnit(report.plans[id].unit);
+        return name + ' ' + Number(w.limit).toLocaleString(intlLang()) + ' ' + planUnit(report.plans[id].unit);
       }).join(' / ')];
     });
-    if (descriptions.length) line.textContent += '  ' + descriptions.join('　');
+    if (descriptions.length) line.textContent += '  ' + descriptions.join('銆€');
   } catch { /* unavailable is distinct from a zero limit */ }
 }
