@@ -17,10 +17,21 @@ var workspaceTiers = map[string][]string{
 func workspaceTemplate(kind string, ms []rated) Template {
 	t := Template{Kind: kind, Group: Group{ID: TemplateIDs[kind], Name: TemplateNames[kind], Routing: Rotate, Affinity: AffinitySession}}
 	ids := workspaceTiers[kind]
+	tierIDs := make(map[string]bool)
+	for _, models := range workspaceTiers {
+		for _, id := range models {
+			tierIDs[catalog.SameModel(id)] = true
+		}
+	}
+	keys := make([]string, len(ms))
 	// Prefer a shared model, then the designated tier at other providers.
 	by := map[string]map[string]bool{}
-	for _, m := range ms {
-		key := catalog.SameModel(m.e.Model)
+	for i, m := range ms {
+		key := catalog.LongestModelPrefix(catalog.SameModel(m.e.Model), func(id string) bool { return tierIDs[id] })
+		keys[i] = key
+		if key == "" {
+			continue
+		}
 		if by[key] == nil {
 			by[key] = map[string]bool{}
 		}
@@ -47,8 +58,8 @@ func workspaceTemplate(kind string, ms []rated) Template {
 		preferred = append([]string{shared}, ids...)
 	}
 	for _, id := range preferred {
-		for _, m := range ms {
-			if chosen[m.e.Provider.ID].ID == "" && catalog.SameModel(m.e.Model) == catalog.SameModel(id) {
+		for i, m := range ms {
+			if chosen[m.e.Provider.ID].ID == "" && keys[i] == catalog.SameModel(id) {
 				chosen[m.e.Provider.ID] = m.e
 			}
 		}

@@ -33,6 +33,17 @@ func TestInternalDeploymentSuffixesKeepModelCapabilities(t *testing.T) {
 	}
 }
 
+func TestInternalDeploymentUsesLongestOfficialPrefix(t *testing.T) {
+	writeCatalog(t, `{"deepseek":{"models":{"deepseek-v4-flash":{"id":"deepseek-v4-flash","limit":{"context":200000},"reasoning":true,"reasoning_options":[{"type":"effort","values":["low","high","max"]}]},"deepseek-v4-flash-0731":{"id":"deepseek-v4-flash-0731","limit":{"context":300000},"reasoning":true,"reasoning_options":[{"type":"effort","values":["high","max"]}]}}}}`)
+	const id = "cib-zht-apikey/DeepSeek-V4-Flash-0731-AliYun"
+	if Spelling(id) != "deepseek-v4-flash-0731" || !Thinks(id) || strings.Join(EffortsOf(id), ",") != "high,max" {
+		t.Fatalf("inherited wrong model capabilities: %q %v %v", Spelling(id), Thinks(id), EffortsOf(id))
+	}
+	if Thinks("deepseek-v4-flashier-aliyun") {
+		t.Fatal("matched inside a model-name segment")
+	}
+}
+
 func TestInternalDeploymentSuffixesPreserveExplicitVariant(t *testing.T) {
 	writeCatalog(t, `{"zhipuai":{"models":{"glm-5.3-flash":{"id":"glm-5.3-flash","limit":{"context":200000},"cost":{"input":1}},"glm-5.3-flash-zp":{"id":"glm-5.3-flash-zp","limit":{"context":64000},"cost":{"input":3}}}}}`)
 	if ContextOf("glm-5.3-flash-zp") != 64000 {

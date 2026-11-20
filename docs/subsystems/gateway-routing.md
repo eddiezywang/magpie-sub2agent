@@ -1,5 +1,13 @@
 # Gateway routing and fallback
 
+In the intranet distribution, the catalog resolves unlisted deployment IDs
+through the longest case-insensitive model prefix at a separator boundary.
+Routing templates use the same matching rule against their capability tiers.
+The matching chooses group membership and capability metadata. Requests still
+carry the provider's original model ID, which TIG billing uses for channel
+attribution. For Anthropic Messages, a Claude Code session header can identify
+Claude Code when the client omits its User-Agent or uses a generic SDK agent.
+
 The intranet workspace hosts the original routing visualization and request history;
 its navigation replaces the standalone Routing page.
 Its quick choices use existing groups carrying plan/smart/thrifty/steady

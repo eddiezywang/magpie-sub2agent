@@ -913,6 +913,11 @@ func mergeKeyIn(cs []string, pid, model string, same map[string]string) string {
 	if v := catalog.Unprefixed(cs, model); v != "" {
 		return mergeName(v)
 	}
+	if distribution.Internal {
+		if v := catalog.Spelling(windowless(model)); v != "" {
+			return mergeName(v)
+		}
+	}
 	return mergeName(model)
 }
 

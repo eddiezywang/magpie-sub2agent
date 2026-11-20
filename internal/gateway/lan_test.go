@@ -164,6 +164,24 @@ func TestAgentOf(t *testing.T) {
 	}
 }
 
+func TestClaudeSessionIdentifiesGenericMessagesClient(t *testing.T) {
+	for _, tc := range []struct{ path, ua, session, want string }{
+		{"/v1/messages", "", "fixture-clause-session", "claude"},
+		{"/v1/messages", "ai-sdk/anthropic/2.0.1", "fixture-clause-session", "claude"},
+		{"/v1/messages", "", "", "other"},
+		{"/v1/chat/completions", "", "fixture-clause-session", "other"},
+		{"/v1/messages", "custom-client/1.0", "fixture-clause-session", "custom-client"},
+	} {
+		r := httptest.NewRequest("POST", tc.path, nil)
+		r.Header.Set("Authorization", "Bearer "+Token)
+		r.Header.Set("User-Agent", tc.ua)
+		r.Header.Set("X-Claude-Code-Session-Id", tc.session)
+		if got := callerFrom(r).agent; got != tc.want {
+			t.Errorf("%s %q session=%v: got %s, want %s", tc.path, tc.ua, tc.session != "", got, tc.want)
+		}
+	}
+}
+
 // In a container magpie's own addresses are the container's (Docker's
 // bridge, 172.17.x), which a NAS's other devices can't reach: set,
 // MAGPIE_PUBLIC_URL is the address shared, and its host the one printed

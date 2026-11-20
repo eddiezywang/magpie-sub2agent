@@ -1481,7 +1481,7 @@ func ProviderName(id string) string {
 // others.
 func Thinks(id string) bool {
 	load()
-	v, _ := lookup(id, thinks)
+	v, _ := lookup(capabilityID(id), thinks)
 	return v
 }
 
@@ -1515,7 +1515,10 @@ func NameOf(id string) string {
 // without a vendor's prefix; "" when it knows the model by no spelling.
 func Spelling(id string) string {
 	load()
-	return normal[SameModel(id)]
+	if spelling := normal[SameModel(id)]; spelling != "" || !distribution.Internal {
+		return spelling
+	}
+	return LongestModelPrefix(id, knownModel)
 }
 
 // Named gives a model the list names by its id alone the name models.dev
@@ -1813,8 +1816,34 @@ func OutputOf(id string) int {
 // reason, and an agent offer no levels for it.
 func EffortsOf(id string) []string {
 	load()
-	e, _ := lookup(id, efforts)
+	e, _ := lookup(capabilityID(id), efforts)
 	return slices.Clone(e)
+}
+
+// ReasoningModel is the canonical identity used when borrowing reasoning
+// from the maker. Direct provider metadata and request IDs are unchanged.
+func ReasoningModel(id string) string {
+	if !distribution.Internal {
+		return id
+	}
+	load()
+	return capabilityID(id)
+}
+
+func capabilityID(id string) string {
+	if distribution.Internal {
+		bare := bareID(id)
+		if knownModel(bare) {
+			return id
+		}
+		if spelling, ok := normalFor(bare); ok && knownModel(spelling) {
+			return spelling
+		}
+		if prefix := LongestModelPrefix(id, knownModel); prefix != "" {
+			return prefix
+		}
+	}
+	return id
 }
 
 // lookup is what table holds for a model of this id: as found finds it,
