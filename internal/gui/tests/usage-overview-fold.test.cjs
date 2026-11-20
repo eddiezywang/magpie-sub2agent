@@ -168,10 +168,13 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
         "/api/accounting/tig-plans": catalog,
         "/api/usage/suppliers/tig/keys": [{ provider: ids.tig, keys: [{ id: "fingerprint-one", name: "Desk" }, { id: "fingerprint-two", name: "Team" }] }],
         "/api/usage/suppliers/tig/key": (route, url) => route.fulfill({ json: url.searchParams.get("key") === "fingerprint-one" ? {
-          windows: [{ period: "fiveHours", status: "estimated", start: "2026-11-19T10:00:00+08:00", reset: "2026-11-19T15:00:00+08:00" }, { period: "week", status: "unknown" }],
-          usage: { periods: { fiveHours: { complete: true, points: 24500, priced: 1 } } },
+          windows: [{ period: "fiveHours", status: "unknown" }, { period: "week", status: "unknown" }],
+          usage: { periods: {
+            fiveHours: { complete: true, rolling: true, points: 24500, priced: 1 },
+            week: { complete: false, rolling: true, points: 15500, priced: 1, uncovered: 2 },
+          } },
         } : { windows: [{ period: "fiveHours", status: "observed", reset: "2026-11-19T16:00:00+08:00" }, { period: "week", status: "expired" }],
-          usage: { periods: { fiveHours: { complete: false, rolling: true, points: 200, priced: 1, uncovered: 2 } } } } }),
+          usage: { periods: { fiveHours: { complete: false, rolling: true, points: 200, priced: 1, uncovered: 2 }, week: { rolling: true, points: 0, priced: 0, uncovered: 2 } } } } }),
         "/api/usage/quotas": [
           { provider: ids.cib, user: "account-one-fixture", windows: [{ name: "Credits", used: 0, limit: 2000, resetText: "2026-12-02 00:00:00" }] },
           { provider: ids.cib, user: "account-two-fixture", windows: [{ name: "Credits", amount: 2500.1358, used: 71, limit: 3521, resetText: "2026-12-03 00:00:00" }] },
@@ -209,7 +212,11 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
     const red = await themeColor("--red");
     assert.notEqual(blue, red);
     assert.deepEqual(await fillStyle(gauge(shortWindow)), { width: "70%", color: blue });
-    assert.equal(await gauge(weekWindow).count(), 0);
+    assert.match(await shortWindow.innerText(), /滚动 5 小时估算\s+24,500\s+积分/);
+    await weekWindow.getByText("10%", { exact: true }).waitFor();
+    assert.deepEqual(await fillStyle(gauge(weekWindow)), { width: "10%", color: blue });
+    assert.match(await weekWindow.innerText(), /滚动 7 天估算\s+15,500\s+积分/);
+    assert.match(await weekWindow.innerText(), /2 次请求未覆盖/);
     assert.deepEqual(await panel.getByRole("tab").allTextContents(), ["TIG", "WorkBuddy 企业", "WorkBuddy CIB"]);
     assert.match(await panel.innerText(), /35,000\s+积分/);
     assert.match(await panel.innerText(), /周额度/);

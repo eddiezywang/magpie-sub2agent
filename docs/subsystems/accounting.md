@@ -246,16 +246,18 @@ unknown cache breakdown leave the window partially covered. A normal upstream
 quota 429 establishes a recovery time. For the five-hour window, the first
 locally observed successful call and the first success after each expiry
 establish a new estimated start. An active 429 recovery takes precedence.
-Weekly estimates still require a prior quota observation. The five-hour rolling estimate can be shown
-as a reference when the window start is unknown. The weekly estimate needs a
-window start. Neither changes the user-wide reporting or outbound telemetry.
+Without a window start, the gateway sums the selected key's priced requests
+over the preceding five hours or seven days. It reports the rolling period
+independently of the subscription window dates.
 
 The TIG Usage tab detects channels from configured providers and retains a
 Zhipu channel when a saved observation identifies it. For Zhipu, it offers an
 enabled-key picker and shows the five-hour and weekly windows independently.
 An active quota 429 shows the affected window as 100% exhausted until its
-recovery time, even if the start or used points are unknown. A rolling five-hour
-estimate has a distinct label and supplies no window percentage of its own.
+recovery time, even if the start or used points are unknown. Otherwise the card
+divides locally priced points by the reference limit and labels the estimate's
+rolling period and any gaps in coverage. With incomplete coverage and no
+priced requests, the percentage stays unknown.
 Quota bars are blue through 70% and red above 70%. Usage Details offers Token and the selected channel's
 own billing unit, together with the applicable model rates. The panel
 refreshes while the Overview is visible and cancels reads when it closes.

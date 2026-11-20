@@ -69,7 +69,7 @@ window.supplierUsage = (() => {
     box.append(chart.node);
   }
 
-  function quotaCard({ label, unit, used, limit, percent, start, reset, status, estimate, reference = true, coverage, exhausted = false }) {
+  function quotaCard({ label, unit, used, limit, percent, start, reset, status, estimate, rollingLabel, reference = true, coverage, exhausted = false }) {
     const progress = exhausted ? 100 : percent;
     const card = el("article", "su-window");
     const heading = el("div", "su-window-title");
@@ -91,7 +91,7 @@ window.supplierUsage = (() => {
     }
     card.append(rail);
     const data = el("dl", "su-window-data");
-    for (const [label, value] of [[estimate?.rolling ? "Rolling 5-hour estimate" : estimate && !estimate.complete ? "Covered estimate" : "Used",
+    for (const [label, value] of [[estimate?.rolling ? rollingLabel : estimate && !estimate.complete ? "Covered estimate" : "Used",
       points(used, unit)], [reference ? "Reference limit" : "Limit", points(limit, unit)], ["Window start", start || missing], ["Reset time", reset || missing]]) {
       data.append(el("dt", "", t(label)), el("dd", "", value));
     }
@@ -135,12 +135,13 @@ window.supplierUsage = (() => {
       const win = windows.find((w) => w.period === period), estimate = side.key?.usage?.periods?.[period];
       const limit = period === "fiveHours" ? 35000 : plan?.windows?.find((w) => w.id === id)?.limit;
       const used = estimate?.priced || estimate?.complete ? estimate.points : null;
-      const percent = estimate?.complete && !estimate.rolling && limit > 0 ? used / limit * 100 : null;
+      const percent = used != null && limit > 0 ? used / limit * 100 : null;
+      const rollingLabel = period === "week" ? "Rolling 7-day estimate" : "Rolling 5-hour estimate";
       const status = { observed: "Observed in a 429 response", estimated: "Estimated window", expired: "Observation expired" }[win?.status] ||
         (side.keyError ? "Unable to read window" : selectedKey && side.key == null && channel === "zp" ? "Reading…" : "Window unknown");
       const coverage = estimate && !estimate.complete ? note("Partial ledger or rate coverage · {n} uncovered requests", { n: exact(estimate.uncovered) }) : null;
       cards.append(quotaCard({ label, unit: currencies[channel], used, limit, percent, start: when(win?.start), reset: when(win?.reset),
-        status, estimate, coverage, exhausted: win?.status === "observed" }));
+        status, estimate, rollingLabel, coverage, exhausted: win?.status === "observed" }));
     }
     panel.append(cards);
   }

@@ -22,6 +22,7 @@ magpie.strings({
     "Monthly allowance": "月额度",
     "Current gateway estimate": "当前网关估算",
     "Rolling 5-hour estimate": "滚动 5 小时估算",
+    "Rolling 7-day estimate": "滚动 7 天估算",
     "Covered estimate": "已覆盖估算",
     "Reference limit": "参考上限",
     "Window start": "窗口开始",

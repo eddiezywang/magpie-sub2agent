@@ -85,7 +85,8 @@ func TestTIGUsagePeriodsSeparateObservedAndRolling(t *testing.T) {
 		{Period: "week", Until: now.Add(-time.Minute)},
 	}
 	windows, periods := tigUsagePeriods(now, observations)
-	if len(periods) != 1 || !periods["fiveHours"].Rolling || windows[0].Status != "observed" ||
+	if len(periods) != 2 || !periods["fiveHours"].Rolling || !periods["fiveHours"].From.Equal(now.Add(-5*time.Hour)) ||
+		!periods["week"].Rolling || !periods["week"].From.Equal(now.Add(-7*24*time.Hour)) || windows[0].Status != "observed" ||
 		windows[0].Reset.IsZero() || !windows[0].Start.IsZero() || windows[1].Status != "expired" || !windows[1].Reset.IsZero() {
 		t.Fatalf("unknown start or expired reset overstated: %+v %+v", windows, periods)
 	}
