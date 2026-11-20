@@ -2,21 +2,25 @@ package gui
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
+	"github.com/yetone/magpie/internal/usage"
 )
 
 func TestConfiguredUsageSuppliers(t *testing.T) {
 	got := configuredUsageSuppliers([]provider.Provider{
 		{ID: "aiep-coding-plan-2", Key: "private-fixture"},
 		{ID: "cib-zht-apikey"},
-		{ID: "sub2agent-workbuddy-cib", Key: "private-fixture"},
-		{ID: "sub2agent-workbuddy-enterprise", Key: "private-fixture"},
+		{ID: "sub2agent-workbuddy-cib", Account: &provider.Account{User: "private-fixture"}},
+		{ID: "sub2agent-workbuddy-enterprise", Account: &provider.Account{User: "private-fixture"}},
 		{ID: "workbuddy", Key: "private-fixture"},
 	})
 	want := []usageSupplier{
@@ -30,6 +34,47 @@ func TestConfiguredUsageSuppliers(t *testing.T) {
 	encoded, err := json.Marshal(got)
 	if err != nil || strings.Contains(string(encoded), "private-fixture") {
 		t.Fatal("configuration response included credentials or failed to encode")
+	}
+}
+
+func TestSupplierUsageRoutesRequireConfiguration(t *testing.T) {
+	sandboxHome(t)
+	now := holdUsageClock(t, time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC))
+	mux := http.NewServeMux()
+	usageRoutes(mux, folderOnly{})
+	read := func(path string) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/usage/suppliers"+path, nil))
+		return w
+	}
+	noConfig := read("")
+	if distribution.Internal && (noConfig.Code != http.StatusOK || strings.TrimSpace(noConfig.Body.String()) != "[]") ||
+		!distribution.Internal && noConfig.Code != http.StatusNotFound {
+		t.Fatalf("unconfigured suppliers: %d %s", noConfig.Code, noConfig.Body.String())
+	}
+	if !distribution.Internal {
+		return
+	}
+	if w := read("/cib"); w.Code != http.StatusNotFound {
+		t.Fatalf("unconfigured supplier exposed usage: %d", w.Code)
+	}
+	const id = "cib-zht-apikey"
+	const secret = "fixture-credential-must-not-be-serialized"
+	if err := provider.Save(provider.Provider{ID: id, Name: "CIB", Key: secret, Chat: "https://fixture.invalid/chat"}); err != nil {
+		t.Fatal(err)
+	}
+	w := read("")
+	if w.Code != http.StatusOK || strings.Contains(w.Body.String(), secret) || !strings.Contains(w.Body.String(), id) {
+		t.Fatalf("configured supplier summary: HTTP %d", w.Code)
+	}
+	usage.Append(usage.Record{Time: now, Provider: id, Model: "glm-5.3-aliyun", Input: 10, Output: 2, CacheRead: 3, CacheWrite: 7, Status: 200})
+	w = read("/cib?tz=UTC&days=1")
+	var got usage.SupplierUsage
+	if err := json.Unmarshal(w.Body.Bytes(), &got); w.Code != http.StatusOK || err != nil || got.Today.Tokens != 22 || len(got.Timeline) != 24 {
+		t.Fatalf("configured supplier usage: %d, tokens=%v, buckets=%d (%v)", w.Code, got.Today.Tokens, len(got.Timeline), err)
+	}
+	if w := read("/cib?channel=zp"); w.Code != http.StatusBadRequest {
+		t.Fatalf("CIB accepted a TIG channel: %d", w.Code)
 	}
 }
 

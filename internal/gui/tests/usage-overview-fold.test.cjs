@@ -44,14 +44,23 @@ function server(lang, zht) {
     const url = new URL(route.request().url());
     const json = (data) => route.fulfill({ json: data });
     // zh and zh-TW in 万 and 亿, as the reporter reads them (183.2万 in · 8793.3万 cache)
-    const settings = { lang, theme: "light", chineseUnits: lang.startsWith("zh") };
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:false,intranet:${!!zht}};` });
+    const theme = zht?.theme || "light";
+    const settings = { lang, theme, chineseUnits: lang.startsWith("zh") };
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"${theme}",web:false,intranet:${!!zht}};` });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return json({ agents: [], profiles: [], settings, fx: { rate: 7.2, at: new Date().toISOString() } });
+    if (url.pathname === "/api/agents/connections") return json({ agents: [], checks: {} });
     if (url.pathname === "/api/settings") return json(settings);
+    if (zht?.routes && Object.hasOwn(zht.routes, url.pathname)) {
+      const reply = zht.routes[url.pathname];
+      return typeof reply === "function" ? reply(route, url) : json(reply);
+    }
     if (url.pathname === "/api/usage/quotas") return json([]);
     if (url.pathname === "/api/usage/requests") return json(LEDGER);
-    if (url.pathname === "/api/usage/cib-zht" && zht) return json(zht);
+    if (url.pathname === "/api/usage/suppliers" && zht) {
+      return json(zht.suppliers || [{ id: "cib", providers: ["cib-zht-apikey"] }]);
+    }
+    if (url.pathname === "/api/usage/suppliers/cib" && zht) return json(zht);
     if (url.pathname === "/api/usage") return json(USAGE);
     if (url.pathname === "/api/providers") return json({ providers: [], presets: [], excluded: [], models: [], gateway: { running: false } });
     if (url.pathname === "/api/sessions") return json({ sessions: [], dirs: [] });
@@ -60,7 +69,11 @@ function server(lang, zht) {
     if (url.pathname.startsWith("/api/")) return json({});
     const file = path.join(assets, url.pathname === "/" ? "index.html" : url.pathname);
     const contentType = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png" }[path.extname(file)];
-    try { await route.fulfill({ body: await fs.readFile(file), contentType }); } catch { await route.fulfill({ status: 404, body: "" }); }
+    try {
+      let body = await fs.readFile(file);
+      if (url.pathname === "/" && zht) body = body.toString().replace("</head>", '<link rel="stylesheet" href="intranet-retro.css"></head>');
+      await route.fulfill({ body, contentType });
+    } catch { await route.fulfill({ status: 404, body: "" }); }
   };
 }
 
@@ -83,8 +96,9 @@ test("CIB token usage shows K/M/B totals and switches daily line ranges", async 
   const browser = await chromium.launch({ channel: "chromium" });
   t.after(() => browser.close());
   const data = {
-    today: 1250, week: 2_400_000, month: 81_000_000, total: 1_300_000_000,
-    series: Array.from({ length: 30 }, (_, i) => ({ date: `2026-11-${String(i + 1).padStart(2, "0")}`, tokens: i * 1000 })),
+    today: { tokens: 1250 }, week: { tokens: 2_400_000 }, month: { tokens: 81_000_000 },
+    total: { tokens: 1_300_000_000, calls: 100 }, ledgerFrom: "2026-10-31T12:00:00Z",
+    activity: Array.from({ length: 30 }, (_, i) => ({ date: `2026-11-${String(i + 1).padStart(2, "0")}`, tokens: i * 1000 })),
   };
   for (const width of [1100, 420]) {
     const p = await browser.newPage({ viewport: { width, height: 720 }, locale: "zh-CN" });
@@ -93,22 +107,177 @@ test("CIB token usage shows K/M/B totals and switches daily line ranges", async 
     await p.route("**/*", server("zh", data));
     await p.goto("http://magpie.test/");
     await goUsage(p);
-    const panel = p.locator("#zhtTokenUsage");
+    const panel = p.locator("#supplierUsage");
     await panel.locator("polyline").waitFor();
     assert.deepEqual(await panel.locator("dd").allTextContents(), ["1.25K", "2.4M", "81M", "1.3B"]);
-    assert.equal(await panel.locator(".zht-token-point").count(), 30);
-    assert.equal(await panel.locator(".zht-token-point title").last().textContent(), "2026-11-30 · 29,000 Token");
+    assert.equal(await panel.locator(".su-pixel").count(), 30);
+    assert.equal(await panel.locator(".su-chart-hit title").last().textContent(), "2026-11-30 · 29,000 Token");
     const week = panel.locator('button[value="7"]');
     await week.click();
     assert.equal(await week.getAttribute("aria-pressed"), "true");
-    assert.equal(await panel.locator(".zht-token-point").count(), 7);
+    await panel.locator(".su-pixel").nth(6).waitFor();
+    assert.equal(await panel.locator(".su-pixel").count(), 7);
     await panel.locator('button[value="30"]').click();
-    assert.equal(await panel.locator(".zht-token-point").count(), 30);
+    await panel.locator(".su-pixel").nth(29).waitFor();
+    assert.equal(await panel.locator(".su-pixel").count(), 30);
     assert.equal(await panel.evaluate(el => el.scrollWidth <= el.clientWidth), true);
     assert.deepEqual(errors, []);
     if (process.env.CIB_SCREENSHOT && width === 1100) await panel.screenshot({ path: process.env.CIB_SCREENSHOT });
     await p.close();
   }
+});
+
+test("configured supplier tabs use independent TIG windows, WorkBuddy readings and gateway views", async (t) => {
+  const browser = await chromium.launch({ channel: "chromium" });
+  t.after(() => browser.close());
+  const ids = { tig: "aiep-coding-plan", enterprise: "sub2agent-workbuddy", cib: "sub2agent-workbuddy-cib" };
+  const time = "2026-11-19T00:00:00+08:00";
+  const stats = {
+    from: "2026-11-13", to: "2026-11-19", asOf: "2026-11-19T13:00:00+08:00",
+    ledgerFrom: "2026-11-16T00:00:00+08:00", total: { calls: 3, tokens: 12_000, maasCovered: 1, maasPoints: 4, credited: 1, credits: 2 },
+    selected: { calls: 3, tokens: 12_000, tigTokens: 10_000, offPeakTokens: 5_000, tigCovered: 2, tigAmount: 4, cacheRead: 500, knownPrompt: 1000 },
+    peak: { date: "2026-11-19", tokens: 12000 }, streak: 1, longest: 1,
+    activity: Array.from({ length: 14 }, (_, i) => ({ date: `2026-11-${String(i + 6).padStart(2, "0")}`, tokens: i === 13 ? 12000 : 0 })),
+    models: [{ id: "glm-5.3-zp", tokens: 10000, calls: 1 }, { id: "glm-5.3-flash-zp", tokens: 2000, calls: 1 }],
+    timeline: [{ time, models: [{ id: "glm-5.3-zp", tokens: 10000 }, { id: "glm-5.3-flash-zp", tokens: 2000 }] }],
+  };
+  const catalog = {
+    config: { plans: { zp: { windows: [{ id: "rolling_5h", limit: 35000 }, { id: "subscription_week", limit: 155000 }] } } },
+    rates: [{ provider: ids.tig + "*", deployment: "zp", model: "glm-5.3-zp", credit_rates: { input: 6.9, cache_read: 1.7, output: 24 }, source: "Zhipu Coding Plan" }],
+  };
+  for (const [width, theme] of [[1230, "light"], [420, "dark"]]) {
+    const page = await browser.newPage({ viewport: { width, height: 820 }, timezoneId: "Asia/Shanghai", colorScheme: theme });
+    await page.clock.setFixedTime(new Date(stats.asOf));
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const config = {
+      theme, suppliers: [
+        { id: "tig", providers: [ids.tig] }, { id: "workbuddy-enterprise", providers: [ids.enterprise] },
+        { id: "workbuddy-cib", providers: [ids.cib] },
+      ],
+      routes: {
+        "/api/providers": { providers: [{ id: ids.tig, models: [{ id: "glm-5.3-zp" }, { id: "glm-5.3-tc" }] }], presets: [] },
+        "/api/usage/suppliers/tig": stats,
+        "/api/usage/suppliers/workbuddy-enterprise": stats,
+        "/api/usage/suppliers/workbuddy-cib": stats,
+        "/api/accounting/tig-plans": catalog,
+        "/api/accounting/report": { channels: { zp: { rolling_5h: 3000, rolling_7d: 4000, rolling_30d: 5000, unpriced: 1 } } },
+        "/api/usage/suppliers/tig/keys": [{ provider: ids.tig, keys: [{ id: "fingerprint-one", name: "Desk" }, { id: "fingerprint-two", name: "Team" }] }],
+        "/api/usage/suppliers/tig/key": (route, url) => route.fulfill({ json: url.searchParams.get("key") === "fingerprint-one" ? {
+          windows: [{ period: "fiveHours", status: "estimated", start: "2026-11-19T10:00:00+08:00", reset: "2026-11-19T15:00:00+08:00" }, { period: "week", status: "unknown" }],
+          usage: { periods: { fiveHours: { complete: true, points: 7000, priced: 1 } } },
+        } : { windows: [{ period: "fiveHours", status: "observed", reset: "2026-11-19T16:00:00+08:00" }, { period: "week", status: "expired" }],
+          usage: { periods: { fiveHours: { complete: false, rolling: true, points: 200, priced: 1, uncovered: 2 } } } } }),
+        "/api/usage/quotas": [
+          { provider: ids.cib, user: "account-one-fixture", windows: [{ name: "Credits", used: 0, limit: 2000, resetText: "2026-12-02 00:00:00" }] },
+          { provider: ids.cib, user: "account-two-fixture", windows: [{ name: "Credits", amount: 250, used: 25, limit: 1000, resetText: "2026-12-03 00:00:00" }] },
+        ],
+        "/api/usage/suppliers/workbuddy-cib/rates": { rates: [{ model: "glm-5.3", coefficient: .79, source: "Reference from provider catalog" }] },
+      },
+    };
+    await page.route("**/*", server("zh", config));
+    await page.goto("http://magpie.test/");
+    await page.evaluate(() => {
+      const showStatus = window.status;
+      window.status = (message, kind, duration) => {
+        if (kind === "err") console.error(new Error(message).stack);
+        return showStatus(message, kind, duration);
+      };
+    });
+    const runtimeAlerts = [];
+    page.on("console", (message) => { if (message.type() === "error" && message.text().includes("window.status")) runtimeAlerts.push(message.text()); });
+    await goUsage(page);
+    const panel = page.locator("#supplierUsage");
+    await panel.getByText("20%", { exact: true }).waitFor();
+    assert.deepEqual(await panel.getByRole("tab").allTextContents(), ["TIG", "WorkBuddy 企业", "WorkBuddy CIB"]);
+    assert.match(await panel.innerText(), /35,000\s+积分/);
+    assert.match(await panel.innerText(), /周额度/);
+    if (process.env.SUPPLIER_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.SUPPLIER_SCREENSHOTS, `supplier-usage-${theme}.png`), animations: "disabled" });
+    await panel.locator("select").selectOption("1");
+    await panel.getByText("429 已确认").waitFor();
+    assert.equal(await panel.getByText("20%", { exact: true }).count(), 0);
+    assert.match(await panel.innerText(), /窗口观测已过期/);
+    await panel.locator("details").getByText("服务器用量估算（按用户名）").click();
+    await panel.getByText("3,000 积分", { exact: true }).waitFor();
+
+    await panel.locator('button[value="activity"]').click();
+    await panel.locator(".su-heat-cell").first().waitFor();
+    assert.ok(await panel.locator('.su-heatmap [data-level="unknown"]').count());
+    assert.ok(await panel.locator('.su-heatmap [data-level="0"]').count());
+    assert.doesNotMatch(await panel.innerText(), /使用时长/);
+    if (process.env.SUPPLIER_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.SUPPLIER_SCREENSHOTS, `supplier-activity-${theme}.png`), animations: "disabled" });
+    await panel.locator('button[value="weekly"]').click();
+    await panel.locator(".su-pixel").waitFor();
+    await panel.locator('button[value="cumulative"]').click();
+    await panel.locator(".su-pixel").waitFor();
+
+    await panel.locator('button[value="details"]').click();
+    await panel.locator(".su-kpi dd").first().waitFor();
+    assert.equal(await panel.locator(".su-kpi dd").first().textContent(), "12K");
+    assert.match(await panel.locator(".su-selected-total").innerText(), /12K/);
+    await panel.locator(".su-model").first().click();
+    assert.match(await panel.locator(".su-selected-total").innerText(), /2K/);
+    await panel.getByText("模型系数", { exact: true }).click();
+    await panel.getByText("6.9", { exact: true }).waitFor();
+    if (process.env.SUPPLIER_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.SUPPLIER_SCREENSHOTS, `supplier-details-${theme}.png`), animations: "disabled" });
+
+    await panel.getByRole("tab", { name: "WorkBuddy CIB" }).click();
+    await panel.locator('button[value="quota"]').click();
+    await panel.getByText("2026-12-02 00:00:00", { exact: true }).waitFor();
+    await panel.getByText("2026-12-03 00:00:00", { exact: true }).waitFor();
+    await panel.getByText("0%", { exact: true }).waitFor();
+    assert.doesNotMatch(await panel.innerText(), /account-one-fixture/);
+    assert.equal(await page.locator("#subscriptionUsage").isHidden(), true);
+    await panel.getByRole("tab", { name: "WorkBuddy 企业" }).click();
+    await panel.getByText("4 积分", { exact: true }).waitFor();
+    await panel.getByText("2 积分", { exact: true }).waitFor();
+    assert.equal(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth), true);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(runtimeAlerts, []);
+    await page.close();
+  }
+});
+
+test("supplier usage ignores late replies and hides when configuration is empty", async (t) => {
+  const browser = await chromium.launch({ channel: "chromium" });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  let release, configReads = 0;
+  let configured = [{ id: "cib", providers: ["cib-zht-apikey"] },
+    { id: "workbuddy-cib", providers: ["sub2agent-workbuddy-cib"] }];
+  const delayed = new Promise((resolve) => { release = resolve; });
+  const routes = {
+    "/api/usage/suppliers": (route) => { configReads++; return route.fulfill({ json: configured }); },
+    "/api/usage/suppliers/cib": async (route) => {
+      await delayed;
+      await route.fulfill({ json: { total: { calls: 1, tokens: 12345 }, activity: [] } }).catch(() => {});
+    },
+    "/api/usage/suppliers/workbuddy-cib": (route) => route.fulfill({ status: 503, body: "fixture offline" }),
+    "/api/usage/quotas": [{ provider: "sub2agent-workbuddy-cib", error: "fixture expired" }],
+  };
+  t.after(release);
+  await page.route("**/*", server("en", { routes }));
+  await page.goto("http://magpie.test/");
+  const requested = page.waitForRequest((req) => new URL(req.url()).pathname === "/api/usage/suppliers/cib");
+  await goUsage(page);
+  await requested;
+  const panel = page.locator("#supplierUsage");
+  await panel.getByRole("tab", { name: "WorkBuddy CIB" }).click();
+  await panel.getByText("Gateway usage query failed", { exact: true }).waitFor();
+  await panel.getByText("Allowance query failed", { exact: true }).waitFor();
+  release();
+  await panel.locator('button[value="activity"]').click();
+  await panel.getByText("Gateway usage query failed", { exact: true }).waitFor();
+  assert.doesNotMatch(await panel.innerText(), /12.35K/);
+
+  await page.evaluate(() => show("agents"));
+  const prior = configReads;
+  await page.evaluate(() => supplierUsage.refresh(true));
+  assert.equal(configReads, prior);
+  configured = [];
+  await goUsage(page);
+  await page.waitForFunction(() => document.querySelector("#supplierUsage").hidden);
+  await page.locator("#stats .kpi").first().waitFor();
 });
 
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {

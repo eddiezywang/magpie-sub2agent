@@ -18,6 +18,7 @@ type SupplierUsage struct {
 	LedgerFrom   *time.Time       `json:"ledgerFrom,omitempty"`
 	RateRevision string           `json:"rateRevision,omitempty"`
 	RateFrom     time.Time        `json:"rateFrom,omitzero"`
+	AsOf         time.Time        `json:"asOf"`
 	Today        SupplierCounters `json:"today"`
 	Week         SupplierCounters `json:"week"`
 	Month        SupplierCounters `json:"month"`
@@ -112,7 +113,7 @@ func foldSupplierUsage(now, first time.Time, channel string, days int, rates tig
 	activityStart := heatmapSince(now)
 	out := SupplierUsage{From: start.Format(time.DateOnly), To: today.Format(time.DateOnly),
 		Activity: []TokenDay{}, Models: []SupplierModel{}, Timeline: []SupplierBucket{},
-		RateRevision: rates.Revision(), RateFrom: rates.Effective()}
+		RateRevision: rates.Revision(), RateFrom: rates.Effective(), AsOf: now}
 	if !first.IsZero() {
 		out.LedgerFrom = &first
 	}
@@ -124,16 +125,6 @@ func foldSupplierUsage(now, first time.Time, channel string, days int, rates tig
 			return
 		}
 		d := supplierCounters(r)
-		if channel != "" && !r.Time.Before(start) && (d.Tokens > 0 || !r.Failed()) {
-			if c, ok := rates.Charge(tigChargeInput(r)); ok {
-				d.TIGAmount, d.TIGCovered, d.TIGTokens = c.Amount, 1, d.Tokens
-				if c.OffPeak {
-					d.OffPeakTokens = d.Tokens
-				}
-			} else {
-				d.TIGUnpriced = 1
-			}
-		}
 		out.Total.add(d)
 		if !r.Time.Before(today) {
 			out.Today.add(d)
@@ -149,6 +140,16 @@ func foldSupplierUsage(now, first time.Time, channel string, days int, rates tig
 		}
 		if r.Time.Before(start) {
 			return
+		}
+		if channel != "" && (d.Tokens > 0 || !r.Failed()) {
+			if c, ok := rates.Charge(tigChargeInput(r)); ok && d.Tokens > 0 {
+				d.TIGAmount, d.TIGCovered, d.TIGTokens = c.Amount, 1, d.Tokens
+				if c.OffPeak {
+					d.OffPeakTokens = d.Tokens
+				}
+			} else {
+				d.TIGUnpriced = 1
+			}
 		}
 		out.Selected.add(d)
 		model := cmp.Or(r.Served, r.Model)

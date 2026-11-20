@@ -6,10 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
 	"github.com/yetone/magpie/internal/usage"
 	"github.com/yetone/magpie/internal/usageapi"
+	"github.com/yetone/magpie/plugins/sub2agent"
 )
 
 type usageSupplier struct {
@@ -23,6 +25,27 @@ func supplierUsageRoutes(mux *http.ServeMux) {
 	}))
 	mux.HandleFunc("GET /api/usage/suppliers/tig/keys", coldTurn(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, tigUsageProviders(provider.All()))
+	}))
+	mux.HandleFunc("GET /api/usage/suppliers/{id}/rates", coldTurn(func(w http.ResponseWriter, r *http.Request) {
+		for _, source := range configuredUsageSuppliers(provider.All()) {
+			if source.ID != r.PathValue("id") {
+				continue
+			}
+			switch source.ID {
+			case "workbuddy-cib":
+				writeJSON(w, map[string]any{"rates": sub2agent.WorkBuddyCIBRateReferences()})
+				return
+			case "workbuddy-enterprise":
+				rates, err := catalog.ManagedMaaSRates(source.Providers)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusServiceUnavailable)
+					return
+				}
+				writeJSON(w, rates)
+				return
+			}
+		}
+		http.NotFound(w, r)
 	}))
 	mux.HandleFunc("GET /api/usage/suppliers/tig/key", coldTurn(func(w http.ResponseWriter, r *http.Request) {
 		providerID, keyID := r.URL.Query().Get("provider"), r.URL.Query().Get("key")

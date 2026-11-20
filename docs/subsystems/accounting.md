@@ -16,11 +16,28 @@ remain explicit; Record cannot distinguish missing token usage from genuine zero
 Only gateway records enter this plane: probes, local rejections, synced and
 independently reported rows are excluded. Session-reading consent is unchanged.
 
-The CIB 智汇通 API Key section in Usage Overview counts gateway tokens from the
-retained Usage ledger, including cache reads and writes. The reader's time zone
-defines today and the inclusive seven- and thirty-day windows. All time covers
-the ledger's retained history, and the chart shows daily values within the
-chosen window. See [the token trend implementation](../../internal/usage/token_trend.go).
+The intranet Usage Overview shows a single panel for configured TIG, CIB
+智汇通 API Key, WorkBuddy Enterprise and WorkBuddy CIB providers. The panel
+provides Usage, Activity and Usage Details. The original gateway summary and
+other subscription allowances stay below. Supplier charts read the current
+gateway ledger, including cache reads and writes, and use the reader's time
+zone for day boundaries. The activity grid distinguishes dates outside
+retained history from zero-use dates. The cumulative Token card covers the
+whole retained ledger. The cumulative chart follows the displayed calendar.
+Usage Details uses hourly buckets for today and daily buckets for seven or
+thirty days. Filtering models updates the displayed series and selected
+subtotal. The selected period's total covers all its models.
+
+CIB 智汇通 reports Token only, with K/M/B values for today, seven days,
+thirty days, and all retained history. Its daily Token line supports seven
+or thirty days. WorkBuddy Enterprise shows local MaaS estimates and upstream
+per-request credits separately. WorkBuddy CIB shows its upstream allowance and
+reset separately for every account. Catalog reference multipliers are
+displayed independently of per-request credits.
+
+See [the supplier ledger fold](../../internal/usage/supplier_usage.go),
+[the Overview client](../../internal/gui/assets/plugins/usage/supplier-usage.js)
+and [the Playwright fixtures](../../internal/gui/tests/usage-overview-fold.test.cjs).
 
 The transport schema is `sub2agent-usage/3`, with `summaries` rather than per-request
 `events`. Its shared identity includes **username and install_id**. Username comes
@@ -231,20 +248,21 @@ supplies an estimated next start. The five-hour rolling estimate can be shown
 as a reference when the window start is unknown. The weekly estimate needs a
 window start. Neither changes the user-wide reporting or outbound telemetry.
 
-The intranet Usage overview detects TIG channels from the current provider's
-model list and shows reference limits, server model coefficients, estimated
-observed user totals and a near-limit warning for the rolling five-hour
-reference. A warning is not proof of exhaustion. A missing report remains
-unavailable; account-level attribution and actual subscription resets are not
-inferred. The overview refreshes while open, and stops polling on leave. See
-`assets/tig-plan-usage.js` and `build/tig-plan-acceptance.cjs`.
+The TIG Usage tab detects channels from configured providers and retains a
+Zhipu channel when a saved observation identifies it. For Zhipu, it offers an
+enabled-key picker and shows the five-hour and weekly windows independently.
+A confirmed recovery time can appear with an empty start. A rolling
+five-hour estimate has a distinct label and leaves the window percentage
+empty. Server-side estimates are shown in a separate expandable row with
+their username scope. Usage Details offers Token and the selected channel's
+own billing unit, together with the applicable model rates. The panel
+refreshes while the Overview is visible and cancels reads when it closes.
 
 The provider editor shows the server-managed plan overview and model badges at
 the model selection controls. The local `/api/accounting/tig-plans` endpoint
-exposes only the unexpired managed plan configuration and channel rates; if
-the catalog is unavailable the editor does not invent limits. The overview
-combines detected channels across providers and displays each user-wide total
-once. Model consumption is separately available for the trailing 30 days.
+exposes the unexpired managed plan configuration and channel rates. The
+overview combines detected channels across providers and displays each
+user-wide total once.
 Before a TIG key is added, the security notice and three selectable channel
 tabs explain the reference rules. After configuration, the security notice is
 not repeated and only channels and model coefficients identified from that

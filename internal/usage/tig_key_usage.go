@@ -39,15 +39,13 @@ func TIGKeyUsageOf(now time.Time, providerID, keyID string, periods map[string]T
 			since = p.From
 		}
 	}
-	return foldTIGKeyUsage(now, cleared.clearedSince(s.firstOwn), providerID, keyID, periods, rates, func(yield func(Record)) {
+	return foldTIGKeyUsage(now, cleared.clearedSince(s.firstOwn), providerID, keyID, periods, rates, cleared.hides, func(yield func(Record)) {
 		if len(periods) == 0 {
 			return
 		}
 		s.visit(since, func(r Record) {
 			r.renameBy(renames)
-			if !cleared.hides(&r) {
-				yield(r)
-			}
+			yield(r)
 		})
 	})
 }
@@ -58,7 +56,7 @@ type tigKeyPricer interface {
 	Charge(catalog.TIGChargeInput) (catalog.TIGCharge, bool)
 }
 
-func foldTIGKeyUsage(now, first time.Time, providerID, keyID string, periods map[string]TIGKeyPeriod, rates tigKeyPricer, visit func(func(Record))) TIGKeyUsage {
+func foldTIGKeyUsage(now, first time.Time, providerID, keyID string, periods map[string]TIGKeyPeriod, rates tigKeyPricer, cleared func(*Record) bool, visit func(func(Record))) TIGKeyUsage {
 	out := TIGKeyUsage{Revision: rates.Revision(), LedgerFrom: first, Periods: make(map[string]TIGKeyEstimate, len(periods))}
 	effective := rates.Effective()
 	for name, p := range periods {
@@ -70,15 +68,22 @@ func foldTIGKeyUsage(now, first time.Time, providerID, keyID string, periods map
 			TIGModelChannel(r.Model) != "zp" || r.ProviderKeyID != "" && r.ProviderKeyID != keyID {
 			return
 		}
-		if r.Input == 0 && r.Output == 0 && r.CacheRead == 0 && r.CacheWrite == 0 && r.Failed() {
+		measurable := hasTIGTokens(r)
+		if !measurable && r.Failed() {
 			return
 		}
-		charge, priced := rates.Charge(tigChargeInput(r))
+		hidden := cleared(&r)
+		charge, priced := catalog.TIGCharge{}, false
+		if !hidden && measurable && r.ProviderKeyID != "" {
+			charge, priced = rates.Charge(tigChargeInput(r))
+		}
 		for name, e := range out.Periods {
 			if r.Time.Before(e.From) {
 				continue
 			}
-			if priced && r.ProviderKeyID != "" {
+			if hidden {
+				e.Complete = false
+			} else if priced {
 				e.Points += charge.Amount
 				e.Priced++
 			} else {
@@ -89,6 +94,10 @@ func foldTIGKeyUsage(now, first time.Time, providerID, keyID string, periods map
 		}
 	})
 	return out
+}
+
+func hasTIGTokens(r Record) bool {
+	return r.Input > 0 || r.Output > 0 || r.CacheRead > 0 || r.CacheWrite > 0
 }
 
 func tigChargeInput(r Record) catalog.TIGChargeInput {

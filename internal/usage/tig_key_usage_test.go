@@ -28,14 +28,20 @@ func TestTIGKeyUsageDoesNotBorrowChargesOrHistory(t *testing.T) {
 		row(time.Hour, "one", "zp", 3, 502), row(6*time.Hour, "", "zp", 80, 200),
 		row(48*time.Hour, "one", "zp", 20, 200),
 	}
-	got := foldTIGKeyUsage(now, now.Add(-30*time.Hour), providerID, "one", periods, tigKeyFixture{now.Add(-24 * time.Hour)}, func(yield func(Record)) {
+	visit := func(yield func(Record)) {
 		for _, r := range rows {
 			yield(r)
 		}
-	})
+	}
+	got := foldTIGKeyUsage(now, now.Add(-30*time.Hour), providerID, "one", periods, tigKeyFixture{now.Add(-24 * time.Hour)}, func(*Record) bool { return false }, visit)
 	five, week := got.Periods["fiveHours"], got.Periods["week"]
 	if !five.Complete || !five.Rolling || five.Points != 13 || five.Priced != 2 ||
 		week.Complete || week.Rolling || week.Points != 13 || week.Priced != 2 || week.Uncovered != 2 {
 		t.Fatalf("unexpected periods: %+v", got)
+	}
+	cleared := func(r *Record) bool { return r.Input == 3 }
+	got = foldTIGKeyUsage(now, now.Add(-30*time.Hour), providerID, "one", periods, tigKeyFixture{now.Add(-24 * time.Hour)}, cleared, visit)
+	if five := got.Periods["fiveHours"]; five.Complete || five.Points != 10 || five.Uncovered != 0 || five.Priced != 1 {
+		t.Fatalf("cleared usage affected visible figures or complete coverage: %+v", five)
 	}
 }

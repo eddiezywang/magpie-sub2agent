@@ -1,0 +1,12 @@
+[
+  ["glm-5.3-flash", "GLM-5.3-flash", 0.06],
+  ["deepseek-v4.1-flash", "Deepseek-V4.1-Flash", 0.11],
+  ["minimax-m3.1-flash", "MiniMax-M3.1-Flash", 0.08],
+  ["kimi-k2.8-preview", "Kimi-K2.8-Preview", 0.77],
+  ["glm-5.3", "GLM-5.3", 0.79],
+  ["glm-5.2-aicc", "GLM-5.2 AICC", 1.58],
+  ["kimi-k3.1-pro", "Kimi-K3.1-Pro", 0.97],
+  ["mimo-v2.6-pro", "MiMo-V2.6-Pro", 0.18],
+  ["space-bunny", "Space-Bunny", 0.08],
+  ["hy4", "Hy4", 0.29]
+]

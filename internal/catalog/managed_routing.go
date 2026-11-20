@@ -47,6 +47,30 @@ func ManagedTIGPlans() (map[string]any, error) {
 	return map[string]any{"config": plans, "rates": rates, "revision": d.Revision, "effectiveAt": d.Effective, "peak": d.TIGPeak}, nil
 }
 
+// ManagedMaaSRates returns the active WorkBuddy enterprise reference rates
+// applicable to the configured provider ids.
+func ManagedMaaSRates(providers []string) (map[string]any, error) {
+	d, err := filememo.Read("managed-routing", managedRoutingPath(), parseManagedRouting)
+	now := time.Now()
+	if err != nil || !now.Before(d.Expires) {
+		return nil, fmt.Errorf("MaaS rates unavailable")
+	}
+	rates := make([]managedRate, 0)
+	for _, rate := range d.Models {
+		if rate.Currency != "POINTS" || rate.Coefficient == nil || !strings.HasSuffix(strings.ToLower(rate.Model), "-maas") ||
+			!rate.Until.IsZero() && !now.Before(rate.Until) {
+			continue
+		}
+		for _, id := range providers {
+			if routingMatch(rate.Provider, id) {
+				rates = append(rates, rate)
+				break
+			}
+		}
+	}
+	return map[string]any{"rates": rates, "revision": d.Revision}, nil
+}
+
 type creditRates struct {
 	Input     float64 `json:"input"`
 	CacheRead float64 `json:"cache_read"`
