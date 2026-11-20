@@ -4,7 +4,7 @@ package distribution
 
 const Internal = true
 
-const DefaultVersion = "1.0.0-beta.12"
+const DefaultVersion = "1.0.0-beta.13"
 
 const Name = "sub2agent"
 const DisplayName = "Sub2Agent"
