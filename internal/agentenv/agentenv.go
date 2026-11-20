@@ -61,6 +61,8 @@ var Vars = []string{
 	// PenguinHarness's data root and the Project its CLI works in
 	// ($PENGUIN_HOME/$PENGUIN_PROJECT_ID/.project_config.toml)
 	"PENGUIN_HOME", "PENGUIN_PROJECT_ID",
+	// Devin CLI's sessions folder ($DEVIN_SESSIONS_DIR/cli)
+	"DEVIN_SESSIONS_DIR",
 	// omp
 	"OMP_PROFILE",
 	// Qoder's two builds, the global site's and China's
@@ -87,8 +89,14 @@ var Vars = []string{
 	// Kun's data folder (its runtime.json and model-connections.v2.json),
 	// ~/.kun/data without it
 	"KUN_DATA_DIR",
+	// Nowledge Mem's config folder (its remote_llm.json), and where its
+	// backend listens (the nmem CLI's), 127.0.0.1:14242 without it
+	"NMEM_APP_CONFIG_DIR",
+	"NMEM_API_URL",
 	// AstrBot's root, the folder holding its data/ (else ~/.astrbot, the desktop app's)
 	"ASTRBOT_ROOT",
+	// Dim alpha's folder (dima), ~/.dimcode-alpha without it
+	"DIMCODE_HOME",
 	// Mistral Vibe's folder (config.toml, skills, AGENTS.md), ~/.vibe without it
 	"VIBE_HOME",
 	// jcode's folder, ~/.jcode without it
@@ -131,6 +139,9 @@ var Vars = []string{
 	// QwenPaw's working folder (~/.qwenpaw, or a legacy ~/.copaw, without
 	// it) and its secret folder, <working folder>.secret without it
 	"QWENPAW_WORKING_DIR", "QWENPAW_SECRET_DIR",
+	// billion-context's config file, the Library's billion-context tab
+	// changes; $XDG_CONFIG_HOME/billion-context/billion-context.json without it
+	"BILI_CONFIG_FILE",
 	// Cursor's CLI: its config folder (its chats) and its data folder
 	"CURSOR_CONFIG_DIR", "CURSOR_DATA_DIR",
 	// OpenCode and OpenChamber
@@ -163,6 +174,7 @@ var Vars = []string{
 var NotPaths = map[string]bool{
 	"PI_PROFILE": true, "OMP_PROFILE": true,
 	"WINDSURF_API_SERVER_URL": true, "ZCODE_CREDENTIAL_SECRET": true,
+	"AGY_LLM_GATEWAY_URL": true, "NMEM_API_URL": true,
 	"PI_CONFIG_DIR": true, "OPENCODE_DB": true,
 	"STEPCODE_CONFIG_DIR": true,
 	"MAGPIE_ZED_BIN":      true, "MAGPIE_ZED_PROCESS_NAMES": true,

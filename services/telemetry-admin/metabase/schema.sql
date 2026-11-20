@@ -118,4 +118,15 @@ SELECT DISTINCT ON (username) day, username, client_version, version_group
 FROM analytics.installation_versions
 ORDER BY username, version_seen DESC NULLS LAST, day DESC, installation;
 
-GRANT SELECT ON analytics.user_growth, analytics.installation_versions, analytics.user_version_cohort TO analytics_reader;
+CREATE OR REPLACE VIEW analytics.active_without_usage AS
+SELECT a.username, min(a.day) AS first_day, max(a.day) AS last_day,
+       count(DISTINCT a.day) AS active_days, count(DISTINCT a.installation) AS installations,
+       c.client_version AS last_version, c.version_group AS version_group
+FROM analytics.user_daily_activity a
+JOIN analytics.user_version_cohort c USING (username)
+WHERE a.app_events > 0
+  AND NOT EXISTS (SELECT 1 FROM analytics.daily_usage u WHERE u.username = a.username)
+GROUP BY a.username, c.client_version, c.version_group;
+
+GRANT SELECT ON analytics.user_growth, analytics.installation_versions, analytics.user_version_cohort,
+  analytics.active_without_usage TO analytics_reader;

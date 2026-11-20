@@ -60,7 +60,7 @@ func Registry() RegistryInUse {
 		return RegistryInUse{URL: distribution.Registry, From: FromMagpie}
 	}
 
-	if u, err := CleanRegistry(settings.Load().NPMRegistry); err == nil && u != "" {
+	if u, err := CleanRegistry(settings.Shared().NPMRegistry); err == nil && u != "" {
 		return RegistryInUse{URL: u, From: FromMagpie}
 	}
 	if r, ok := userRegistry(); ok {

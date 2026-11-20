@@ -38,3 +38,5 @@
 /brand/use-font.bat
 /brand/use-font.log
 /brand/use-font.ps1
+/internal/conptypair/amd64/
+/internal/conptypair/arm64/

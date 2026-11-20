@@ -17,7 +17,6 @@ package gateway
 // isn't asked to go on (prefill.go).
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -133,7 +132,7 @@ func spends(ev Event) bool {
 // a reply said nothing, and is the empty reply's to answer (#667), not a
 // cut one's.
 func geminiEnds(data []byte) bool {
-	if !bytes.Contains(data, []byte(`"finishReason"`)) && bytes.Contains(data, []byte(`"candidates"`)) {
+	if !bodyHas(data, `"finishReason"`) && bodyHas(data, `"candidates"`) {
 		return false
 	}
 	type chunk struct {
@@ -519,6 +518,7 @@ func (s *Server) streamTranslated(w http.ResponseWriter, r *http.Request, p prov
 			if h, ok := w.(*holdWriter); ok {
 				h.mu.Lock()
 				h.first.hidden = true
+				h.first.summarized = h.first.summarized || ev.Kind == KThink
 				h.mu.Unlock()
 			}
 		case KError:

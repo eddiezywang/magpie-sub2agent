@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -36,12 +37,14 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 	minW, minH := windowMin(z, 0, 0)
 	width, height := openSize(settings.Load().Window, minW, minH)
 	state := application.WindowStateNormal
-	if runtime.GOOS == "linux" && openMaximised(settings.Load()) {
+	if runtime.GOOS == "linux" && settings.Shared().WindowMaximised {
 		state = application.WindowStateMaximised
 	}
 	// Windows' title bar in the page's colour from the first frame; the
 	// page keeps it so as its theme changes (TintTitleBar)
-	winOpts, winBg := windowChrome(cmp.Or(os.Getenv("MAGPIE_THEME"), settings.Load().Theme))
+	winOpts, winBg := windowChrome(cmp.Or(os.Getenv("MAGPIE_THEME"), settings.Shared().Theme))
+	// pinned above other windows, as the title bar's pin left it (ontop.go)
+	onTop := settings.Load().OnTop && canOnTop(runtime.GOOS, os.Getenv)
 	w := h.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:             "main",
 		Title:            distribution.Name,
@@ -52,21 +55,37 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 		MinHeight:        minH,
 		Zoom:             z,
 		Hidden:           true,
-		Frameless:        retroMainFrameEnabled(),
 		StartState:       state,
+		AlwaysOnTop:      onTop,
+		Frameless:        retroMainFrameEnabled() || mainFrameless(runtime.GOOS),
 		Mac:              mainMacWindow(),
 		Windows:          winOpts,
 		BackgroundColour: winBg,
 	})
 	h.zoomWhenLoaded(w)
 	lowWhileHidden(w)
-	if runtime.GOOS == "windows" && !retroMainFrameEnabled() {
-		w.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) { w.ExecJS(frameOnlyResizeJS) })
+	h.mendWebView(w)
+	if mainFrameless(runtime.GOOS) || retroMainFrameEnabled() {
+		// resized from Windows' own border too, not the page's edge alone
+		keepResizeFrame(w)
+		// the page's caption buttons follow the window's maximised state
+		// (captionJS); a resize that changes it says so, once
+		var maxed atomic.Bool
+		w.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+			m := w.IsMaximised()
+			maxed.Store(m)
+			w.ExecJS(captionJS(m))
+		})
+		w.OnWindowEvent(events.Common.WindowDidResize, func(*application.WindowEvent) {
+			if m := w.IsMaximised(); maxed.Swap(m) != m {
+				w.ExecJS(captionJS(m))
+			}
+		})
 	}
 	// A resize is kept once it settles (settle): the size, or that the
 	// window is maximised. Nothing is kept of a window not placed and shown
 	// yet (placeMain: a text size can resize it, unmaximised as yet), one
-	// let go (0×0), or one full screen or minimised, which keeps what was
+	// let go (0鑴?), or one full screen or minimised, which keeps what was
 	// kept before it went so; nor, on Linux, of one hidden by then, since
 	// X11 drops a hidden window's maximised state.
 	var resized *time.Timer
@@ -136,11 +155,11 @@ func (h *host) makePanel() *application.WebviewWindow {
 	w := h.app.Window.NewWithOptions(po)
 	h.zoomWhenLoaded(w)
 	lowWhileHidden(w)
+	h.mendWebView(w)
 	if h.tray != nil {
 		h.tray.AttachWindow(w).WindowOffset(6)
 	}
 	// the icon stays lit while the panel is open (the Mac's)
-	trayOwnClicks()
 	w.OnWindowEvent(events.Mac.WindowShow, func(*application.WindowEvent) { trayHighlight(true) })
 	w.OnWindowEvent(events.Mac.WindowHide, func(*application.WindowEvent) { trayHighlight(false) })
 	sayWailsHides(w)
@@ -351,12 +370,15 @@ const spaceSettle = 500 * time.Millisecond
 // was last; on the main thread. It moves only while being shown: left on,
 // activating magpie in any way (the Dock, Command-Tab) would pull the open
 // window off its own Space onto the user's (#1252). Without focus, it is
-// shown and left behind the app the user is in (a restart by itself).
+// shown and left behind the app the user is in (a restart by itself),
+// asking nothing of the user (showQuietly).
 func showHere(w *application.WebviewWindow, focus bool) {
 	setMovesToActiveSpace(w, true)
-	showWebview(w)
 	if focus {
+		showWebview(w)
 		w.Focus()
+	} else {
+		showQuietly(w)
 	}
 	time.AfterFunc(spaceSettle, func() {
 		application.InvokeAsync(func() { setMovesToActiveSpace(w, false) })
@@ -414,7 +436,7 @@ func (h *host) placeAt(w *application.WebviewWindow) (maximise bool) {
 		}
 		fitted = false
 	}
-	return openMaximised(settings.Load()) && !fitted
+	return settings.Shared().WindowMaximised && !fitted
 }
 
 // putBack moves the main window, not shown yet, to where it was last left
@@ -486,7 +508,7 @@ func (h *host) mainRoom(w *application.WebviewWindow) (int, int) {
 }
 
 // fitScreen is the work area the main window is fitted to, in the units of
-// its Size: Windows' (DIPs), 0s elsewhere — the Mac fits a window to its
+// its Size: Windows' (DIPs), 0s elsewhere 閳?the Mac fits a window to its
 // screen itself, and GTK's window manager does.
 func fitScreen(w *application.WebviewWindow) (int, int) {
 	if runtime.GOOS != "windows" {
