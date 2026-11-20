@@ -145,6 +145,8 @@ func TestAgentOf(t *testing.T) {
 		{"Bearer " + Token, "", "ai-sdk/openai/4.0.15 ai-sdk/provider-utils/5.0.10 runtime/node.js/22", "ai-sdk"},
 		{"", TokenFor("alma"), "ai-sdk/anthropic/2.0.1", "alma"},
 		{"Bearer " + TokenFor("qoder"), "", "Bun/1.4.2", "qoder"},
+		{"Bearer " + TokenFor("pi"), "", "OpenAI/JS 6.0.0", "pi"},
+		{"", TokenFor("pi"), "", "pi"},
 		{"Bearer " + TokenFor("hanako"), "", "OpenAI/JS 6.0.0", "hanako"},
 		{"Bearer " + Token, "", "claude-cli/2.1.0 (external, cli)", "claude-cli"},
 		{"Bearer " + Token, "", "ai-sdk/openai/2.0.52", "ai-sdk"},
@@ -160,24 +162,6 @@ func TestAgentOf(t *testing.T) {
 		r.Header.Set("User-Agent", c.ua)
 		if got := agentOf(r); got != c.want {
 			t.Errorf("%q %q %q: %q, want %q", c.auth, c.key, c.ua, got, c.want)
-		}
-	}
-}
-
-func TestClaudeSessionIdentifiesGenericMessagesClient(t *testing.T) {
-	for _, tc := range []struct{ path, ua, session, want string }{
-		{"/v1/messages", "", "fixture-clause-session", "claude"},
-		{"/v1/messages", "ai-sdk/anthropic/2.0.1", "fixture-clause-session", "claude"},
-		{"/v1/messages", "", "", "other"},
-		{"/v1/chat/completions", "", "fixture-clause-session", "other"},
-		{"/v1/messages", "custom-client/1.0", "fixture-clause-session", "custom-client"},
-	} {
-		r := httptest.NewRequest("POST", tc.path, nil)
-		r.Header.Set("Authorization", "Bearer "+Token)
-		r.Header.Set("User-Agent", tc.ua)
-		r.Header.Set("X-Claude-Code-Session-Id", tc.session)
-		if got := callerFrom(r).agent; got != tc.want {
-			t.Errorf("%s %q session=%v: got %s, want %s", tc.path, tc.ua, tc.session != "", got, tc.want)
 		}
 	}
 }

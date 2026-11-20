@@ -5,8 +5,9 @@ through the longest case-insensitive model prefix at a separator boundary.
 Routing templates use the same matching rule against their capability tiers.
 The matching chooses group membership and capability metadata. Requests still
 carry the provider's original model ID, which TIG billing uses for channel
-attribution. For Anthropic Messages, a Claude Code session header can identify
-Claude Code when the client omits its User-Agent or uses a generic SDK agent.
+attribution. Pi's local gateway key names Pi in its generated models.json,
+so the gateway can attribute requests when the client sends a generic SDK
+User-Agent. Catalog sync replaces a previously written local placeholder.
 
 The intranet workspace hosts the original routing visualization and request history;
 its navigation replaces the standalone Routing page.

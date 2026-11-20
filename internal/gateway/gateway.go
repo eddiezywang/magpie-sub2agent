@@ -104,12 +104,7 @@ func agentOf(r *http.Request) string {
 	if codexForClaudeCode(r.Header) {
 		return "codex"
 	}
-	agent := usage.AgentOf(ua)
-	if (agent == "other" || agent == "magpie" || usage.IsLibrary(agent)) &&
-		protoOfPath(r.URL.Path) == provider.Anthropic && label(r.Header.Get("X-Claude-Code-Session-Id")) != "" {
-		return "claude"
-	}
-	return agent
+	return usage.AgentOf(ua)
 }
 
 // codexForClaudeCode is a Codex turn that Claude Code started under its

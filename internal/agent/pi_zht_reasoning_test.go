@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/yetone/magpie/internal/catalog"
+	"github.com/yetone/magpie/internal/edit"
+	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/provider"
 )
 
@@ -61,10 +63,20 @@ func TestPiZHTInheritsOfficialReasoningAndJoinsFlashTemplate(t *testing.T) {
 	if err := pi(home).Field("model").Set("magpie/" + id); err != nil {
 		t.Fatal(err)
 	}
+	path := filepath.Join(home, ".pi", "agent", "models.json")
+	if err := edit.SetJSON(path, edit.KV{Path: "providers.magpie.apiKey", Value: gateway.Token}); err != nil {
+		t.Fatal(err)
+	}
+	if err := pi(home).Sync(); err != nil {
+		t.Fatal(err)
+	}
+	if key, _ := edit.GetJSON(path, "providers.magpie.apiKey"); key != gateway.TokenFor("pi") {
+		t.Fatal("Pi sync did not replace the old gateway placeholder with its named token")
+	}
 	var file struct {
 		Providers map[string]struct{ Models []map[string]any }
 	}
-	if err := json.Unmarshal([]byte(readFile(filepath.Join(home, ".pi", "agent", "models.json"))), &file); err != nil {
+	if err := json.Unmarshal([]byte(readFile(path)), &file); err != nil {
 		t.Fatal(err)
 	}
 	models := file.Providers["magpie"].Models
