@@ -255,16 +255,14 @@ Zhipu channel when a saved observation identifies it. For Zhipu, it offers an
 enabled-key picker and shows the five-hour and weekly windows independently.
 A confirmed recovery time can appear with an empty start. A rolling
 five-hour estimate has a distinct label and leaves the window percentage
-empty. Server-side estimates are shown in a separate expandable row with
-their username scope. Usage Details offers Token and the selected channel's
+empty. Usage Details offers Token and the selected channel's
 own billing unit, together with the applicable model rates. The panel
 refreshes while the Overview is visible and cancels reads when it closes.
 
 The provider editor shows the server-managed plan overview and model badges at
 the model selection controls. The local `/api/accounting/tig-plans` endpoint
 exposes the unexpired managed plan configuration and channel rates. The
-overview combines detected channels across providers and displays each
-user-wide total once.
+overview combines detected channels across configured providers.
 Before a TIG key is added, the security notice and three selectable channel
 tabs explain the reference rules. After configuration, the security notice is
 not repeated and only channels and model coefficients identified from that

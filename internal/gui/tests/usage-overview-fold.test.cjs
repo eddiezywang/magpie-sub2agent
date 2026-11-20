@@ -150,6 +150,11 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
     await page.clock.setFixedTime(new Date(stats.asOf));
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    const reportReads = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (url.pathname === "/api/accounting/report" && url.searchParams.get("period") === "tig-plans") reportReads.push(url.pathname);
+    });
     const config = {
       theme, suppliers: [
         { id: "tig", providers: [ids.tig] }, { id: "workbuddy-enterprise", providers: [ids.enterprise] },
@@ -161,7 +166,6 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
         "/api/usage/suppliers/workbuddy-enterprise": stats,
         "/api/usage/suppliers/workbuddy-cib": stats,
         "/api/accounting/tig-plans": catalog,
-        "/api/accounting/report": { channels: { zp: { rolling_5h: 3000, rolling_7d: 4000, rolling_30d: 5000, unpriced: 1 } } },
         "/api/usage/suppliers/tig/keys": [{ provider: ids.tig, keys: [{ id: "fingerprint-one", name: "Desk" }, { id: "fingerprint-two", name: "Team" }] }],
         "/api/usage/suppliers/tig/key": (route, url) => route.fulfill({ json: url.searchParams.get("key") === "fingerprint-one" ? {
           windows: [{ period: "fiveHours", status: "estimated", start: "2026-11-19T10:00:00+08:00", reset: "2026-11-19T15:00:00+08:00" }, { period: "week", status: "unknown" }],
@@ -197,8 +201,7 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
     await panel.getByText("429 已确认").waitFor();
     assert.equal(await panel.getByText("20%", { exact: true }).count(), 0);
     assert.match(await panel.innerText(), /窗口观测已过期/);
-    await panel.locator("details").getByText("服务器用量估算（按用户名）").click();
-    await panel.getByText("3,000 积分", { exact: true }).waitFor();
+    assert.equal(await panel.getByText("服务器用量估算（按用户名）", { exact: true }).count(), 0);
 
     await panel.locator('button[value="activity"]').click();
     await panel.locator(".su-heat-cell").first().waitFor();
@@ -235,6 +238,7 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
     assert.equal(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth), true);
     assert.deepEqual(errors, []);
     assert.deepEqual(runtimeAlerts, []);
+    assert.deepEqual(reportReads, []);
     await page.close();
   }
 });

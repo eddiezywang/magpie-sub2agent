@@ -123,7 +123,7 @@ window.supplierUsage = (() => {
       panel.append(note("TIG channels have not been identified from the saved models."));
       return;
     }
-    const plan = side.catalog?.config?.plans?.[channel] || side.report?.plans?.[channel];
+    const plan = side.catalog?.config?.plans?.[channel];
     const windows = side.key?.windows || [];
     const rules = channel === "zp" ? [["fiveHours", "5-hour allowance", "rolling_5h"], ["week", "Weekly allowance", "subscription_week"]] :
       [["", channel === "hs" ? "Monthly allowance" : "Weekly allowance", channel === "hs" ? "month" : "subscription_week"]];
@@ -140,25 +140,6 @@ window.supplierUsage = (() => {
         status, estimate, coverage }));
     }
     panel.append(cards);
-    const reported = side.report?.channels?.[channel];
-    const rollup = el("details", "su-detail");
-    rollup.dataset.suFocus = "supplier-tig-rollup";
-    rollup.append(el("summary", "", t("Server estimates by username")));
-    if (reported) {
-      rollup.append(kpis([["Last 5 hours", points(reported.rolling_5h, currencies[channel])],
-        ["Last 7 days", points(reported.rolling_7d, currencies[channel])], ["Last 30 days", points(reported.rolling_30d, currencies[channel])]]));
-      const line = channel === "zp" ? reported.rolling_5h / 35000 :
-        channel === "hs" ? reported.rolling_30d / plan?.windows?.find((w) => w.id === "month")?.limit :
-          reported.rolling_7d / plan?.windows?.find((w) => w.id === "subscription_week")?.limit;
-      if (line >= (side.report.warning_thresholds?.[0] ?? side.catalog?.config?.warning_thresholds?.[0] ?? .8)) {
-        const warning = note(channel === "zp" ? "Estimated usage is near the reference limit; actual balance is unknown." :
-          "Rolling usage is near the reference limit; the actual reset date is unknown.");
-        warning.classList.add("su-warning");
-        rollup.append(warning);
-      }
-      if (reported.unpriced) rollup.append(note("{n} attempts could not be priced", { n: exact(reported.unpriced) }));
-    } else rollup.append(note("Usage unavailable; waiting for the billing service"));
-    panel.append(rollup);
   }
 
   const retained = (c) => stats?.total?.calls ? compact(c?.tokens ?? 0) : missing;
@@ -269,7 +250,7 @@ window.supplierUsage = (() => {
   function ratesTable() {
     if (selected === "cib" || selected === "tig" && !channel) return null;
     const ids = suppliers.find((x) => x.id === selected)?.providers || [];
-    const known = sourceSide?.rates?.rates || sourceSide?.catalog?.rates || sourceSide?.report?.rates || [];
+    const known = sourceSide?.rates?.rates || sourceSide?.catalog?.rates || [];
     const filtered = known.filter((r) => (selected !== "tig" || r.deployment === channel) &&
       (!r.provider || ids.some((id) => matches(r.provider, id))));
     const distinct = [...new Map(filtered.map((r) => [(r.model || "") + "|" + (r.service_tier || "") + "|" + (r.providerLabel || ""), r])).values()];
@@ -435,10 +416,10 @@ window.supplierUsage = (() => {
 
   async function readSide(n) {
     if (selected === "tig") {
-      const accounting = Promise.allSettled([get("accounting/tig-plans"), get("accounting/report?period=tig-plans&format=json")])
-        .then(([cfg, r]) => {
+      const accounting = get("accounting/tig-plans").catch(() => undefined)
+        .then((catalog) => {
           if (!usable(n)) return;
-          sourceSide = { ...sourceSide, catalog: cfg.value, report: r.value };
+          sourceSide = { ...sourceSide, catalog };
           render();
         });
       const [p, keys] = await Promise.allSettled([get("providers"), get("usage/suppliers/tig/keys")]);

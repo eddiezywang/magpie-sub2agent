@@ -32,8 +32,6 @@ magpie.strings({
     "Unable to read window": "窗口查询失败",
     "Window unknown": "窗口待探测",
     "Partial ledger or rate coverage · {n} uncovered requests": "账本或费率覆盖不完整 · {n} 次请求未覆盖",
-    "Server estimates by username": "服务器用量估算（按用户名）",
-    "Last 5 hours": "近 5 小时",
     "Account {n}": "账号 {n}",
     "Allowance query failed": "额度查询失败",
     "Allowance unavailable": "额度暂不可用",
