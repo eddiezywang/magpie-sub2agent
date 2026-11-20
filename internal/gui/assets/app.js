@@ -15226,7 +15226,7 @@ function quotasOpened() {
 
 // A load is never swallowed by a lesser one on its way. A stale answer
 // (X-Magpie-Reading) is asked again every 1.5s, 30s at most (#959).
-let quotasLoading = null, quotasLater = 0, quotasTries = 0;
+let quotasLoading = null, quotasLater = 0, quotasTries = 0, quotaReadFailed = false;
 let quotaRefreshVersion = 0;
 const quotaRefreshVersions = new Map();
 function loadQuotas(asked, again) {
@@ -15246,7 +15246,8 @@ function loadQuotas(asked, again) {
     .then((q) => {
       // an answer that isn't a list of cards is a read that failed: what
       // was read before stays, as it does when the read is refused
-      if (q != null && !Array.isArray(q)) { quotas = quotas || []; quotasKept = reading = false; return; }
+      quotaReadFailed = q != null && !Array.isArray(q);
+      if (quotaReadFailed) { quotas = quotas || []; quotasKept = reading = false; return; }
       q = keepRefreshedQuotas(q || [], began);
       // Whole-page reads are serialized; no older one still needs these
       // markers. A card reply must not retire them while a GET is pending.
@@ -15254,7 +15255,7 @@ function loadQuotas(asked, again) {
       same = !!again && !!quotas && JSON.stringify(q || []) === JSON.stringify(quotas);
       quotas = q || []; quotasAt = Date.now(); quotasKept = false;
       if (mode === "panel") try { localStorage.setItem("magpie.panelQuotas", JSON.stringify(quotas)); } catch {}
-    }, () => { quotas = quotas || []; quotasKept = reading = false; })
+    }, () => { quotas = quotas || []; quotasKept = reading = false; quotaReadFailed = true; })
     .finally(() => {
       if (quotasLoading === p) quotasLoading = null;
       if (!same) renderQuotas(true);
@@ -15374,15 +15375,17 @@ function renderQuotas(lazy) {
   // the tray panel never shows the Usage page: its cards and curves are
   // not drawn there unseen (#3192)
   if (mode === "panel") return;
+  window.supplierUsage?.quotaChanged();
+  const overviewQuotas = quotas?.filter((q) => !window.supplierUsage?.hasProvider(q.provider));
   const subscriptions = $("#subscriptionUsage");
   const restoreFlash = keepQuotaFlash(subscriptions);
   const restoreRefresh = keepQuotaRefresh(subscriptions);
   const was = [...subscriptions.children];
   subscriptions.replaceChildren();
   // the allowances' heading: used or left, shown with a card that has one
-  $("#quotaHead").hidden = !!quotas && !quotas.length;
+  $("#quotaHead").hidden = !!overviewQuotas && !overviewQuotas.length;
   const pick = $("#quotaMode");
-  pick.hidden = !quotas?.some((q) => !q.error && q.windows?.length);
+  pick.hidden = !overviewQuotas?.some((q) => !q.error && q.windows?.length);
   if (!pick.hidden) {
     pick.replaceChildren();
     for (const [left, name] of [[false, "Used"], [true, "Left"]]) {
@@ -15394,7 +15397,7 @@ function renderQuotas(lazy) {
     slide(pick, "quotaMode");
   }
   const views = $("#quotaView");
-  views.hidden = !quotas?.length;
+  views.hidden = !overviewQuotas?.length;
   if (!views.hidden) {
     views.replaceChildren(...[["cards", "Cards"], ["table", "Table"]].map(([v, name]) => {
       const b = el("button", "opt" + (v === quotaView ? " on" : ""), t(name));
@@ -15418,7 +15421,7 @@ function renderQuotas(lazy) {
   }
   if (usageArranging) { usageRenderPending = true; restoreRefresh(); return; }
   // less the ones hidden from it (overviewCards, the Usage page's)
-  const shown = overviewCards(quotas);
+  const shown = overviewCards(overviewQuotas);
   subscriptions.hidden = !shown.length;
   // the table: a row an account, in the cards' order
   const rows = quotaView === "table" && shown.length && (window.quotaTable ? quotaTable(byUsageOrder(keyCards(shown))) : void quotaTableJS());

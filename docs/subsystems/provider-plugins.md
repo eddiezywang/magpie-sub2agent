@@ -782,8 +782,10 @@ is inferred from the empty configuration responses.
 
 Balance uses POST `/v2/billing/meter/get-enterprise-user-usage` with the signed
 enterprise headers. `credit` is consumed credits, `limitNum` is the total, and
-the display includes remaining credits and the vendor reset text. The unzoned
-reset string is not turned into an assumed timestamp. Missing data or query
+the display includes remaining credits and the vendor reset text. Usage Overview
+reads that text from the optional `resetText` field on each account window.
+The field is display-only. An unzoned value leaves `resetsAt` and `span` empty.
+Missing data or query
 failure shows unknown/error instead of a fabricated zero. An HTTP 401 uses the
 community refresh path and retries once. Existing Go usage accounting consumes
 per-response `usage.credit` and token fields; reference model multipliers are

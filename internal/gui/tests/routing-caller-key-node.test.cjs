@@ -16,7 +16,7 @@ const { chromium, webkit } = require("playwright");
 
 const assets = path.resolve(__dirname, "../assets");
 
-function fixture() {
+function fixture(intranet) {
   const now = Date.now(), at = (s) => new Date(now - s * 1000).toISOString();
   const seat = { id: "agy", provider: "agy", name: "Antigravity", who: "me@example.com", kind: "account", model: "gemini-3-pro" };
   // under way, so each stays on the stage
@@ -28,22 +28,25 @@ function fixture() {
     req(1, "Python-urllib", { id: "k-nightly", name: "爬虫 nightly" }),
     req(2, "Python-urllib", { id: "k-server", name: "Old box" }), // renamed since: Server
     req(3, "Python-urllib", null), // no key: its User-Agent
-    req(4, "claude", null),
+    req(4, "claude", intranet ? { id: "k-beta10", name: "sub2agent" } : null),
+    ...(intranet ? [req(5, "sub2agent", { id: "k-unknown", name: "Service key" })] : []),
   ];
 }
 // the keys as Gateway keys lists them now
 const keys = [{ id: "k-nightly", name: "爬虫 nightly" }, { id: "k-server", name: "Server" }];
 
-function serve(lang) {
+function serve(lang, intranet = false) {
   return async (route) => {
     const url = new URL(route.request().url());
     const json = (data) => route.fulfill({ json: data });
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:true};` });
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:true,intranet:${intranet}};` });
+    if (url.pathname === "/api/agents/connections") return json({ agents: [], checks: {} });
     if (url.pathname === "/wails/runtime.js") return route.fulfill({ contentType: "text/javascript", body: "export const Window = {};" });
     if (url.pathname === "/api/state") return json({ agents: [{ id: "claude", name: "Claude Code", fields: [] }], profiles: [], settings: { lang, theme: "light" } });
     if (url.pathname === "/api/gateway/trace") {
       if (url.searchParams.has("wait") || Number(url.searchParams.get("after"))) return new Promise(() => {});
-      return json({ mine: true, now: new Date().toISOString(), seq: 4, totals: { requests: 4, rerouted: 0, errors: 0 }, routes: fixture() });
+      const routes = fixture(intranet);
+      return json({ mine: true, now: new Date().toISOString(), seq: routes.length, totals: { requests: routes.length, rerouted: 0, errors: 0 }, routes });
     }
     if (url.pathname === "/api/gateway/history") return json({ cut: false, days: [], routes: [] });
     if (url.pathname === "/api/caller-keys") return json({ keys, accountNames: {} });
@@ -57,6 +60,18 @@ function serve(lang) {
     return route.fulfill({ body: await fs.readFile(file), contentType });
   };
 }
+
+test("intranet routing shows the Claude client and labels its gateway key separately", async (t) => {
+  const browser = await chromium.launch({ channel: "chromium" });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  await page.route("**/*", serve("zh", true));
+  await page.goto("http://magpie.test/?view=routing");
+  const claude = page.locator(".rt-src").filter({ has: page.getByText("Claude Code", { exact: true }) });
+  await claude.getByText("网关 Key：sub2agent", { exact: true }).waitFor();
+  const unknown = page.locator(".rt-src").filter({ has: page.getByText("客户端未知", { exact: true }) });
+  await unknown.getByText("网关 Key：Service key", { exact: true }).waitFor();
+});
 
 for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
   for (const lang of ["en", "zh", "zh-TW", "ja", "de"]) {

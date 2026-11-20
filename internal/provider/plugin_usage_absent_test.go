@@ -48,12 +48,15 @@ func TestPluginWindowWithoutUsedIsNoReading(t *testing.T) {
 // before the fix.
 func TestAWindowWithoutUsedIsNoAllowance(t *testing.T) {
 	var u plugin.Usage
-	if err := json.Unmarshal([]byte(`{"windows":[{"name":"Credits","display":"0 / 5000"},{"name":"Daily","used":0,"limit":100,"display":"0 / 100"}]}`), &u); err != nil {
+	if err := json.Unmarshal([]byte(`{"windows":[{"name":"Credits","display":"0 / 5000"},{"name":"Daily","used":0,"limit":100,"display":"0 / 100","resetText":"2026-12-02 00:00:00"}]}`), &u); err != nil {
 		t.Fatal(err)
 	}
 	q := quotaOfPlugin(SubscriptionQuota{Provider: "loomy-plugin", User: "u"}, u)
 	if a := allowanceOf(q.Windows, time.Now()); len(a) != 1 || a[0].Name != "Daily" {
 		t.Fatalf("the allowance: %+v", a)
+	}
+	if w := q.Windows[1]; w.ResetText != "2026-12-02 00:00:00" || w.ResetsAt != nil || w.Span != 0 {
+		t.Errorf("reset text should reach the UI without a structured time or period: %+v", w)
 	}
 }
 
@@ -90,7 +93,7 @@ func TestPluginHostPassesAnAbsentUsedOn(t *testing.T) {
 	windows := filepath.Join(t.TempDir(), "windows.json")
 	if err := os.WriteFile(windows, []byte(`{
 		"a@fake": [{"name": "Credits", "display": "0 / 5000"}],
-		"full@fake": [{"name": "Credits", "used": 0, "display": "0 / 5000"}]
+		"full@fake": [{"name": "Credits", "used": 0, "display": "0 / 5000", "resetText": "2026-12-02 00:00:00"}]
 	}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -124,6 +127,9 @@ func TestPluginHostPassesAnAbsentUsedOn(t *testing.T) {
 	}
 	if w := said.Windows[0]; w.Text || w.Aside {
 		t.Errorf("a 0 that was said: %+v", w)
+	}
+	if w := said.Windows[0]; w.ResetText != "2026-12-02 00:00:00" || w.ResetsAt != nil || w.Span != 0 {
+		t.Errorf("reset text should reach the UI without a structured time or period: %+v", w)
 	}
 	now := time.Now()
 	if a, ok := routedAllowance("plugin:fakeco", "a@fake", unsaid, now); ok {

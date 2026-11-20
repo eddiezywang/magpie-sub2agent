@@ -2,6 +2,8 @@
 // kernel adds them to i18n.js's (magpie.strings).
 magpie.strings({
   zh: {
+    "Unknown client": "客户端未知",
+    "Gateway key: {name}": "网关 Key：{name}",
     "Balanced first": "均衡优先",
     "Stability first": "稳定优先",
     "Turn on Routing": "开启路由",

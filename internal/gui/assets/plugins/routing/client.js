@@ -2478,8 +2478,10 @@ function routingPage(part) {
     let a = agents.get(id);
     if (a) return a;
     const node = el("div", "rt-node rt-src"), ic = el("span", "rt-ic"), name = el("b"), sub = el("small");
-    node.append(ic, name, sub);
-    a = { node, ic, name, sub, wire: path() };
+    const key = el("small", "rt-src-key");
+    key.hidden = true;
+    node.append(ic, name, key, sub);
+    a = { node, ic, name, key, sub, wire: path() };
     node.style.setProperty("--agent", hueOf(id));
     a.wire.style.setProperty("--agent", hueOf(id));
     agents.set(id, a);
@@ -2685,7 +2687,11 @@ function routingPage(part) {
       const a = agents.get(id), r = rs.filter((x) => srcOf(x) === id).pop(), ag = agentOf(r.agent);
       for (const n of [a.node, a.wire]) n.style.setProperty("--agent", hueOf(id));
       if (a.icon !== (ag?.icon || "generic")) { a.icon = ag?.icon || "generic"; a.ic.replaceChildren(icon(a.icon)); }
-      setText(a.name, callerName(r));
+      const caller = callerName(r);
+      const client = intranet ? ag?.name || (["sub2agent", "magpie", "other", ""].includes((r.agent || "").toLowerCase()) ? t("Unknown client") : agentName(r.agent)) : caller;
+      setText(a.name, client);
+      a.key.hidden = !intranet || !r.callerKey || caller === agentName(r.agent);
+      if (!a.key.hidden) setText(a.key, t("Gateway key: {name}", { name: caller }));
       // one agent working in more than one folder at once: which, by
       // their last level (#1068). The stage holds an agent's latest
       // request alone, so its others still going, or just done, count too.
@@ -2693,7 +2699,7 @@ function routingPage(part) {
       const fs = foldersOf([...new Set([...going, ...rs.filter((x) => srcOf(x) === id)])].sort((x, y) => x.id - y.id));
       // told again every second (countdown): only what changed is written
       setText(a.sub, fs.length > 1 ? fs.map(lastLevel).join(", ") : r.model);
-      const tip = [...new Set([callerName(r), agentName(r.agent)]), r.model, ...fs.map((f) => t("Folder") + ": " + f)].join("\n");
+      const tip = [...new Set([client, caller, agentName(r.agent)]), r.model, ...fs.map((f) => t("Folder") + ": " + f)].join("\n");
       if (a.node.title !== tip) a.node.title = tip;
     }
     // the account sets, the latest of each

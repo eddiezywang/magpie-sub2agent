@@ -1,21 +1,11 @@
 import {makePlugin, current, meter, reissued, _internal} from 'community-workbuddy-cib';
+import references from './workbuddy-cib-catalog.json' with {type: 'json'};
 
 export const ID = 'sub2agent-workbuddy-cib';
 export const DEFAULT_MODEL = 'glm-5.3-flash';
 export const ORIGIN = 'https://webankcib.copilot.qq.com';
 // Screenshot multipliers are reference values, not live prices or billing rates.
-export const CATALOG = [
-  ['glm-5.3-flash', 'GLM-5.3-flash', 0.06],
-  ['deepseek-v4.1-flash', 'Deepseek-V4.1-Flash', 0.11],
-  ['minimax-m3.1-flash', 'MiniMax-M3.1-Flash', 0.08],
-  ['kimi-k2.8-preview', 'Kimi-K2.8-Preview', 0.77],
-  ['glm-5.3', 'GLM-5.3', 0.79],
-  ['glm-5.2-aicc', 'GLM-5.2 AICC', 1.58],
-  ['kimi-k3.1-pro', 'Kimi-K3.1-Pro', 0.97],
-  ['mimo-v2.6-pro', 'MiMo-V2.6-Pro', 0.18],
-  ['space-bunny', 'Space-Bunny', 0.08],
-  ['hy4', 'Hy4', 0.29],
-];
+export const CATALOG = references;
 const site = {
   ..._internal.SITES.workbuddy,
   id: ID, name: 'WorkBuddy CIB', endpoint: ORIGIN,
@@ -63,9 +53,12 @@ export default async function createCib(input) {
       const window = _internal.enterpriseUsageOf(data);
       delete window.resetsAt;
       delete window.span;
+      const resetText = typeof data.cycleResetTime === 'string' ? data.cycleResetTime.trim() : '';
+      if (resetText && resetText.length <= 128 && !/[\x00-\x1f\x7f]/.test(resetText))
+        window.resetText = resetText;
       const remaining = Math.max(0, data.limitNum - data.credit);
       window.display = `剩余 ${Number(remaining.toFixed(4))} / ${data.limitNum}（已用 ${data.credit}）` +
-        (data.cycleResetTime ? `；重置 ${data.cycleResetTime}` : '');
+        (window.resetText ? `；重置 ${window.resetText}` : '');
       return {plan: 'CIB 企业积分', windows: [window], signIn};
     } catch { return {error: 'CIB 积分余额查询失败', signIn: 'kept'}; }
   };

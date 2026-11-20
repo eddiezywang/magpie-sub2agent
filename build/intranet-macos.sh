@@ -3,8 +3,8 @@
 set -euo pipefail
 set +x
 if [[ "$(uname -s)" != Darwin ]]; then echo 'Run this script on macOS with Xcode command-line tools.' >&2; exit 1; fi
-VERSION="${1:-1.0.0-beta.9}"
-if [[ ! "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?$ ]]; then echo 'Use a version such as 1.0.0-beta or 1.0.0-beta.9.' >&2; exit 1; fi
+VERSION="${1:-1.0.0-beta.10}"
+if [[ ! "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?$ ]]; then echo 'Use a version such as 1.0.0-beta or 1.0.0-beta.10.' >&2; exit 1; fi
 BUNDLE_VERSION="${BASH_REMATCH[1]}"
 MACOS_SIGN_MODE="${MACOS_SIGN_MODE:-adhoc}"
 case "$MACOS_SIGN_MODE" in

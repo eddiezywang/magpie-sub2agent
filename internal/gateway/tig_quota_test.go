@@ -1,8 +1,10 @@
 package gateway
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,5 +49,49 @@ func TestTIGQuotaWindows(t *testing.T) {
 	c.model = "glm-5.3-flash-hs"
 	if _, ok := tigQuotaRest(c, now); ok {
 		t.Fatal("unrelated channel was held")
+	}
+}
+
+func TestTIGKeyUsages(t *testing.T) {
+	p := provider.Provider{ID: "aiep-coding-plan-window-fixture", Key: "fixture-window-first",
+		Keys: []provider.KeyAccount{
+			{Key: "fixture-window-second", Name: "Team"},
+			{Key: "fixture-window-off", Off: true},
+			{Key: "fixture-window-second"},
+			{Key: "fixture-window-unobserved"},
+		}}
+	if err := os.MkdirAll(filepath.Dir(provider.Path()), 0700); err != nil {
+		t.Fatal(err)
+	}
+	keys := p.KeysOn()
+	firstID, secondID := provider.KeyID(keys[0].Key), provider.KeyID(keys[1].Key)
+	now := time.Date(2026, 11, 18, 8, 0, 0, 0, time.UTC)
+	firstEnd, secondEnd := now.Add(time.Hour), now.Add(6*24*time.Hour)
+	for i, observation := range []struct {
+		period string
+		end    time.Time
+	}{{"fiveHours", firstEnd}, {"week", secondEnd}} {
+		key := tigQuotaKey(candidate{p: p.WithKey(keys[i]), model: "glm-5.3-flash-zp"})
+		updateTIGWindows(key, observation.period, observation.end, time.Time{})
+	}
+	got := TIGKeyUsages(p)
+	if len(got) != 3 || got[0].ID != firstID || got[1].ID != secondID || got[1].Name != "Team" {
+		t.Fatalf("enabled keys out of order: %+v", got)
+	}
+	if !got[0].Windows[0].Until.Equal(firstEnd) || !got[0].Windows[1].Until.IsZero() ||
+		!got[1].Windows[0].Until.IsZero() || !got[1].Windows[1].Until.Equal(secondEnd) ||
+		!got[2].Windows[0].Until.IsZero() || !got[2].Windows[1].Until.IsZero() {
+		t.Fatalf("windows leaked across keys: %+v", got)
+	}
+	data, err := json.Marshal(got)
+	if err != nil || strings.Contains(string(data), "fixture-window-") {
+		t.Fatalf("unsafe window response (%v)", err)
+	}
+	if legacy := TIGQuotaWindows(p); legacy != nil {
+		t.Fatal("legacy reader mixed multiple keys")
+	}
+	p.Keys = nil
+	if legacy := TIGQuotaWindows(p); len(legacy) != 2 || !legacy[0].Until.Equal(firstEnd) {
+		t.Fatalf("legacy single-key window was lost: %+v", legacy)
 	}
 }

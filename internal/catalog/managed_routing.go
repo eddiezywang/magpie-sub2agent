@@ -20,10 +20,12 @@ import (
 var managedRoutingURL = "http://172.21.0.177:17890/usage/routing-catalog"
 
 type managedRouting struct {
-	Revision string          `json:"revision"`
-	Expires  time.Time       `json:"expires_at"`
-	Models   []managedRate   `json:"models"`
-	TIGPlans json.RawMessage `json:"tig_plans,omitempty"`
+	Revision  string          `json:"revision"`
+	Effective time.Time       `json:"effective_at"`
+	Expires   time.Time       `json:"expires_at"`
+	Models    []managedRate   `json:"models"`
+	TIGPlans  json.RawMessage `json:"tig_plans,omitempty"`
+	TIGPeak   *tigPeak        `json:"tig_peak,omitempty"`
 }
 
 // ManagedTIGPlans returns the unexpired server-managed reference configuration.
@@ -42,7 +44,31 @@ func ManagedTIGPlans() (map[string]any, error) {
 			rates = append(rates, rate)
 		}
 	}
-	return map[string]any{"config": plans, "rates": rates, "revision": d.Revision}, nil
+	return map[string]any{"config": plans, "rates": rates, "revision": d.Revision, "effectiveAt": d.Effective, "peak": d.TIGPeak}, nil
+}
+
+// ManagedMaaSRates returns the active WorkBuddy enterprise reference rates
+// applicable to the configured provider ids.
+func ManagedMaaSRates(providers []string) (map[string]any, error) {
+	d, err := filememo.Read("managed-routing", managedRoutingPath(), parseManagedRouting)
+	now := time.Now()
+	if err != nil || !now.Before(d.Expires) {
+		return nil, fmt.Errorf("MaaS rates unavailable")
+	}
+	rates := make([]managedRate, 0)
+	for _, rate := range d.Models {
+		if rate.Currency != "POINTS" || rate.Coefficient == nil || !strings.HasSuffix(strings.ToLower(rate.Model), "-maas") ||
+			!rate.Until.IsZero() && !now.Before(rate.Until) {
+			continue
+		}
+		for _, id := range providers {
+			if routingMatch(rate.Provider, id) {
+				rates = append(rates, rate)
+				break
+			}
+		}
+	}
+	return map[string]any{"rates": rates, "revision": d.Revision}, nil
 }
 
 type creditRates struct {
@@ -51,16 +77,19 @@ type creditRates struct {
 	Output    float64 `json:"output"`
 }
 type managedRate struct {
-	Provider    string       `json:"provider"`
-	Deployment  string       `json:"deployment,omitempty"`
-	CreditRates *creditRates `json:"credit_rates,omitempty"`
-	Model       string       `json:"model"`
-	Score       float64      `json:"score"`
-	Until       time.Time    `json:"valid_until,omitempty"`
-	Currency    string       `json:"currency,omitempty"`
-	Coefficient *float64     `json:"coefficient,omitempty"`
-	Source      string       `json:"source,omitempty"`
-	Pool        string       `json:"pool,omitempty"`
+	Provider        string       `json:"provider"`
+	Deployment      string       `json:"deployment,omitempty"`
+	CreditRates     *creditRates `json:"credit_rates,omitempty"`
+	Model           string       `json:"model"`
+	Score           float64      `json:"score"`
+	Until           time.Time    `json:"valid_until,omitempty"`
+	Currency        string       `json:"currency,omitempty"`
+	Coefficient     *float64     `json:"coefficient,omitempty"`
+	Source          string       `json:"source,omitempty"`
+	Pool            string       `json:"pool,omitempty"`
+	ServiceTier     string       `json:"service_tier,omitempty"`
+	Above           []int64      `json:"above,omitempty"`
+	AfternoonFactor *float64     `json:"weekday_afternoon_factor,omitempty"`
 }
 
 // RoutingBilling keeps enterprise accounting distinct from USD list prices.

@@ -15,3 +15,21 @@ test('routing exports typed point coefficients independently from relative score
   assert.throws(()=>policy.set({revision:'bad',models:[{provider:'wb',model:'glm',source:{},above:[]}]}));
  } finally {fs.rmSync(dataDir,{recursive:true,force:true});}
 });
+
+test('routing publishes the same TIG schedule as charge and keeps activation across restarts',()=>{
+ const dataDir=fs.mkdtempSync(path.join(os.tmpdir(),'tig-policy-'));
+ try {
+  const policy=createBillingPolicy({dataDir});
+  const {effective_at,tig_peak}=policy.routing();
+  assert.ok(Number.isFinite(Date.parse(effective_at)));
+  policy.set(policy.snapshot());
+  assert.equal(policy.routing().effective_at,effective_at);
+  const reopened=createBillingPolicy({dataDir});
+  assert.equal(reopened.routing().effective_at,effective_at);
+  const usage={provider:'aiep-coding-plan',model:'glm-5.3-zp',input_tokens:10000,output_tokens:0,
+   cache_read_tokens:0,cache_write_5m_tokens:0,cache_write_1h_tokens:0};
+  assert.deepEqual(tig_peak,{utc_offset_minutes:480,weekdays:[1,2,3,4,5],start_hour:14,end_hour:18,peak_factor:1,off_peak_factor:0.5});
+  assert.equal(policy.charge(usage,'2026-11-16T06:00:00Z').factor,tig_peak.peak_factor);
+  assert.equal(policy.charge(usage,'2026-11-16T10:00:00Z').factor,tig_peak.off_peak_factor);
+ } finally {fs.rmSync(dataDir,{recursive:true,force:true});}
+});

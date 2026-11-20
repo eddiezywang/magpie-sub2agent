@@ -30,7 +30,7 @@ magpie.plugin("usage", (ctx) => {
     <span class="usage-cost" id="usageCost"></span>
   </div>
   <div class="usage-pane" id="usagePane">
-    <section id="tig-plan-usage" hidden></section>
+    <section id="supplierUsage" hidden></section>
     <div class="row-head quota-head" id="quotaHead" hidden>
       <span class="label" data-t>Allowances</span>
       <span class="grow"></span>
@@ -41,7 +41,6 @@ magpie.plugin("usage", (ctx) => {
       <div class="segs" id="quotaMode" hidden></div>
     </div>
     <section class="subscription-usage" id="subscriptionUsage"></section>
-    <section class="zht-token-usage" id="zhtTokenUsage" hidden></section>
     <div class="us-hid" id="quotaHid" hidden><button class="text us-hidline" type="button" aria-expanded="false"></button><div class="list" hidden></div></div>
     <p class="usage-note" id="usageScope" data-t>Gateway calls only; session-log calls are in Requests. Local rejections are excluded from totals.</p>
     <section class="stats" id="stats"></section>
@@ -140,17 +139,17 @@ magpie.plugin("usage", (ctx) => {
   </div>
 `,
     mount() { mountUsageFolds(); },
-    open() { window.tigPlanUsage?.start(); return loadUsage(true).catch((e) => status(e.message, "err")); },
+    open() { return loadUsage(true).catch((e) => status(e.message, "err")); },
     refresh(again) {
       // on the Overview, where the allowances are, coming back is opening them (#1588)
-      if (again && usageTab === "usage") { quotasOpened(); window.tigPlanUsage?.start(); }
+      if (again && usageTab === "usage") { quotasOpened(); window.supplierUsage?.refresh(); }
       return (again && usageDrawn() ? refreshUsage() : loadUsage()).catch((e) => status(e.message, "err"));
     },
-    reload() { window.tigPlanUsage?.refresh(); return refreshUsage(true); },
+    reload() { return refreshUsage(true); },
     costs() { renderCosts(); },
     tab() { return usageTab; },
     // the reader goes to another page: the Requests give back what a
     // click lent them (ledLeave)
-    leave() { window.tigPlanUsage?.stop(); if (usageTab === "requests") ledLeave(true); },
+    leave() { window.supplierUsage?.stop(); if (usageTab === "requests") ledLeave(true); },
   });
 });

@@ -147,7 +147,9 @@ test('CIB balance uses enterprise meter and preserves unknown instead of zero', 
   assert.equal(usage.windows[0].amount, 123.05);
   assert.equal(usage.windows[0].limit, 2000);
   assert.match(usage.windows[0].display, /1876.95/);
+  assert.equal(usage.windows[0].resetText, '2026-12-02 00:00:00');
   assert.equal(usage.windows[0].resetsAt, undefined);
+  assert.equal(usage.windows[0].span, undefined);
   valid = false;
   const unknown = await plugin.auth.usage(async () => auth);
   assert.match(unknown.error, /未知/);
