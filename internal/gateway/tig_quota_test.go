@@ -95,3 +95,43 @@ func TestTIGKeyUsages(t *testing.T) {
 		t.Fatalf("legacy single-key window was lost: %+v", legacy)
 	}
 }
+
+func TestTIGFiveHourWindowOpensOnSuccessfulUse(t *testing.T) {
+	p := provider.Provider{ID: "aiep-coding-plan-idle-fixture", Key: "fixture-idle-first",
+		Keys: []provider.KeyAccount{{Key: "fixture-idle-second"}}}
+	c := candidate{p: p, model: "glm-5.3-openai-zp"}
+	key := tigQuotaKey(c)
+	first := time.Date(2026, 11, 19, 8, 0, 0, 0, time.UTC)
+	if err := os.MkdirAll(filepath.Dir(provider.Path()), 0700); err != nil {
+		t.Fatal(err)
+	}
+	check := func(end time.Time, estimated bool) {
+		t.Helper()
+		w := TIGKeyUsages(p)
+		if w[0].Windows[0].Estimated != estimated || !w[0].Windows[0].Until.Equal(end) ||
+			!w[0].Windows[1].Until.IsZero() || !w[1].Windows[0].Until.IsZero() {
+			t.Fatalf("five-hour observation changed the wrong window or key: %+v", w)
+		}
+	}
+	updateTIGWindows(key, "", time.Time{}, first)
+	check(first.Add(5*time.Hour), true)
+	updateTIGWindows(key, "", time.Time{}, first.Add(time.Hour))
+	check(first.Add(5*time.Hour), true)
+	next := first.Add(5 * time.Hour)
+	updateTIGWindows(key, "", time.Time{}, next)
+	// A request from the previous window can finish later without moving
+	// the new window back across its lower bound.
+	updateTIGWindows(key, "", time.Time{}, next.Add(-time.Second))
+	check(next.Add(5*time.Hour), true)
+	if _, ok := tigQuotaRest(c, next.Add(time.Minute)); ok {
+		t.Fatal("an estimated window must not block routing")
+	}
+	recovery := next.Add(4 * time.Hour)
+	updateTIGWindows(key, "fiveHours", recovery, time.Time{})
+	check(recovery, false)
+	if rest, ok := tigQuotaRest(c, recovery.Add(-time.Second)); !ok || !rest.Until.Equal(recovery) {
+		t.Fatalf("confirmed quota rest lost: %+v", rest)
+	}
+	updateTIGWindows(key, "", time.Time{}, recovery)
+	check(recovery.Add(5*time.Hour), true)
+}

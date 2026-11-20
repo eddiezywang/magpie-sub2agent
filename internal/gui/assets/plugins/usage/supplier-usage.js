@@ -4,10 +4,11 @@ window.supplierUsage = (() => {
   const channels = { zp: "Zhipu", hs: "Volcengine", tc: "Tencent" };
   const currencies = { zp: "Points", hs: "AFP", tc: "Weighted tokens" };
   const periods = [[1, "Today"], [7, "Last 7 days"], [30, "Last 30 days"]];
-  const { compact, exact, day, dateKey, sum, color, plot, heatmap } = supplierCharts;
+  const { compact, exact, whole, day, dateKey, sum, color, plot, heatmap } = supplierCharts;
   const missing = "—";
   const note = (key, vars) => el("p", "su-note", t(key, vars));
-  const points = (n, unit) => n == null ? missing : exact(n) + " " + t(unit);
+  const pointUnit = (unit) => ["points", "maas points", "upstream points", "credits", "积分", "積分"].includes(unit.toLowerCase());
+  const points = (n, unit) => n == null ? missing : (pointUnit(unit) ? whole(n) : exact(n)) + " " + t(unit);
   const when = (v) => v ? new Date(v).toLocaleString(intlLang(), { dateStyle: "short", timeStyle: "short" }) : missing;
   const pct = (n) => n == null ? missing : exact(Math.round(n * 100) / 100) + "%";
   const matches = (rule, id) => rule?.endsWith("*") ? id.startsWith(rule.slice(0, -1)) : rule === id;
@@ -63,7 +64,7 @@ window.supplierUsage = (() => {
   }
 
   function appendChart(box, label, rows, lines, unit) {
-    const chart = plot(t(label), rows, lines, t(unit));
+    const chart = plot(t(label), rows, lines, t(unit), pointUnit(unit));
     chartStop = chart.stop;
     box.append(chart.node);
   }
@@ -313,8 +314,9 @@ window.supplierUsage = (() => {
     if (!stats) { panel.append(note(state || "Reading…")); return; }
     const [field, label] = seriesFields[measure], unit = label || currencies[channel];
     const s = stats.selected || {}, n = counted(s, measure) ? s[field] || 0 : null;
-    const meta = [["Period total", compact(n), t(unit)],
-      ["Daily average", n == null ? missing : compact(n / days), t(unit)]];
+    const amount = pointUnit(unit) ? whole : compact;
+    const meta = [["Period total", n == null ? missing : amount(n), t(unit)],
+      ["Daily average", n == null ? missing : amount(n / days), t(unit)]];
     if (measure === "tokens") meta.push(["Cache hit rate", pct(s.knownPrompt > 0 ? 100 * s.cacheRead / s.knownPrompt : null)]);
     if (selected === "tig" && channel === "zp" && s.tigTokens > 0)
       meta.push(["Off-peak share", pct(100 * (s.offPeakTokens || 0) / s.tigTokens), t("Covered Token")]);
@@ -324,14 +326,14 @@ window.supplierUsage = (() => {
     const value = (m) => m?.[field] || 0;
     const modelLabel = (m) => m.id || t("Other models");
     const legend = el("div", "su-legend"), box = el("div", "su-chart-box");
-    legend.append(el("span", "su-selected-total", t("Visible model total") + " " + (n == null ? missing : compact(sum(models.filter(active).map(value))))));
+    legend.append(el("span", "su-selected-total", t("Visible model total") + " " + (n == null ? missing : amount(sum(models.filter(active).map(value))))));
     models.forEach((model, i) => {
       const b = el("button", "su-model");
       b.dataset.suFocus = "model-" + i;
       b.type = "button"; b.setAttribute("aria-pressed", active(model)); b.title = modelLabel(model);
       const dot = el("i");
       dot.style.setProperty("--su-model", color(i));
-      b.append(dot, el("span", "", modelLabel(model)), el("b", "", compact(value(model))));
+      b.append(dot, el("span", "", modelLabel(model)), el("b", "", amount(value(model))));
       b.onclick = () => { if (active(model)) selection.add(model.id); else selection.delete(model.id); render(b.dataset.suFocus); };
       legend.append(b);
     });
@@ -350,7 +352,7 @@ window.supplierUsage = (() => {
     });
     appendChart(box, "Usage by model", rows, false, unit);
     panel.append(box);
-    if (models.length) panel.append(table("Model usage", ["Model", unit], models.map((m) => [modelLabel(m), compact(value(m))]), "supplier-model-usage"));
+    if (models.length) panel.append(table("Model usage", ["Model", unit], models.map((m) => [modelLabel(m), amount(value(m))]), "supplier-model-usage"));
     if (selected === "tig" && channel && s.tigUnpriced) panel.append(note("{n} attempts could not be priced", { n: exact(s.tigUnpriced) }));
     if (ledgerStart() && stats.from < ledgerStart()) panel.append(note("The available ledger starts on {date}.", { date: ledgerStart() }));
     if (!stats.total.calls) panel.append(note("No gateway requests on record."));

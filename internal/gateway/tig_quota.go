@@ -107,20 +107,25 @@ func updateTIGWindows(key, period string, until, started time.Time) {
 	defer tigWindows.Unlock()
 	loadTIGWindows()
 	windows := tigWindows.data[key]
+	if windows == nil {
+		windows = make(map[string]TIGQuotaWindow, 2)
+		tigWindows.data[key] = windows
+	}
 	if period != "" {
-		if windows == nil {
-			windows = make(map[string]TIGQuotaWindow)
-			tigWindows.data[key] = windows
-		}
 		windows[period] = TIGQuotaWindow{Period: period, Until: until}
 	} else {
-		changed := false
+		// A successful request can establish a local five-hour estimate
+		// before any quota response. A weekly window still needs a 429.
+		changed := windows["fiveHours"].Until.IsZero()
+		if changed {
+			windows["fiveHours"] = TIGQuotaWindow{Period: "fiveHours", Until: started.Add(tigPeriod("fiveHours")), Estimated: true}
+		}
 		for name, window := range windows {
 			if !window.Until.IsZero() && !started.Before(window.Until) {
 				windows[name] = TIGQuotaWindow{Period: name, Until: started.Add(tigPeriod(name)), Estimated: true, ObservedAfter: window.Until}
 				changed = true
-			} else if window.Estimated && !window.ObservedAfter.IsZero() &&
-				!started.Before(window.ObservedAfter) && started.Before(window.Until.Add(-tigPeriod(name))) {
+			} else if start := window.Until.Add(-tigPeriod(name)); window.Estimated &&
+				!started.Before(window.ObservedAfter) && started.Before(start) && started.Add(tigPeriod(name)).After(start) {
 				window.Until = started.Add(tigPeriod(name))
 				windows[name] = window
 				changed = true

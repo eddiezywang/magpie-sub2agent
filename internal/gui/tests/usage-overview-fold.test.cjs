@@ -170,7 +170,7 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
           usage: { periods: { fiveHours: { complete: false, rolling: true, points: 200, priced: 1, uncovered: 2 } } } } }),
         "/api/usage/quotas": [
           { provider: ids.cib, user: "account-one-fixture", windows: [{ name: "Credits", used: 0, limit: 2000, resetText: "2026-12-02 00:00:00" }] },
-          { provider: ids.cib, user: "account-two-fixture", windows: [{ name: "Credits", amount: 250, used: 25, limit: 1000, resetText: "2026-12-03 00:00:00" }] },
+          { provider: ids.cib, user: "account-two-fixture", windows: [{ name: "Credits", amount: 2500.1358, used: 25, limit: 10000, resetText: "2026-12-03 00:00:00" }] },
         ],
         "/api/usage/suppliers/workbuddy-cib/rates": { rates: [{ model: "glm-5.3", coefficient: .79, source: "Reference from provider catalog" }] },
       },
@@ -225,6 +225,7 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
     await panel.locator('button[value="quota"]').click();
     await panel.getByText("2026-12-02 00:00:00", { exact: true }).waitFor();
     await panel.getByText("2026-12-03 00:00:00", { exact: true }).waitFor();
+    await panel.getByText("2,500 积分", { exact: true }).waitFor();
     await panel.getByText("0%", { exact: true }).waitFor();
     assert.doesNotMatch(await panel.innerText(), /account-one-fixture/);
     assert.equal(await page.locator("#subscriptionUsage").isHidden(), true);

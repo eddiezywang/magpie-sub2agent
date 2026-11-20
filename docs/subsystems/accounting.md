@@ -243,8 +243,10 @@ counts only matching Zhipu requests under the selected key fingerprint, and
 withholds full coverage if the available ledger or rate revision starts after
 the window started. Unattributed requests, conflicting returned models and
 unknown cache breakdown leave the window partially covered. A normal upstream
-quota 429 establishes a recovery time. The first successful call after recovery
-supplies an estimated next start. The five-hour rolling estimate can be shown
+quota 429 establishes a recovery time. For the five-hour window, the first
+locally observed successful call and the first success after each expiry
+establish a new estimated start. An active 429 recovery takes precedence.
+Weekly estimates still require a prior quota observation. The five-hour rolling estimate can be shown
 as a reference when the window start is unknown. The weekly estimate needs a
 window start. Neither changes the user-wide reporting or outbound telemetry.
 
