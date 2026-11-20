@@ -48,7 +48,7 @@ func shipped(l List) List {
 		}); i >= 0 {
 			old := l.Plugins[i].Spec
 			l.Plugins[i].Spec, l.Plugins[i].Bundled = pkg, kind
-			if (kind == "codebuddy" || kind == "trae") && !l.Plugins[i].ExplicitOn {
+			if shippedRequiresEnable(kind) && !l.Plugins[i].ExplicitOn {
 				l.Plugins[i].Off = true
 			}
 			for id, chosen := range l.Prefer {
@@ -89,6 +89,11 @@ func effectiveList() List {
 }
 
 var shippedKinds = []string{"codebuddy", "workbuddy", "workbuddy-cib", "trae", "aiep", "native-api", "glm-coding-plan", "deepseek-api", "community-antigravity", "community-commandcode", "community-cursor", "community-devin", "community-factory", "community-grok", "community-kiro", "community-mimo", "community-qoder", "community-workbuddy", "community-zcode", "community-zed"}
+
+// Explicit enablement prevents a legacy bundled entry from activating itself.
+func shippedRequiresEnable(kind string) bool {
+	return kind == "codebuddy" || kind == "trae" || kind == "community-antigravity"
+}
 
 func shippedPackage(kind string) string {
 	if name, ok := strings.CutPrefix(kind, "community-"); ok {

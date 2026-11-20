@@ -107,6 +107,33 @@ func TestCommunityShippedProvidersDefaultOffAndEnable(t *testing.T) {
 	}
 }
 
+func TestBundledAntigravityRequiresExplicitEnablement(t *testing.T) {
+	storeSandbox(t)
+	root := t.TempDir()
+	old := shippedDirectory
+	shippedDirectory = func() string { return root }
+	t.Cleanup(func() { shippedDirectory = old })
+	const kind = "community-antigravity"
+	pkg := shippedPackage(kind)
+	dir := filepath.Join(root, kind)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"`+pkg+`","version":"0.2.1"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	writeList(t, `{"plugins":[{"spec":"`+pkg+`"}]}`)
+	if got := Load().Plugins; len(got) != 1 || !got[0].Off {
+		t.Fatalf("legacy Antigravity should start disabled: %+v", got)
+	}
+	if err := SetOff(pkg, false); err != nil {
+		t.Fatal(err)
+	}
+	if got := Load().Plugins; len(got) != 1 || got[0].Off {
+		t.Fatalf("manual enablement did not persist: %+v", got)
+	}
+}
+
 func TestIntranetLightRuntimeAdmission(t *testing.T) {
 	storeSandbox(t)
 	t.Setenv("MAGPIE_BUN", "")

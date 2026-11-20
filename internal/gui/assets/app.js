@@ -23091,7 +23091,7 @@ else { $("#nav").remove(); $("#side").remove(); }
 if (mode !== "window" || !document.body.classList.contains("linux")) $("#winclose").remove();
 // Windows' window (html.win, body.window, not the web): the header is its
 // title bar, with the caption buttons wincap.js runs
-if ($(".win .window:not(.web)")) import("./wincap.js");
+if (!window.bootPrefs?.retroFrame && $(".win .window:not(.web)")) import("./wincap.js");
 
 // The title bar's pin keeps the window above other apps' windows, for Usage
 // or Routing watched while working elsewhere (NovaStudiosss on X): in the
