@@ -57,7 +57,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 		Hidden:           true,
 		StartState:       state,
 		AlwaysOnTop:      onTop,
-		Frameless:        retroMainFrameEnabled() || mainFrameless(runtime.GOOS),
+		Frameless:        mainFrameless(runtime.GOOS),
 		Mac:              mainMacWindow(),
 		Windows:          winOpts,
 		BackgroundColour: winBg,
@@ -85,7 +85,7 @@ func (h *host) makeMain(url string) *application.WebviewWindow {
 	// A resize is kept once it settles (settle): the size, or that the
 	// window is maximised. Nothing is kept of a window not placed and shown
 	// yet (placeMain: a text size can resize it, unmaximised as yet), one
-	// let go (0鑴?), or one full screen or minimised, which keeps what was
+	// let go (0閼?), or one full screen or minimised, which keeps what was
 	// kept before it went so; nor, on Linux, of one hidden by then, since
 	// X11 drops a hidden window's maximised state.
 	var resized *time.Timer
@@ -508,7 +508,7 @@ func (h *host) mainRoom(w *application.WebviewWindow) (int, int) {
 }
 
 // fitScreen is the work area the main window is fitted to, in the units of
-// its Size: Windows' (DIPs), 0s elsewhere 閳?the Mac fits a window to its
+// its Size: Windows' (DIPs), 0s elsewhere 闁?the Mac fits a window to its
 // screen itself, and GTK's window manager does.
 func fitScreen(w *application.WebviewWindow) (int, int) {
 	if runtime.GOOS != "windows" {
