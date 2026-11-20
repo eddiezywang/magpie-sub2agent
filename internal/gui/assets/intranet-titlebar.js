@@ -17,8 +17,8 @@
   if (!window.bootPrefs?.retroFrame) return;
   const brand = document.querySelector('.brand');
   const name = brand?.querySelector('span:not(.logo)');
-  const actions = document.querySelector('.top .actions');
-  if (!brand || !name || !actions) return;
+  const controls = document.querySelector('#wincap');
+  if (!brand || !name || !controls) return;
   document.body.classList.add('retro-frame');
   name.classList.add('retro-wordmark');
   name.setAttribute('aria-label', 'Sub2Agent');
@@ -33,9 +33,9 @@
     [labels[1], 'ToggleMaximise', 'M3 3h10v2H3zm0 8h10v2H3zM3 5h2v6H3zm8 0h2v6h-2z'],
     [labels[2], 'Close', 'M3 3h2v2H3zm8 0h2v2h-2zM5 5h2v2H5zm4 0h2v2H9zM7 7h2v2H7zM5 9h2v2H5zm4 0h2v2H9zm-6 2h2v2H3zm8 0h2v2h-2z'],
   ];
-  const controls = document.createElement('div');
-  controls.className = 'retro-window-controls';
-  controls.style.setProperty('--wails-draggable', 'no-drag');
+  controls.classList.add('retro-window-controls');
+  controls.replaceChildren();
+  new MutationObserver(() => controls.inert = false).observe(controls, { attributeFilter: ['inert'] });
   for (const [label, method, drawing] of specs) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -51,7 +51,6 @@
     });
     controls.append(button);
   }
-  actions.append(controls);
   let maximized = false;
   function updateLabels() {
     const current = languageLabels[document.documentElement.lang] || englishLabels;

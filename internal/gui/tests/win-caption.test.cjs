@@ -19,7 +19,7 @@ const { chromium, webkit } = require("playwright");
 
 const assets = path.resolve(__dirname, "../assets");
 
-function serve(lang, web) {
+function serve(lang, web, retro = false) {
   const settings = { theme: "light", lang, tray: "panel", currency: "usd" };
   const relay = { id: "relay", name: "Relay", icon: "generic", host: "relay.test", chat: "https://relay.test/v1",
     responses: "", anthropic: "", models: [{ id: "fixture-model", name: "Fixture model", on: true }], agents: [], fallback: [], headers: {},
@@ -27,12 +27,12 @@ function serve(lang, web) {
   return async (route) => {
     const url = new URL(route.request().url());
     const json = (data) => route.fulfill({ json: data });
-    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:${web},pin:true,onTop:false};` });
+    if (url.pathname === "/boot.js") return route.fulfill({ contentType: "text/javascript", body: `window.bootPrefs = {lang:"${lang}",theme:"light",web:${web},intranet:${retro},retroFrame:${retro},pin:true,onTop:false};` });
     if (url.pathname === "/wails/runtime.js") {
       return route.fulfill({ contentType: "text/javascript", body: "window.__calls = []; const say = (n) => () => { window.__calls.push(n); return Promise.resolve(); };" +
         "export const Window = { Minimise: say('Minimise'), ToggleMaximise: say('ToggleMaximise'), Close: say('Close'), IsMaximised: () => Promise.resolve(false) }; window.__runtimeReady = true;" });
     }
-    if (url.pathname === "/api/state") return json({ agents: [], profiles: [], settings });
+    if (["/api/state", "/api/sync", "/api/agents/rescan"].includes(url.pathname)) return json({ agents: [], profiles: [], settings });
     if (url.pathname === "/api/settings") return json(settings);
     if (url.pathname === "/api/providers") return json({ providers: [relay], presets: [], excluded: [], gateway: { running: true, window: true } });
     if (url.pathname === "/api/usage/quotas") return json([]);
@@ -44,7 +44,14 @@ function serve(lang, web) {
     if (url.pathname.startsWith("/api/")) return json({});
     const file = path.join(assets, url.pathname === "/" ? "index.html" : url.pathname);
     const contentType = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png" }[path.extname(file)];
-    try { await route.fulfill({ body: await fs.readFile(file), contentType }); } catch { await route.fulfill({ status: 404, body: "" }); }
+    try {
+      let body = await fs.readFile(file);
+      if (retro && url.pathname === "/") {
+        body = body.toString().replace("</head>", '<link rel="stylesheet" href="intranet-retro.css"></head>')
+          .replace('<script src="app.js"></script>', '<script src="app.js"></script><script src="intranet-titlebar.js"></script>');
+      }
+      await route.fulfill({ body, contentType });
+    } catch { await route.fulfill({ status: 404, body: "" }); }
   };
 }
 
@@ -209,4 +216,31 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       }
     });
   }
+}
+
+
+for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium", "webkit"])) {
+  test(`${engine}: the Windows pixel frame shows one set of window buttons`, async (t) => {
+    const browser = await (engine === "webkit" ? webkit.launch() : chromium.launch({ channel: "chromium" }));
+    t.after(() => browser.close());
+    const page = await browser.newPage({ viewport: { width: 950, height: 700 } });
+    await page.addInitScript(() => Object.defineProperty(Navigator.prototype, "platform", { get: () => "Win32" }));
+    await page.route("**/*", serve("en", false, true));
+    await page.goto("http://magpie.test/?mode=window");
+    const buttons = page.locator(".retro-window-button");
+    await buttons.first().waitFor();
+    await page.waitForFunction(() => window.__runtimeReady === true, null, { timeout: 6000 });
+    assert.equal(await buttons.count(), 3);
+    assert.equal(await page.locator("#wincap [data-cap]:visible").count(), 0, "duplicate Windows buttons");
+    for (const button of await buttons.all()) await button.click();
+    await page.waitForFunction(() => window.__calls.length >= 3);
+    assert.deepEqual(await page.evaluate(() => window.__calls), ["Minimise", "ToggleMaximise", "Close"]);
+    await page.locator(".top").dispatchEvent("dblclick", { bubbles: true, button: 0 });
+    await page.waitForFunction(() => window.__calls.length >= 4);
+    assert.deepEqual(await page.evaluate(() => window.__calls), ["Minimise", "ToggleMaximise", "Close", "ToggleMaximise"]);
+    await page.evaluate(() => modalBackground(true));
+    await page.waitForFunction(() => !document.querySelector("#wincap").inert);
+    await buttons.first().click();
+    assert.equal(await page.evaluate(() => window.__calls.at(-1)), "Minimise");
+  });
 }

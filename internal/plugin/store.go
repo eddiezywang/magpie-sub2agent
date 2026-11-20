@@ -700,7 +700,7 @@ func SetOff(name string, off bool) error {
 		return fmt.Errorf("no plugin %q", name)
 	}
 	l.Plugins[i].Off = off
-	if l.Plugins[i].Bundled == "codebuddy" || l.Plugins[i].Bundled == "trae" {
+	if shippedRequiresEnable(l.Plugins[i].Bundled) {
 		l.Plugins[i].ExplicitOn = !off
 	}
 	if err := save(l); err != nil {

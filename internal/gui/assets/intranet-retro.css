@@ -119,6 +119,7 @@ body.side-nav #nav.seg { border:0; background:transparent; }
 ::selection { background:var(--accent-soft); color:var(--fg); }
 
 /* Opt-in only: the native host must supply a matching frameless window. */
+body.window.retro-frame:not(.web) .top { padding-right:118px; }
 body.retro-frame .brand { display:flex !important; gap:7px; order:-1; }
 body.retro-frame .logo img { width:30px; height:30px; }
 body.retro-frame .retro-wordmark { display:block; width:106px; flex:none; overflow:hidden; white-space:nowrap; color:var(--fg); font-family:BitrimusBrand, var(--font, system-ui), sans-serif; font-size:24px; font-weight:400; letter-spacing:0; line-height:1; }
@@ -126,9 +127,9 @@ body.retro-frame .side-top .retro-wordmark { width:clamp(62px,calc(var(--side-w)
 body.retro-frame:not(.side-nav) .retro-wordmark, body.retro-frame .side-top.tight .retro-wordmark { display:none; }
 body.retro-frame .side-top { gap:8px; padding:0 10px 0 12px; }
 body.retro-frame .side-top .side-toggle { margin-left:auto; }
-body.retro-frame .retro-window-controls { display:flex; gap:6px; align-items:center; margin-left:8px; order:10; }
-body.retro-frame .retro-window-button { width:30px; height:29px; display:grid; place-items:center; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:2px; box-shadow:1px 2px 0 var(--line); }
+body.window.retro-frame:not(.web) .retro-window-controls { display:flex; position:fixed; top:0; right:10px; z-index:40; height:var(--top-h, 46px); gap:6px; align-items:center; }
+body.retro-frame .wincap .retro-window-button { width:30px; height:29px; display:grid; place-items:center; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:2px; box-shadow:1px 2px 0 var(--line); }
 body.retro-frame .retro-window-button svg { width:16px; height:16px; fill:currentColor; shape-rendering:crispEdges; }
-body.retro-frame .retro-window-button:hover { background:var(--accent-soft); border-color:var(--retro-ink); }
-body.retro-frame .retro-window-button.close:hover { background:#b34a40; color:#fff; }
+body.retro-frame .wincap .retro-window-button:hover { background:var(--accent-soft); border-color:var(--retro-ink); }
+body.retro-frame .wincap .retro-window-button.close:hover { background:#b34a40; color:#fff; }
 body.retro-frame .retro-window-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }

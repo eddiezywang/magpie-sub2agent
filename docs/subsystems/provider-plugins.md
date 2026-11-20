@@ -770,6 +770,11 @@ through the real provider loader with missing and reported usage. Gateway
 
 The intranet baseline includes the twelve retired Magpie community subscription plugins from the pinned community checkout. They start disabled, preserve user enablement, and share package identities with the intranet marketplace. Their manifest icon names resolve to the packaged pixel artwork. The bundled `@sub2agent/native-api` plugin controls Magpie native API presets as a group and defaults off. Turning it off hides their saved providers from routing without deleting credentials or settings; enabling it restores them. Subscription logins still in core are not included.
 
+The bundled Antigravity plugin requires explicit enablement, including for
+older plugin entries. Automatic account migration waits until the plugin is
+enabled. The intranet Providers page omits Antigravity's withdrawal and account
+migration notices.
+
 WorkBuddy 1.0.7 advertises a transport-aware working context/input window of
 at most 256,000 tokens and a default output budget of at most 32,000 tokens
 for MaaS deployments, including mapped aliases and

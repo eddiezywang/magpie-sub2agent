@@ -43,6 +43,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/filememo"
 	"github.com/yetone/magpie/internal/lastgood"
 	"github.com/yetone/magpie/internal/lazyre"
@@ -1060,6 +1061,9 @@ func MoveRetiring(ctx context.Context) map[string]error {
 		case ok && m.State == MoveRemoved:
 			continue
 		case ok && m.State == MoveFailed && !retryDue(id, m.At):
+			continue
+		}
+		if distribution.Internal && id == "antigravity" && !pluginReady(movers[id]) {
 			continue
 		}
 		if accts, err := movers[id].out(); err != nil || len(accts) == 0 {

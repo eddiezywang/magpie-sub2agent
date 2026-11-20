@@ -6,12 +6,33 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/provider"
+	"github.com/yetone/magpie/internal/settings"
 )
+
+func TestProvidersAntigravityWithdrawalNoticeFollowsDistribution(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	if err := os.MkdirAll(settings.Dir(), 0700); err != nil {
+		t.Fatal(err)
+	}
+	const plugins = `{"plugins":[{"spec":"@magpie-community/opencode-antigravity-auth","off":true}]}`
+	if err := os.WriteFile(filepath.Join(settings.Dir(), "plugins.json"), []byte(plugins), 0600); err != nil {
+		t.Fatal(err)
+	}
+	state := providersState()
+	if got := len(state.Withdrawn) != 0; got != !distribution.Internal {
+		t.Fatalf("Antigravity notice shown = %v, want %v", got, !distribution.Internal)
+	}
+}
 
 // A move goes on though the page that asked for it closes: stopped
 // halfway, it leaves the accounts in neither place.

@@ -21,6 +21,7 @@ import (
 	"github.com/yetone/magpie/internal/agent"
 	"github.com/yetone/magpie/internal/autostart"
 	"github.com/yetone/magpie/internal/catalog"
+	"github.com/yetone/magpie/internal/distribution"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/library"
 	"github.com/yetone/magpie/internal/plugin"
@@ -1510,18 +1511,19 @@ func providersState() providersJSON {
 		}
 		s.MovesTo[id] = provider.MovePackage(id)
 	}
-	s.AgyMove = provider.AgyMoveUsers()
+	if !distribution.Internal {
+		s.AgyMove = provider.AgyMoveUsers()
+		s.Withdrawn = plugin.WithdrawnKept()
+	}
 	for _, c := range provider.MoveCandidates() {
-		// Antigravity's plugin is retired too: its accounts go to agy-cli,
-		// on AgyMove's line
-		if c.ID == "antigravity" && len(s.AgyMove) > 0 {
+		// Antigravity has its own migration notice in the upstream build.
+		if c.ID == "antigravity" && (distribution.Internal || len(s.AgyMove) > 0) {
 			continue
 		}
 		if provider.BuiltinRetired(c.ID) {
 			s.Unmoved = append(s.Unmoved, c)
 		}
 	}
-	s.Withdrawn = plugin.WithdrawnKept()
 	if err := provider.FileError(); err != nil {
 		s.FileError = err.Error()
 	}
