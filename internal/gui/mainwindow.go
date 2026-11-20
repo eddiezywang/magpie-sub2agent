@@ -37,7 +37,13 @@ func mainMacWindow() application.MacWindow {
 // strip (258a14 on X); the page draws minimise, maximise and close
 // (#wincap). Wails keeps the frame's styles, so the window still snaps,
 // casts its shadow and has rounded corners on Windows 11.
-func mainFrameless(goos string) bool { return goos == "windows" }
+func mainFrameless(goos string) bool {
+	// the retro main frame draws its own chrome in the page, frameless too
+	if goos == "windows" && retroMainFrameEnabled() {
+		return true
+	}
+	return goos == "windows"
+}
 
 // captionJS tells the page whether the window is maximised, and keeps
 // Wails' resize edges inside the page off while it is. A frameless window

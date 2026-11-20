@@ -5612,6 +5612,7 @@ const I18N = {
     "a classifier lets safe actions through": "由分类器放行安全的操作",
     "refuses what isn't allowed, never asks": "不在允许范围内的直接拒绝，从不询问",
     "runs everything without asking": "所有操作都直接运行，不询问",
+    "The routings besides Smart: In order, Until used up, In turn, Least used first, Use before expiry, By weight, Free first, Speed first and Cheapest first": "Smart 之外的路由方式：按顺序、用完为止、轮流、最少使用、到期前用完、按权重、免费优先、速度优先和最便宜优先",
   },
   "zh-TW": {
     "Agent model changed; refresh and try again": "Agent 模型已變更，請重新整理後重試",
@@ -11185,6 +11186,7 @@ const I18N = {
     "a classifier lets safe actions through": "由分類器放行安全的操作",
     "refuses what isn't allowed, never asks": "不在允許範圍內的直接拒絕，從不詢問",
     "runs everything without asking": "所有操作都直接執行，不詢問",
+    "The routings besides Smart: In order, Until used up, In turn, Least used first, Use before expiry, By weight, Free first, Speed first and Cheapest first": "The routings besides Smart: In order, Until used up, In turn, Least used first, Use before expiry, By weight, Free first, Speed first and Cheapest first",
   },
   ja: {
     "Agent model changed; refresh and try again": "Agent のモデルが変更されました。更新して再試行してください",
@@ -16760,6 +16762,7 @@ const I18N = {
     "a classifier lets safe actions through": "分類器が安全な操作を通す",
     "refuses what isn't allowed, never asks": "許可外の操作は拒否し、確認しない",
     "runs everything without asking": "すべて確認せずに実行する",
+    "The routings besides Smart: In order, Until used up, In turn, Least used first, Use before expiry, By weight, Free first, Speed first and Cheapest first": "The routings besides Smart: In order, Until used up, In turn, Least used first, Use before expiry, By weight, Free first, Speed first and Cheapest first",
   },
   de: {
     "Agent model changed; refresh and try again": "Agent-Modell geändert; aktualisieren und erneut versuchen",
@@ -22335,6 +22338,7 @@ const I18N = {
     "a classifier lets safe actions through": "ein Klassifikator lässt sichere Aktionen durch",
     "refuses what isn't allowed, never asks": "lehnt Nicht-Erlaubtes ab, fragt nie",
     "runs everything without asking": "führt alles ohne Nachfrage aus",
+    "The routings besides Smart: In order, Until used up, In turn, Least used first, Use before expiry, By weight, Free first, Speed first and Cheapest first": "The routings besides Smart: In order, Until used up, In turn, Least used first, Use before expiry, By weight, Free first, Speed first and Cheapest first",
   },
 };
 

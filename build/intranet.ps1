@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$BunArchive = '',
     [string]$OutputRoot = '',
     [string]$Version = '1.0.0-beta.11',
