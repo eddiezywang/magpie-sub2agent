@@ -21,11 +21,14 @@ import (
 	"github.com/yetone/magpie/internal/distribution"
 )
 
-const internalBunRegistry = "http://wnpm.weoa.com:8001"
-const internalBunPackage = "@oven/bun-windows-x64-baseline"
-
-// Pinned executable digest, independently verified from the packaged release.
-const internalBunSHA256 = "15277c59ccd6c6c20f8dc9716c2b59c1776320d606b6a8658f70be8799519ca4"
+// Internal registry, package and pinned executable digest (independently
+// verified from the packaged release). Vars so a test can serve the
+// mirror, as bunRelease is.
+var (
+	internalBunRegistry = "http://wnpm.weoa.com:8001"
+	internalBunPackage  = "@oven/bun-windows-x64-baseline"
+	internalBunSHA256   = "15277c59ccd6c6c20f8dc9716c2b59c1776320d606b6a8658f70be8799519ca4"
+)
 
 // CanStart includes an internal first-run download, unlike HasBun's read-only
 // presence check. This keeps preinstalled providers discoverable in light builds.
@@ -45,6 +48,30 @@ func CanStart() bool {
 
 func internalBunCache() string {
 	return filepath.Join(appdir.Cache(), "plugin-runtime", BunVersion, "bun.exe")
+}
+
+// internalBunPresent is a Bun already on this machine that an internal
+// build runs plugins on, "" when there is none yet: $MAGPIE_BUN, the one
+// packed beside the app, or the pinned one in the private cache (where
+// the embedded archive materializes and the enterprise mirror downloads).
+// Read-only stat checks, so any caller may ask at any time.
+func internalBunPresent() string {
+	if b := os.Getenv("MAGPIE_BUN"); filepath.IsAbs(b) {
+		if fi, err := os.Stat(b); err == nil && !fi.IsDir() {
+			return b
+		}
+	}
+	if exe, err := os.Executable(); err == nil {
+		p := filepath.Join(filepath.Dir(exe), "runtime", bunExe())
+		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
+			return p
+		}
+	}
+	p := internalBunCache()
+	if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() {
+		return p
+	}
+	return ""
 }
 
 func internalNPMBun(ctx context.Context) (string, error) {

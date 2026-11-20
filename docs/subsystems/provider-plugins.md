@@ -581,6 +581,17 @@ Download, parsing and checksum failures preserve prior files and show a sanitize
 network/retry message. The shared Bun lock serializes concurrent installation.
 Other platforms still require a bundled runtime in this internal distribution.
 
+The host's start resolves Bun the same internal way, not through the public
+download: `bunAtHand` finds `$MAGPIE_BUN`, the runtime packed beside the app or
+the pinned cache (`internalBunPresent`), and a download goes through the embedded
+archive or the enterprise mirror (`downloadInternalBun`), never GitHub — which
+`AssetURL` refuses anyway, and which is how a plugin request on a fresh install
+used to end "Bun runtime not ready: downloading Bun 1.4.2 failed: public resource
+downloads are disabled: github.com" (1.0.0-beta.11). The same bounded wait and
+`BunNotReadyError` failover as a public download apply. `TestHostBunComesFromTheEnterpriseMirror`
+and `TestHostBunWithoutTheMirrorSaysSo` in [`bun_internal_test.go`](../../internal/plugin/bun_internal_test.go)
+cover these.
+
 `build/intranet.ps1 -SingleFile` emits a ZIP containing only `Sub2Agent.exe`,
 without portable markers, provider folders, Bun or external license files.
 License texts are embedded and accessible through `licenses` and About. The

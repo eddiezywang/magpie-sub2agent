@@ -22,6 +22,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"github.com/yetone/magpie/internal/distribution"
 	"io"
 	"log"
 	"os"
@@ -124,6 +125,12 @@ var bunFetches struct {
 
 // bunAtHand is the Bun plugins run on and whether it is on disk.
 func bunAtHand() (v, exe string, ok bool) {
+	if distribution.Internal {
+		if p := internalBunPresent(); p != "" {
+			return BunVersion, p, true
+		}
+		return BunVersion, bunExeOf(BunVersion), false
+	}
 	bunMu.Lock()
 	defer bunMu.Unlock()
 	v = inUseLocked()
