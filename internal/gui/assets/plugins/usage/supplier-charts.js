@@ -9,6 +9,7 @@ const supplierCharts = (() => {
     return node;
   };
   const exact = (n) => new Intl.NumberFormat(intlLang(), { maximumFractionDigits: 4 }).format(n);
+  const whole = (n) => new Intl.NumberFormat(intlLang(), { maximumFractionDigits: 0 }).format(n);
   const compact = (n) => {
     if (n == null) return "—";
     for (const [base, mark] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]]) {
@@ -22,7 +23,7 @@ const supplierCharts = (() => {
   const unitDate = (date, opts) => new Intl.DateTimeFormat(intlLang(), opts).format(date);
   const day = (date) => new Date(date + "T00:00:00");
 
-  function plot(label, rows, lines, unit) {
+  function plot(label, rows, lines, unit, wholePoints = false) {
     const canvas = svg("svg", { class: "su-chart", role: "img", "aria-label": label });
     const draw = () => {
       const w = canvas.clientWidth;
@@ -31,7 +32,9 @@ const supplierCharts = (() => {
       const slots = (right - left) / Math.max(1, rows.length);
       const max = Math.max(0, ...rows.map((row) => sum(row.values)));
       const power = 10 ** Math.floor(Math.log10((max || 4) / 4));
-      const step = [1, 2, 2.5, 5, 10].find((n) => n * power >= max / 4) * power;
+      const gridStep = [1, 2, 2.5, 5, 10].find((n) => n * power >= max / 4) * power;
+      const step = wholePoints ? Math.ceil(gridStep) : gridStep;
+      const valueText = wholePoints ? whole : exact;
       const y = (n) => base - (base - top) * n / (4 * step);
       const x = (i) => left + slots * (i + .5);
       canvas.setAttribute("viewBox", `0 0 ${w} ${h}`);
@@ -39,7 +42,7 @@ const supplierCharts = (() => {
       for (let i = 0; i <= 4; i++) {
         const value = i * step, at = y(value);
         canvas.append(svg("line", { x1: left, x2: right, y1: at, y2: at, class: "su-gridline" }),
-          svg("text", { x: left - 8, y: at, "text-anchor": "end", "dominant-baseline": "middle" }, compact(value)));
+          svg("text", { x: left - 8, y: at, "text-anchor": "end", "dominant-baseline": "middle" }, wholePoints ? whole(value) : compact(value)));
       }
       const interval = Math.ceil(rows.length / Math.max(2, Math.floor((right - left) / 54)));
       let points = [];
@@ -62,13 +65,13 @@ const supplierCharts = (() => {
             if (!n) continue;
             const rect = svg("rect", { x: x(i) - width / 2, y: y(bottom + n),
               width, height: y(bottom) - y(bottom + n), fill: color(j) });
-            if (row.names?.[j]) rect.append(svg("title", {}, row.names[j] + " · " + exact(n) + " " + unit));
+            if (row.names?.[j]) rect.append(svg("title", {}, row.names[j] + " · " + valueText(n) + " " + unit));
             canvas.append(rect);
             bottom += n;
           }
         }
         const hit = svg("rect", { x: x(i) - slots / 2, y: top, width: slots, height: base - top + 4, fill: "transparent", class: "su-chart-hit" });
-        hit.append(svg("title", {}, row.label + " · " + exact(total) + " " + unit));
+        hit.append(svg("title", {}, row.label + " · " + valueText(total) + " " + unit));
         canvas.append(hit);
       }
       drawLine();
@@ -116,5 +119,5 @@ const supplierCharts = (() => {
     return [scroll, key];
   }
 
-  return { plot, heatmap, exact, compact, sum, color, dateKey, day };
+  return { plot, heatmap, exact, whole, compact, sum, color, dateKey, day };
 })();

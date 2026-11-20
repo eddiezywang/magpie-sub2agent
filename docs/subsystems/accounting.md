@@ -243,26 +243,29 @@ counts only matching Zhipu requests under the selected key fingerprint, and
 withholds full coverage if the available ledger or rate revision starts after
 the window started. Unattributed requests, conflicting returned models and
 unknown cache breakdown leave the window partially covered. A normal upstream
-quota 429 establishes a recovery time. The first successful call after recovery
-supplies an estimated next start. The five-hour rolling estimate can be shown
-as a reference when the window start is unknown. The weekly estimate needs a
-window start. Neither changes the user-wide reporting or outbound telemetry.
+quota 429 establishes a recovery time. For the five-hour window, the first
+locally observed successful call and the first success after each expiry
+establish a new estimated start. An active 429 recovery takes precedence.
+Without a window start, the gateway sums the selected key's priced requests
+over the preceding five hours or seven days. It reports the rolling period
+independently of the subscription window dates.
 
 The TIG Usage tab detects channels from configured providers and retains a
 Zhipu channel when a saved observation identifies it. For Zhipu, it offers an
 enabled-key picker and shows the five-hour and weekly windows independently.
-A confirmed recovery time can appear with an empty start. A rolling
-five-hour estimate has a distinct label and leaves the window percentage
-empty. Server-side estimates are shown in a separate expandable row with
-their username scope. Usage Details offers Token and the selected channel's
+An active quota 429 shows the affected window as 100% exhausted until its
+recovery time, even if the start or used points are unknown. Otherwise the card
+divides locally priced points by the reference limit and labels the estimate's
+rolling period and any gaps in coverage. With incomplete coverage and no
+priced requests, the percentage stays unknown.
+Quota bars are blue through 70% and red above 70%. Usage Details offers Token and the selected channel's
 own billing unit, together with the applicable model rates. The panel
 refreshes while the Overview is visible and cancels reads when it closes.
 
 The provider editor shows the server-managed plan overview and model badges at
 the model selection controls. The local `/api/accounting/tig-plans` endpoint
 exposes the unexpired managed plan configuration and channel rates. The
-overview combines detected channels across providers and displays each
-user-wide total once.
+overview combines detected channels across configured providers.
 Before a TIG key is added, the security notice and three selectable channel
 tabs explain the reference rules. After configuration, the security notice is
 not repeated and only channels and model coefficients identified from that

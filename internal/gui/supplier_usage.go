@@ -121,7 +121,7 @@ func tigUsagePeriods(now time.Time, observations []gateway.TIGQuotaWindow) ([]ti
 		} else if !o.Until.IsZero() {
 			w.Status = "expired"
 		}
-		if _, ok := periods[o.Period]; !ok && o.Period == "fiveHours" {
+		if _, ok := periods[o.Period]; !ok {
 			periods[o.Period] = usage.TIGKeyPeriod{From: now.Add(-duration), Rolling: true}
 		}
 		windows = append(windows, w)

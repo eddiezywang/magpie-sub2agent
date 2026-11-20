@@ -48,7 +48,6 @@
 .su-header h2, .su-window h3 { margin: 0; font-size: 14px; }
 .su-panel > .su-segs { margin-bottom: 12px; }
 .su-panel .su-note { font-size: 12px; line-height: 1.45; color: var(--muted); margin: 9px 0 0; }
-.su-panel .su-warning { color: var(--red); }
 .su-window-grid, .su-kpis { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 .su-kpi, .su-window {
   background: var(--card);
@@ -67,6 +66,7 @@
 .su-percent { align-items: baseline; padding: 7px 0; }
 .su-rail { background: var(--pill); height: 7px; border-radius: 1px; }
 .su-rail i { display: block; height: 100%; background: var(--accent); }
+.su-rail.su-rail-high i { background: var(--red); }
 .su-window-data { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 4px 14px; margin: 10px 0 0; }
 .su-window-data dd { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .su-key-pick select { max-width: 100%; }

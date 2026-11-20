@@ -4,10 +4,11 @@ window.supplierUsage = (() => {
   const channels = { zp: "Zhipu", hs: "Volcengine", tc: "Tencent" };
   const currencies = { zp: "Points", hs: "AFP", tc: "Weighted tokens" };
   const periods = [[1, "Today"], [7, "Last 7 days"], [30, "Last 30 days"]];
-  const { compact, exact, day, dateKey, sum, color, plot, heatmap } = supplierCharts;
+  const { compact, exact, whole, day, dateKey, sum, color, plot, heatmap } = supplierCharts;
   const missing = "—";
   const note = (key, vars) => el("p", "su-note", t(key, vars));
-  const points = (n, unit) => n == null ? missing : exact(n) + " " + t(unit);
+  const pointUnit = (unit) => ["points", "maas points", "upstream points", "credits", "积分", "積分"].includes(unit.toLowerCase());
+  const points = (n, unit) => n == null ? missing : (pointUnit(unit) ? whole(n) : exact(n)) + " " + t(unit);
   const when = (v) => v ? new Date(v).toLocaleString(intlLang(), { dateStyle: "short", timeStyle: "short" }) : missing;
   const pct = (n) => n == null ? missing : exact(Math.round(n * 100) / 100) + "%";
   const matches = (rule, id) => rule?.endsWith("*") ? id.startsWith(rule.slice(0, -1)) : rule === id;
@@ -63,31 +64,34 @@ window.supplierUsage = (() => {
   }
 
   function appendChart(box, label, rows, lines, unit) {
-    const chart = plot(t(label), rows, lines, t(unit));
+    const chart = plot(t(label), rows, lines, t(unit), pointUnit(unit));
     chartStop = chart.stop;
     box.append(chart.node);
   }
 
-  function quotaCard({ label, unit, used, limit, percent, start, reset, status, estimate, reference = true, coverage }) {
+  function quotaCard({ label, unit, used, limit, percent, start, reset, status, estimate, rollingLabel, reference = true, coverage, exhausted = false }) {
+    const progress = exhausted ? 100 : percent;
     const card = el("article", "su-window");
     const heading = el("div", "su-window-title");
     heading.append(el("h3", "", t(label)));
     if (status) heading.append(el("span", "su-state", t(status)));
     card.append(heading);
     const amount = el("div", "su-percent");
-    amount.append(el("strong", "", pct(percent)));
-    if (percent != null) amount.append(el("span", "", t(estimate ? "Current gateway estimate" : "Used")));
+    amount.append(el("strong", "", pct(progress)));
+    if (exhausted) amount.append(el("span", "", t("Quota exhausted")));
+    else if (progress != null) amount.append(el("span", "", t(estimate ? "Current gateway estimate" : "Used")));
     card.append(amount);
     const rail = el("div", "su-rail");
     rail.setAttribute("aria-hidden", "true");
-    if (percent != null) {
+    if (progress != null) {
+      rail.classList.toggle("su-rail-high", progress > 70);
       const fill = el("i");
-      fill.style.width = Math.min(100, Math.max(0, percent)) + "%";
+      fill.style.width = Math.min(100, Math.max(0, progress)) + "%";
       rail.append(fill);
     }
     card.append(rail);
     const data = el("dl", "su-window-data");
-    for (const [label, value] of [[estimate?.rolling ? "Rolling 5-hour estimate" : estimate && !estimate.complete ? "Covered estimate" : "Used",
+    for (const [label, value] of [[estimate?.rolling ? rollingLabel : estimate && !estimate.complete ? "Covered estimate" : "Used",
       points(used, unit)], [reference ? "Reference limit" : "Limit", points(limit, unit)], ["Window start", start || missing], ["Reset time", reset || missing]]) {
       data.append(el("dt", "", t(label)), el("dd", "", value));
     }
@@ -122,7 +126,7 @@ window.supplierUsage = (() => {
       panel.append(note("TIG channels have not been identified from the saved models."));
       return;
     }
-    const plan = side.catalog?.config?.plans?.[channel] || side.report?.plans?.[channel];
+    const plan = side.catalog?.config?.plans?.[channel];
     const windows = side.key?.windows || [];
     const rules = channel === "zp" ? [["fiveHours", "5-hour allowance", "rolling_5h"], ["week", "Weekly allowance", "subscription_week"]] :
       [["", channel === "hs" ? "Monthly allowance" : "Weekly allowance", channel === "hs" ? "month" : "subscription_week"]];
@@ -131,33 +135,15 @@ window.supplierUsage = (() => {
       const win = windows.find((w) => w.period === period), estimate = side.key?.usage?.periods?.[period];
       const limit = period === "fiveHours" ? 35000 : plan?.windows?.find((w) => w.id === id)?.limit;
       const used = estimate?.priced || estimate?.complete ? estimate.points : null;
-      const percent = estimate?.complete && !estimate.rolling && limit > 0 ? used / limit * 100 : null;
+      const percent = used != null && limit > 0 ? used / limit * 100 : null;
+      const rollingLabel = period === "week" ? "Rolling 7-day estimate" : "Rolling 5-hour estimate";
       const status = { observed: "Observed in a 429 response", estimated: "Estimated window", expired: "Observation expired" }[win?.status] ||
         (side.keyError ? "Unable to read window" : selectedKey && side.key == null && channel === "zp" ? "Reading…" : "Window unknown");
       const coverage = estimate && !estimate.complete ? note("Partial ledger or rate coverage · {n} uncovered requests", { n: exact(estimate.uncovered) }) : null;
       cards.append(quotaCard({ label, unit: currencies[channel], used, limit, percent, start: when(win?.start), reset: when(win?.reset),
-        status, estimate, coverage }));
+        status, estimate, rollingLabel, coverage, exhausted: win?.status === "observed" }));
     }
     panel.append(cards);
-    const reported = side.report?.channels?.[channel];
-    const rollup = el("details", "su-detail");
-    rollup.dataset.suFocus = "supplier-tig-rollup";
-    rollup.append(el("summary", "", t("Server estimates by username")));
-    if (reported) {
-      rollup.append(kpis([["Last 5 hours", points(reported.rolling_5h, currencies[channel])],
-        ["Last 7 days", points(reported.rolling_7d, currencies[channel])], ["Last 30 days", points(reported.rolling_30d, currencies[channel])]]));
-      const line = channel === "zp" ? reported.rolling_5h / 35000 :
-        channel === "hs" ? reported.rolling_30d / plan?.windows?.find((w) => w.id === "month")?.limit :
-          reported.rolling_7d / plan?.windows?.find((w) => w.id === "subscription_week")?.limit;
-      if (line >= (side.report.warning_thresholds?.[0] ?? side.catalog?.config?.warning_thresholds?.[0] ?? .8)) {
-        const warning = note(channel === "zp" ? "Estimated usage is near the reference limit; actual balance is unknown." :
-          "Rolling usage is near the reference limit; the actual reset date is unknown.");
-        warning.classList.add("su-warning");
-        rollup.append(warning);
-      }
-      if (reported.unpriced) rollup.append(note("{n} attempts could not be priced", { n: exact(reported.unpriced) }));
-    } else rollup.append(note("Usage unavailable; waiting for the billing service"));
-    panel.append(rollup);
   }
 
   const retained = (c) => stats?.total?.calls ? compact(c?.tokens ?? 0) : missing;
@@ -268,7 +254,7 @@ window.supplierUsage = (() => {
   function ratesTable() {
     if (selected === "cib" || selected === "tig" && !channel) return null;
     const ids = suppliers.find((x) => x.id === selected)?.providers || [];
-    const known = sourceSide?.rates?.rates || sourceSide?.catalog?.rates || sourceSide?.report?.rates || [];
+    const known = sourceSide?.rates?.rates || sourceSide?.catalog?.rates || [];
     const filtered = known.filter((r) => (selected !== "tig" || r.deployment === channel) &&
       (!r.provider || ids.some((id) => matches(r.provider, id))));
     const distinct = [...new Map(filtered.map((r) => [(r.model || "") + "|" + (r.service_tier || "") + "|" + (r.providerLabel || ""), r])).values()];
@@ -313,8 +299,9 @@ window.supplierUsage = (() => {
     if (!stats) { panel.append(note(state || "Reading…")); return; }
     const [field, label] = seriesFields[measure], unit = label || currencies[channel];
     const s = stats.selected || {}, n = counted(s, measure) ? s[field] || 0 : null;
-    const meta = [["Period total", compact(n), t(unit)],
-      ["Daily average", n == null ? missing : compact(n / days), t(unit)]];
+    const amount = pointUnit(unit) ? whole : compact;
+    const meta = [["Period total", n == null ? missing : amount(n), t(unit)],
+      ["Daily average", n == null ? missing : amount(n / days), t(unit)]];
     if (measure === "tokens") meta.push(["Cache hit rate", pct(s.knownPrompt > 0 ? 100 * s.cacheRead / s.knownPrompt : null)]);
     if (selected === "tig" && channel === "zp" && s.tigTokens > 0)
       meta.push(["Off-peak share", pct(100 * (s.offPeakTokens || 0) / s.tigTokens), t("Covered Token")]);
@@ -324,14 +311,14 @@ window.supplierUsage = (() => {
     const value = (m) => m?.[field] || 0;
     const modelLabel = (m) => m.id || t("Other models");
     const legend = el("div", "su-legend"), box = el("div", "su-chart-box");
-    legend.append(el("span", "su-selected-total", t("Visible model total") + " " + (n == null ? missing : compact(sum(models.filter(active).map(value))))));
+    legend.append(el("span", "su-selected-total", t("Visible model total") + " " + (n == null ? missing : amount(sum(models.filter(active).map(value))))));
     models.forEach((model, i) => {
       const b = el("button", "su-model");
       b.dataset.suFocus = "model-" + i;
       b.type = "button"; b.setAttribute("aria-pressed", active(model)); b.title = modelLabel(model);
       const dot = el("i");
       dot.style.setProperty("--su-model", color(i));
-      b.append(dot, el("span", "", modelLabel(model)), el("b", "", compact(value(model))));
+      b.append(dot, el("span", "", modelLabel(model)), el("b", "", amount(value(model))));
       b.onclick = () => { if (active(model)) selection.add(model.id); else selection.delete(model.id); render(b.dataset.suFocus); };
       legend.append(b);
     });
@@ -350,7 +337,7 @@ window.supplierUsage = (() => {
     });
     appendChart(box, "Usage by model", rows, false, unit);
     panel.append(box);
-    if (models.length) panel.append(table("Model usage", ["Model", unit], models.map((m) => [modelLabel(m), compact(value(m))]), "supplier-model-usage"));
+    if (models.length) panel.append(table("Model usage", ["Model", unit], models.map((m) => [modelLabel(m), amount(value(m))]), "supplier-model-usage"));
     if (selected === "tig" && channel && s.tigUnpriced) panel.append(note("{n} attempts could not be priced", { n: exact(s.tigUnpriced) }));
     if (ledgerStart() && stats.from < ledgerStart()) panel.append(note("The available ledger starts on {date}.", { date: ledgerStart() }));
     if (!stats.total.calls) panel.append(note("No gateway requests on record."));
@@ -433,10 +420,10 @@ window.supplierUsage = (() => {
 
   async function readSide(n) {
     if (selected === "tig") {
-      const accounting = Promise.allSettled([get("accounting/tig-plans"), get("accounting/report?period=tig-plans&format=json")])
-        .then(([cfg, r]) => {
+      const accounting = get("accounting/tig-plans").catch(() => undefined)
+        .then((catalog) => {
           if (!usable(n)) return;
-          sourceSide = { ...sourceSide, catalog: cfg.value, report: r.value };
+          sourceSide = { ...sourceSide, catalog };
           render();
         });
       const [p, keys] = await Promise.allSettled([get("providers"), get("usage/suppliers/tig/keys")]);
