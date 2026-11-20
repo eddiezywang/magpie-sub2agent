@@ -22,7 +22,15 @@ follow 2–4. A session that must stay connected across steps keeps the root
 shell as its foreground program; long work runs backgrounded with output to a
 root-owned file, then polls it.
 
-## Sub2Agent 发布说明
+## Sub2Agent 发布手册
+
+正式发布的安装包和更新制品必须从 `fork/main` 构建。顺序如下。
+
+1. 打包前，将本次发布的全部代码、版本号变更和 changelog 提交并合入 `main`，推送到 `fork/main`。开发和验收可以在开发分支进行。
+2. 构建前运行 `git fetch fork`，切换到本地 `main`，确认 `git rev-parse HEAD` 与 `git rev-parse fork/main` 一致，并确认 `git status --porcelain` 无输出。正式制品一律从这个工作区构建。
+3. 生成发布清单和上传前，核对构建记录中的源码提交 SHA 与这次构建锁定的 `fork/main` SHA 一致。若发布内容有任何变化，先提交并推送到 `fork/main`，再重新构建、验包和签名。
+
+### 发布说明
 
 每次发布前，在 `build/intranet-release/notes/<版本号>.md` 写明相对于上个已发布版本的用户可见变化。发布准备脚本读取该 Markdown 并写入 `latest.json` 的 `notes` 字段。上传前核对本地清单，自动拉取后从实际更新源回读，确认说明与该版本对应。详细步骤见[发布手册](build/intranet-release/README.zh-CN.md#发布说明)。
 
