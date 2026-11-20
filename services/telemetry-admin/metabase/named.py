@@ -56,22 +56,23 @@ def collect(folder, now, token, public=None):
         raise FileNotFoundError("collector summary directory unavailable")
     activity, usage, seen, seen_events = {}, {}, set(), set()
 
-    def activity_for(at, who):
+    def activity_for(at, who, origin):
         day = at.astimezone(ZONE).date()
         if not first <= day <= today:
             return None
-        key = (day.isoformat(), *who)
+        key = (day.isoformat(), *who, origin)
         active = activity.setdefault(key, [at, None, None, 0, 0])
         active[0] = max(active[0], at)
         return key, active
 
     telemetry = rows(folder, r"telemetry-(?:archived-)?(\d{8})\.jsonl", earliest)
-    for row in chain(telemetry, public.records("legacy") if public else ()):
+    mirror_legacy = (((r, "公网") for r in public.records("legacy")) if public else ())
+    for row, origin in chain(((r, "内网") for r in telemetry), mirror_legacy):
         who = identity(row, token)
         if who is None:
             continue
         at = parse_time(row["timestamp"])
-        found = activity_for(at, who)
+        found = activity_for(at, who, origin)
         if not found:
             continue
         _, active = found
@@ -96,7 +97,7 @@ def collect(folder, now, token, public=None):
                 while start < end:
                     midnight = datetime.combine(start.date() + timedelta(days=1), datetime.min.time(), ZONE)
                     stop = min(end, midnight)
-                    _, period = activity_for(start, who)
+                    _, period = activity_for(start, who, origin)
                     period[4] += int((stop - start) / timedelta(milliseconds=1))
                     start = stop
         version = row.get("app_version")
@@ -104,7 +105,8 @@ def collect(folder, now, token, public=None):
             active[1:3] = at, version
 
     summaries = rows(folder / "minute-summaries", r"summaries-(\d{8})\.jsonl", earliest)
-    for row in chain(summaries, public.records("summary") if public else ()):
+    mirror_summary = (((r, "公网") for r in public.records("summary")) if public else ())
+    for row, origin in chain(((r, "内网") for r in summaries), mirror_summary):
         packet = row["install_id"], row["id"]
         if packet in seen:
             continue
@@ -113,7 +115,7 @@ def collect(folder, now, token, public=None):
         who = identity(row, token)
         if who is None:
             continue
-        found = activity_for(at, who)
+        found = activity_for(at, who, origin)
         if not found:
             continue
         day_key, _ = found
@@ -125,9 +127,12 @@ def collect(folder, now, token, public=None):
 
     return {
         "generated_at": now.isoformat(),
-        "activity": [[*key, last.isoformat(), version_at.isoformat() if version_at else None, version, app_events, online_ms]
-                     for key, (last, version_at, version, app_events, online_ms) in activity.items()],
-        "usage": [[*key, *(counter[field] for field in METRICS)] for key, counter in usage.items()],
+        "activity": [[day, username, install, last.isoformat(), version_at.isoformat() if version_at else None,
+                      version, app_events, online_ms, origin]
+                     for (day, username, install, origin),
+                         (last, version_at, version, app_events, online_ms) in activity.items()],
+        "usage": [[day, username, install, agent, provider, model, *(counter[field] for field in METRICS), origin]
+                  for (day, username, install, origin, agent, provider, model), counter in usage.items()],
     }
 
 
@@ -165,8 +170,13 @@ def write_snapshot(data, dsn):
         if prior and generated <= prior[0]:
             return
         cursor.execute("TRUNCATE analytics.daily_activity, analytics.daily_usage")
-        execute_values(cursor, "INSERT INTO analytics.daily_activity VALUES %s", data["activity"])
-        execute_values(cursor, "INSERT INTO analytics.daily_usage VALUES %s", data["usage"])
+        execute_values(cursor, "INSERT INTO analytics.daily_activity "
+                               "(day, username, installation, last_seen, version_seen, client_version, "
+                                "app_events, online_ms, source) VALUES %s", data["activity"])
+        execute_values(cursor, "INSERT INTO analytics.daily_usage "
+                               "(day, username, installation, agent, provider, model, requests, input_tokens, "
+                                "output_tokens, cache_read_tokens, cache_write_5m_tokens, "
+                                "cache_write_1h_tokens, source) VALUES %s", data["usage"])
         cursor.execute("INSERT INTO analytics.snapshot VALUES (true, %s) "
                        "ON CONFLICT (id) DO UPDATE SET generated_at = excluded.generated_at", (generated,))
 
