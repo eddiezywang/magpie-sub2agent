@@ -133,7 +133,9 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       // its whole 5s on a pill already gone (#3473); waiting for the busy
       // class lands the reads inside the run whatever the load
       await page.locator(`${row("codex")} .ag-up.busy`).waitFor();
-      assert.equal(await page.locator(`${row("codex")} .ag-up`).textContent(), "Updating…");
+      // the seconds tick in from clitick.js a second in, so the text read
+      // here is the plain word or the word and where it has got to
+      assert.match(await page.locator(`${row("codex")} .ag-up`).textContent(), /^Updating…( \d+s)?$/);
       assert.equal(await page.locator(`${row("codex")} .ag-up.busy`).count(), 1);
       // its ring turns inside the svg, round the viewBox's centre: a turned
       // svg circles about a point off its centre in WebKit (owner, 10-09)

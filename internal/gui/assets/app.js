@@ -2036,6 +2036,9 @@ function paintCLIButton(b, c, busy) {
   // named even where a tight row shows only the arrow
   b.setAttribute("aria-label", text);
   b.replaceChildren(svg(busy ? CLI_SPIN : CLI_UP, 11, 1.8), el("span", "", text));
+  // the seconds tick while it runs (clitick.js, in on the first use)
+  if (busy) window.cliTickStart ? window.cliTickStart(b) : import("./clitick.js").then(() => window.cliTickStart(b), () => {});
+  else window.cliTickStop?.();
 }
 
 // paintCLI draws an agent's CLI again where it is, the row left as it is
