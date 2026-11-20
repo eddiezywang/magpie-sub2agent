@@ -27,6 +27,7 @@ magpie.strings({
     "Window start": "窗口开始",
     "Reset time": "重置时间",
     "Observed in a 429 response": "429 已确认",
+    "Quota exhausted": "额度已用尽",
     "Estimated window": "估算窗口",
     "Observation expired": "窗口观测已过期",
     "Unable to read window": "窗口查询失败",

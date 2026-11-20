@@ -69,21 +69,24 @@ window.supplierUsage = (() => {
     box.append(chart.node);
   }
 
-  function quotaCard({ label, unit, used, limit, percent, start, reset, status, estimate, reference = true, coverage }) {
+  function quotaCard({ label, unit, used, limit, percent, start, reset, status, estimate, reference = true, coverage, exhausted = false }) {
+    const progress = exhausted ? 100 : percent;
     const card = el("article", "su-window");
     const heading = el("div", "su-window-title");
     heading.append(el("h3", "", t(label)));
     if (status) heading.append(el("span", "su-state", t(status)));
     card.append(heading);
     const amount = el("div", "su-percent");
-    amount.append(el("strong", "", pct(percent)));
-    if (percent != null) amount.append(el("span", "", t(estimate ? "Current gateway estimate" : "Used")));
+    amount.append(el("strong", "", pct(progress)));
+    if (exhausted) amount.append(el("span", "", t("Quota exhausted")));
+    else if (progress != null) amount.append(el("span", "", t(estimate ? "Current gateway estimate" : "Used")));
     card.append(amount);
     const rail = el("div", "su-rail");
     rail.setAttribute("aria-hidden", "true");
-    if (percent != null) {
+    if (progress != null) {
+      rail.classList.toggle("su-rail-high", progress > 70);
       const fill = el("i");
-      fill.style.width = Math.min(100, Math.max(0, percent)) + "%";
+      fill.style.width = Math.min(100, Math.max(0, progress)) + "%";
       rail.append(fill);
     }
     card.append(rail);
@@ -137,7 +140,7 @@ window.supplierUsage = (() => {
         (side.keyError ? "Unable to read window" : selectedKey && side.key == null && channel === "zp" ? "Reading…" : "Window unknown");
       const coverage = estimate && !estimate.complete ? note("Partial ledger or rate coverage · {n} uncovered requests", { n: exact(estimate.uncovered) }) : null;
       cards.append(quotaCard({ label, unit: currencies[channel], used, limit, percent, start: when(win?.start), reset: when(win?.reset),
-        status, estimate, coverage }));
+        status, estimate, coverage, exhausted: win?.status === "observed" }));
     }
     panel.append(cards);
   }

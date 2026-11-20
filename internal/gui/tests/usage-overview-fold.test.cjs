@@ -169,12 +169,12 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
         "/api/usage/suppliers/tig/keys": [{ provider: ids.tig, keys: [{ id: "fingerprint-one", name: "Desk" }, { id: "fingerprint-two", name: "Team" }] }],
         "/api/usage/suppliers/tig/key": (route, url) => route.fulfill({ json: url.searchParams.get("key") === "fingerprint-one" ? {
           windows: [{ period: "fiveHours", status: "estimated", start: "2026-11-19T10:00:00+08:00", reset: "2026-11-19T15:00:00+08:00" }, { period: "week", status: "unknown" }],
-          usage: { periods: { fiveHours: { complete: true, points: 7000, priced: 1 } } },
+          usage: { periods: { fiveHours: { complete: true, points: 24500, priced: 1 } } },
         } : { windows: [{ period: "fiveHours", status: "observed", reset: "2026-11-19T16:00:00+08:00" }, { period: "week", status: "expired" }],
           usage: { periods: { fiveHours: { complete: false, rolling: true, points: 200, priced: 1, uncovered: 2 } } } } }),
         "/api/usage/quotas": [
           { provider: ids.cib, user: "account-one-fixture", windows: [{ name: "Credits", used: 0, limit: 2000, resetText: "2026-12-02 00:00:00" }] },
-          { provider: ids.cib, user: "account-two-fixture", windows: [{ name: "Credits", amount: 2500.1358, used: 25, limit: 10000, resetText: "2026-12-03 00:00:00" }] },
+          { provider: ids.cib, user: "account-two-fixture", windows: [{ name: "Credits", amount: 2500.1358, used: 71, limit: 3521, resetText: "2026-12-03 00:00:00" }] },
         ],
         "/api/usage/suppliers/workbuddy-cib/rates": { rates: [{ model: "glm-5.3", coefficient: .79, source: "Reference from provider catalog" }] },
       },
@@ -192,14 +192,36 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
     page.on("console", (message) => { if (message.type() === "error" && message.text().includes("window.status")) runtimeAlerts.push(message.text()); });
     await goUsage(page);
     const panel = page.locator("#supplierUsage");
-    await panel.getByText("20%", { exact: true }).waitFor();
+    await panel.getByText("70%", { exact: true }).waitFor();
+    const shortWindow = panel.locator(".su-window").filter({ has: page.getByRole("heading", { name: "5 小时额度" }) });
+    const weekWindow = panel.locator(".su-window").filter({ has: page.getByRole("heading", { name: "周额度" }) });
+    const gauge = (window) => window.locator(".su-rail i");
+    const fillStyle = (fill) => fill.evaluate((el) => ({ width: el.style.width, color: getComputedStyle(el).backgroundColor }));
+    const themeColor = (name) => page.evaluate((name) => {
+      const swatch = document.createElement("span");
+      swatch.style.color = `var(${name})`;
+      document.body.append(swatch);
+      const color = getComputedStyle(swatch).color;
+      swatch.remove();
+      return color;
+    }, name);
+    const blue = await themeColor("--accent");
+    const red = await themeColor("--red");
+    assert.notEqual(blue, red);
+    assert.deepEqual(await fillStyle(gauge(shortWindow)), { width: "70%", color: blue });
+    assert.equal(await gauge(weekWindow).count(), 0);
     assert.deepEqual(await panel.getByRole("tab").allTextContents(), ["TIG", "WorkBuddy 企业", "WorkBuddy CIB"]);
     assert.match(await panel.innerText(), /35,000\s+积分/);
     assert.match(await panel.innerText(), /周额度/);
     if (process.env.SUPPLIER_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.SUPPLIER_SCREENSHOTS, `supplier-usage-${theme}.png`), animations: "disabled" });
     await panel.locator("select").selectOption("1");
-    await panel.getByText("429 已确认").waitFor();
-    assert.equal(await panel.getByText("20%", { exact: true }).count(), 0);
+    await shortWindow.getByText("429 已确认").waitFor();
+    await shortWindow.getByText("100%", { exact: true }).waitFor();
+    await shortWindow.getByText("额度已用尽", { exact: true }).waitFor();
+    assert.deepEqual(await fillStyle(gauge(shortWindow)), { width: "100%", color: red });
+    assert.equal(await gauge(weekWindow).count(), 0);
+    assert.match(await shortWindow.innerText(), /滚动 5 小时估算\s+200\s+积分/);
+    assert.equal(await panel.getByText("70%", { exact: true }).count(), 0);
     assert.match(await panel.innerText(), /窗口观测已过期/);
     assert.equal(await panel.getByText("服务器用量估算（按用户名）", { exact: true }).count(), 0);
 
@@ -230,6 +252,9 @@ test("configured supplier tabs use independent TIG windows, WorkBuddy readings a
     await panel.getByText("2026-12-03 00:00:00", { exact: true }).waitFor();
     await panel.getByText("2,500 积分", { exact: true }).waitFor();
     await panel.getByText("0%", { exact: true }).waitFor();
+    const secondAccount = panel.locator(".su-window").filter({ has: page.getByRole("heading", { name: "账号 2" }) });
+    await secondAccount.getByText("71%", { exact: true }).waitFor();
+    assert.deepEqual(await fillStyle(gauge(secondAccount)), { width: "71%", color: red });
     assert.doesNotMatch(await panel.innerText(), /account-one-fixture/);
     assert.equal(await page.locator("#subscriptionUsage").isHidden(), true);
     await panel.getByRole("tab", { name: "WorkBuddy 企业" }).click();

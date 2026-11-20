@@ -66,6 +66,7 @@
 .su-percent { align-items: baseline; padding: 7px 0; }
 .su-rail { background: var(--pill); height: 7px; border-radius: 1px; }
 .su-rail i { display: block; height: 100%; background: var(--accent); }
+.su-rail.su-rail-high i { background: var(--red); }
 .su-window-data { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 4px 14px; margin: 10px 0 0; }
 .su-window-data dd { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .su-key-pick select { max-width: 100%; }

@@ -253,9 +253,10 @@ window start. Neither changes the user-wide reporting or outbound telemetry.
 The TIG Usage tab detects channels from configured providers and retains a
 Zhipu channel when a saved observation identifies it. For Zhipu, it offers an
 enabled-key picker and shows the five-hour and weekly windows independently.
-A confirmed recovery time can appear with an empty start. A rolling
-five-hour estimate has a distinct label and leaves the window percentage
-empty. Usage Details offers Token and the selected channel's
+An active quota 429 shows the affected window as 100% exhausted until its
+recovery time, even if the start or used points are unknown. A rolling five-hour
+estimate has a distinct label and supplies no window percentage of its own.
+Quota bars are blue through 70% and red above 70%. Usage Details offers Token and the selected channel's
 own billing unit, together with the applicable model rates. The panel
 refreshes while the Overview is visible and cancels reads when it closes.
 
