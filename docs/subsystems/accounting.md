@@ -277,14 +277,20 @@ delivery hits a transport or temporary server error. The primary is retried
 after about one minute. The application startup and gateway request paths do
 not wait for the probes. The existing durable outbox retains unacknowledged
 packets and continues retrying. Billing administration and report endpoints
-remain on the existing intranet service.
+remain on the existing intranet service, which is mirrored read-only on the
+public billing replica at 134.175.165.190:5173 fed by a chunked token-
+authenticated push over root's forward proxy
+([134 deployment](../../services/usage-server/DEPLOYMENT-134.md)).
 
 The public service uses the same v3 acknowledgement contract. Its SQLite inbox
 acknowledges commits, serves only the supported telemetry routes to clients, and
 exposes a separate token-protected incremental mirror. The BI sync on 0.177
 mirrors the public inbox and publishes the internal aggregation rules to it.
 The exporter merges those packets with the internal source by installation and
-packet ID before aggregation, so a retried packet is not counted twice.
+packet ID before aggregation, so a retried packet is not counted twice. Each
+exported row carries a source tag, 内网 for the internal collector and 公网 for
+packets taken from the public mirror; a packet seen on both channels keeps the
+internal copy.
 Existing installed clients need a build with the new fallback to use the endpoint.
 
 The desktop Usage overview estimates WorkBuddy MaaS points for retained calls

@@ -28,12 +28,16 @@ def provision(config):
     headers["X-Metabase-Session"] = api("session", {"username": login["email"], "password": login["password"]})["id"]
     database = next(item for item in api("database")["data"] if item["name"] == "Sub2Agent 埋点")
     db_id = database["id"]
+    api(f"database/{db_id}/sync_schema", method="POST")
     tables = {}
     for _ in range(20):
         metadata = api(f"database/{db_id}/metadata")
         tables = {item["name"]: item for item in metadata["tables"]}
-        required = {"user_daily_usage", "user_daily_activity", "user_growth", "installation_versions", "user_version_cohort"}
-        if all(tables.get(name, {}).get("fields") for name in required):
+        required = {"user_daily_usage": {"source"}, "user_daily_activity": {"source", "version_group"},
+                    "user_growth": set(), "installation_versions": set(), "user_version_cohort": set(),
+                    "active_without_usage": set()}
+        if all(required[name] <= {f["name"] for f in tables.get(name, {}).get("fields") or []}
+               for name in required):
             break
         time.sleep(2)
     usage = tables["user_daily_usage"]
@@ -41,6 +45,7 @@ def provision(config):
     growth = tables["user_growth"]
     installs = tables["installation_versions"]
     cohorts = tables["user_version_cohort"]
+    without_usage = tables["active_without_usage"]
 
     def field(table, name, options=None):
         column = next(item for item in table["fields"] if item["name"] == name)
@@ -92,12 +97,27 @@ def provision(config):
         "order-by": [["desc", field(activity, "last_seen")]],
     })
     activity_field = lambda name, options=None: field(activity, name, options)
-    daily_users = card("daily_users", "应用日活 · 去重用户名", activity, "line", {
+    daily_users_query = {
+        "aggregation": [["distinct", activity_field("username")]],
+        "breakout": [activity_field("day", {"temporal-unit": "day"}), activity_field("version_group")],
+        "filter": ["and", [">", activity_field("app_events"), 0],
+                   ["not-null", activity_field("username")]],
+    }
+    daily_users = card("daily_users", "应用日活 · 去重用户名", activity, "line", daily_users_query,
+                       description="每天有桌面事件上报的去重用户名，按当天活跃安装的版本分组。同一用户名的多台安装版本不同时会出现在多条线上，各线相加可能略大于当日总日活。")
+    new_dau = card("new_dau", "新版用户日活 · 1.0.0 系列及以上", activity, "table", {
         "aggregation": [["distinct", activity_field("username")]],
         "breakout": [activity_field("day", {"temporal-unit": "day"})],
         "filter": ["and", [">", activity_field("app_events"), 0],
-                   ["not-null", activity_field("username")]],
-    }, description="每天有桌面事件上报的去重用户名。同一用户名的多台安装计一次。")
+                   ["not-null", activity_field("username")],
+                   ["=", activity_field("version_group"), "1.0.0 系列及以上"]],
+        "order-by": [["desc", activity_field("day")]],
+    }, description="每天有桌面事件上报且当天活跃安装为 1.0.0 系列版本的去重用户名。同一用户名的旧版安装不计入。")
+    no_usage = card("no_usage", "无用量名单 · 启动过但无网关用量", without_usage, "table", {
+        "fields": [field(without_usage, name) for name in
+                   ("username", "first_day", "last_day", "active_days", "installations", "last_version", "version_group")],
+        "order-by": [["desc", field(without_usage, "last_day")], ["asc", field(without_usage, "username")]],
+    }, description="窗口内有桌面事件上报、但从未产生网关用量分钟包的用户名。版本取该用户名最近上报的版本；日期筛选作用于最后活跃日。")
     online = card("online", "每日网关在线时长 · 设备小时", activity, "line", {
         "aggregation": [["sum", activity_field("online_hours")]],
         "breakout": [activity_field("day", {"temporal-unit": "day"})],
@@ -149,10 +169,10 @@ def provision(config):
         "name": "Sub2Agent 用户用量分析", "collection_id": collection, "parameters": params,
         "description": "按北京时间统计最近 90 天。用户名来自客户端操作系统，安装编号可区分重名或未上报的安装。",
     })
-    if state.get("layout_version") != 5:
-        for table in (usage, activity, growth, installs, cohorts):
+    if state.get("layout_version") != 7:
+        for table in (usage, activity, growth, installs, cohorts, without_usage):
             for column in table["fields"]:
-                if column["name"] in {"day", "last_seen", "version_seen"}:
+                if column["name"] in {"day", "last_seen", "version_seen", "first_day", "last_day"}:
                     settings = column.get("settings") or {}
                     api(f'field/{column["id"]}', {"settings": {
                         **settings, "date_style": "YYYY/M/D",
@@ -165,6 +185,13 @@ def provision(config):
             }},
             "visualization_settings": pivot_settings,
         }, "PUT")
+        api(f"card/{daily_users}", {
+            "name": "应用日活 · 去重用户名",
+            "description": "每天有桌面事件上报的去重用户名，按当天活跃安装的版本分组。同一用户名的多台安装版本不同时会出现在多条线上，各线相加可能略大于当日总日活。",
+            "dataset_query": {"type": "query", "database": db_id, "query": {
+                "source-table": activity["id"], **daily_users_query,
+            }},
+        }, "PUT")
         trend_settings = api(f"card/{trend}")["visualization_settings"]
         api(f"card/{trend}", {"visualization_settings": {**trend_settings, **token_format}}, "PUT")
         api(f"dashboard/{dashboard}", {"parameters": params}, "PUT")
@@ -176,11 +203,13 @@ def provision(config):
             (new_users, growth, 0, 6, 12, 6), (daily_users, activity, 12, 6, 12, 6),
             (online, activity, 0, 12, 12, 6), (trend, usage, 12, 12, 12, 6),
             (version_cohort, cohorts, 0, 18, 8, 7), (upgrades, installs, 8, 18, 16, 7),
-            (user_totals, usage, 0, 25, 24, 6),
-            (pivot, usage, 0, 31, 24, 8), (detail, usage, 0, 39, 24, 8),
-            (user_online, activity, 0, 47, 24, 7), (versions, activity, 0, 54, 24, 7),
-            (breakdowns[0], usage, 0, 61, 24, 7), (breakdowns[1], usage, 0, 68, 24, 7),
-            (breakdowns[2], usage, 0, 75, 24, 7),
+            (new_dau, activity, 0, 25, 24, 6),
+            (no_usage, without_usage, 0, 31, 24, 6),
+            (user_totals, usage, 0, 37, 24, 6),
+            (pivot, usage, 0, 43, 24, 8), (detail, usage, 0, 51, 24, 8),
+            (user_online, activity, 0, 59, 24, 7), (versions, activity, 0, 66, 24, 7),
+            (breakdowns[0], usage, 0, 73, 24, 7), (breakdowns[1], usage, 0, 80, 24, 7),
+            (breakdowns[2], usage, 0, 87, 24, 7),
         ]):
             mappings = []
             for key, _, _, usage_col, activity_col in filters:
@@ -192,6 +221,8 @@ def provision(config):
                     column = "day" if key == "date" else None
                 elif table is installs:
                     column = {"date": "day", "username": "username"}.get(key)
+                elif table is without_usage:
+                    column = {"date": "last_day", "username": "username", "version": "last_version"}.get(key)
                 else:
                     column = "username" if key == "username" else None
                 if column:
@@ -200,10 +231,10 @@ def provision(config):
             cards.append({"id": existing.get(card_id, -i-1), "card_id": card_id, "col": col, "row": row,
                           "size_x": width, "size_y": height, "parameter_mappings": mappings})
         api(f"dashboard/{dashboard}/cards", {"cards": cards}, "PUT")
-        state["layout_version"] = 5
+        state["layout_version"] = 7
         path.write_text(json.dumps(state) + "\n")
     result = api(f"dashboard/{dashboard}")
-    assert len(result["dashcards"]) == 16
+    assert len(result["dashcards"]) == 18
     print(f"dashboard /dashboard/{dashboard}")
 
 

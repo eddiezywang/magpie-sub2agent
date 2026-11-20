@@ -163,7 +163,7 @@ func templateModelsFrom(entries []Entry) []rated {
 		r := rated{e: e}
 		if pr, ok := MakerPrice(e.Model); ok {
 			r.out, r.maker = pr.Output, true
-		} else if pr, ok := priceOf(s, e.Provider, true, e.Model, time.Time{}); ok {
+		} else if pr, ok := priceOf(s, *e.Provider, true, e.Model, time.Time{}); ok {
 			// without a rate window's rate (#2463): a template weighs how
 			// strong a model is, which the hour it is made in doesn't change
 			r.out = pr.Output
@@ -197,8 +197,9 @@ func strongest(ms []rated) []rated {
 }
 
 // cheapest are the models fit to be a cheap one beside strong, ranked
-// best first: priced at a quarter of strong or less (or, with no prices
-// to go by, a small model by its id), a known maker's first, the tiny ones
+// best first: priced at a quarter of strong or less, or below it with
+// an id that says small where strong's doesn't (or, with no prices to go
+// by, a small model by its id), a known maker's first, the tiny ones
 // last, then the newest and the dearest of them — the most able of the
 // cheap.
 func cheapest(ms []rated, strong rated) []rated {
@@ -208,7 +209,11 @@ func cheapest(ms []rated, strong rated) []rated {
 			continue
 		}
 		if strong.out > 0 && m.out > 0 {
-			if m.out <= strong.out/4 {
+			// a quarter of the price, or less dear and the small one by
+			// its id: a vendor's own tiers are often nearer than four
+			// times apart (DeepSeek V4 Pro $1.98 out, V4.1 Flash $0.60;
+			// Sonnet and Haiku three times, @qinzhidaoa on X)
+			if m.out <= strong.out/4 || m.out < strong.out && m.small && !strong.small {
 				out = append(out, m)
 			}
 		} else if m.small && !strong.small {

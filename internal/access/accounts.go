@@ -36,7 +36,7 @@ func CleanAccounts(in []string) ([]string, error) {
 		if a == "" {
 			continue
 		}
-		if rest, _ := strings.CutPrefix(a, ExcludeMark); strings.HasPrefix(rest, GroupMark) {
+		if rest, cut := strings.CutPrefix(a, ExcludeMark); cut && strings.HasPrefix(rest, GroupMark) {
 			if !groupsRead {
 				var err error
 				if groups, err = loadGroups(); err != nil {

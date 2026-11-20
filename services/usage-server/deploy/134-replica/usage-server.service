@@ -1,0 +1,17 @@
+[Unit]
+Description=Sub2Agent usage/billing server (134 replica, port 5173)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/usage-server
+EnvironmentFile=/etc/sub2agent/usage-server.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+# Hardening: data, key and env files are root-owned; service runs as root like
+# the 0.177 original (it reads a root-only HMAC key file).
+User=root
+
+[Install]
+WantedBy=multi-user.target

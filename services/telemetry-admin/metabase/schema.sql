@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS analytics.daily_activity (
 );
 ALTER TABLE analytics.daily_activity ADD COLUMN IF NOT EXISTS app_events bigint NOT NULL DEFAULT 0;
 ALTER TABLE analytics.daily_activity ADD COLUMN IF NOT EXISTS online_ms bigint NOT NULL DEFAULT 0;
+ALTER TABLE analytics.daily_activity ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT '内网';
+ALTER TABLE analytics.daily_usage ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT '内网';
 CREATE TABLE IF NOT EXISTS analytics.daily_usage (
   day date NOT NULL,
   username text,
@@ -32,7 +34,12 @@ CREATE INDEX IF NOT EXISTS activity_version_lookup
 
 CREATE OR REPLACE VIEW analytics.user_daily_activity AS
 SELECT day, username, installation, last_seen, version_seen, client_version,
-       app_events, online_ms, online_ms / 3600000.0 AS online_hours
+       app_events, online_ms, online_ms / 3600000.0 AS online_hours, source,
+       CASE
+         WHEN client_version ~ '^v?0[.][0-9]+[.][0-9]+($|[-+])' THEN '1.0.0 系列以前'
+         WHEN client_version ~ '^v?[1-9][0-9]*[.][0-9]+[.][0-9]+($|[-+])' THEN '1.0.0 系列及以上'
+         ELSE '版本未知'
+       END AS version_group
 FROM analytics.daily_activity;
 
 CREATE OR REPLACE VIEW analytics.user_daily_usage AS
@@ -40,7 +47,7 @@ SELECT u.day, u.username, u.installation, v.client_version AS last_reported_vers
        u.agent, u.provider, u.model, u.requests, u.input_tokens, u.output_tokens,
        u.cache_read_tokens, u.cache_write_5m_tokens + u.cache_write_1h_tokens AS cache_write_tokens,
        u.input_tokens + u.output_tokens + u.cache_read_tokens +
-         u.cache_write_5m_tokens + u.cache_write_1h_tokens AS total_tokens
+         u.cache_write_5m_tokens + u.cache_write_1h_tokens AS total_tokens, u.source
 FROM analytics.daily_usage u
 LEFT JOIN LATERAL (
   SELECT a.client_version FROM analytics.daily_activity a
@@ -97,16 +104,11 @@ WITH devices AS (
   WHERE username IS NOT NULL
   GROUP BY username, installation
 )
-SELECT d.day, d.username, d.installation, v.client_version, v.version_seen,
-       CASE
-         WHEN v.client_version ~ '^v?0[.][0-9]+[.][0-9]+($|[-+])' THEN '1.0.0 系列以前'
-         WHEN v.client_version ~ '^v?[1-9][0-9]*[.][0-9]+[.][0-9]+($|[-+])' THEN '1.0.0 系列及以上'
-         ELSE '版本未知'
-       END AS version_group
+SELECT d.day, d.username, d.installation, v.client_version, v.version_seen, v.version_group
 FROM devices d
 LEFT JOIN LATERAL (
-  SELECT a.client_version, a.version_seen
-  FROM analytics.daily_activity a
+  SELECT a.client_version, a.version_seen, a.version_group
+  FROM analytics.user_daily_activity a
   WHERE a.username = d.username AND a.installation = d.installation AND a.version_seen IS NOT NULL
   ORDER BY a.version_seen DESC LIMIT 1
 ) v ON true;
@@ -116,4 +118,15 @@ SELECT DISTINCT ON (username) day, username, client_version, version_group
 FROM analytics.installation_versions
 ORDER BY username, version_seen DESC NULLS LAST, day DESC, installation;
 
-GRANT SELECT ON analytics.user_growth, analytics.installation_versions, analytics.user_version_cohort TO analytics_reader;
+CREATE OR REPLACE VIEW analytics.active_without_usage AS
+SELECT a.username, min(a.day) AS first_day, max(a.day) AS last_day,
+       count(DISTINCT a.day) AS active_days, count(DISTINCT a.installation) AS installations,
+       c.client_version AS last_version, c.version_group AS version_group
+FROM analytics.user_daily_activity a
+JOIN analytics.user_version_cohort c USING (username)
+WHERE a.app_events > 0
+  AND NOT EXISTS (SELECT 1 FROM analytics.daily_usage u WHERE u.username = a.username)
+GROUP BY a.username, c.client_version, c.version_group;
+
+GRANT SELECT ON analytics.user_growth, analytics.installation_versions, analytics.user_version_cohort,
+  analytics.active_without_usage TO analytics_reader;

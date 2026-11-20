@@ -295,7 +295,10 @@ func ExpandGroups(accounts []string) []string {
 func cleanGroupEntry(gs []AccountGroup, a string) (string, error) {
 	a = strings.TrimSpace(a)
 	rest, out := strings.CutPrefix(a, ExcludeMark)
-	ref, _ := strings.CutPrefix(rest, GroupMark)
+	ref, ok := strings.CutPrefix(rest, GroupMark)
+	if !ok {
+		return "", fmt.Errorf("There is no account group %q", ref)
+	}
 	i := findGroup(gs, ref)
 	if i < 0 {
 		return "", fmt.Errorf("There is no account group %q", ref)
