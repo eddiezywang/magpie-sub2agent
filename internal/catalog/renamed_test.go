@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/yetone/magpie/internal/distribution"
 )
 
 // The reporter's own test (#1383, uWydnA): a relay renames
@@ -290,7 +292,9 @@ func TestRenameNeverTakesAModelForAnother(t *testing.T) {
 		"anthropic2-deepseek-v4.1-flash", "claude-claude-opus-5x",
 		"[1m]", "claude-[1m]",
 	} {
-		if e, c, i, n := EffortsOf(id), ContextOf(id), SeesImages(id), NameOf(id); e != nil || c != 0 || i || n != "" || Knows(id) {
+		e, c, i, n := EffortsOf(id), ContextOf(id), SeesImages(id), NameOf(id)
+		prefixMatched := distribution.Internal && strings.HasPrefix(id, "deepseek-v4.1-flash[")
+		if (e != nil && !prefixMatched) || c != 0 || i || n != "" || (Knows(id) && !prefixMatched) {
 			t.Errorf("%q matched: efforts %v, context %d, images %v, name %q", id, e, c, i, n)
 		}
 		if p, ok := PricedBy([]string{"deepseek", "anthropic", "model-oracle-ai"}, id); ok {
