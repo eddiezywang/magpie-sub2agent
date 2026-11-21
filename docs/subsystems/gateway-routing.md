@@ -1,5 +1,14 @@
 # Gateway routing and fallback
 
+In the intranet distribution, the catalog resolves unlisted deployment IDs
+through the longest case-insensitive model prefix at a separator boundary.
+Routing templates use the same matching rule against their capability tiers.
+The matching chooses group membership and capability metadata. Requests still
+carry the provider's original model ID, which TIG billing uses for channel
+attribution. Pi's local gateway key names Pi in its generated models.json,
+so the gateway can attribute requests when the client sends a generic SDK
+User-Agent. Catalog sync replaces a previously written local placeholder.
+
 The intranet workspace hosts the original routing visualization and request history;
 its navigation replaces the standalone Routing page.
 Its quick choices use existing groups carrying plan/smart/thrifty/steady

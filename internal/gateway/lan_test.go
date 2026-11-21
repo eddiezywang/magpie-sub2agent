@@ -145,6 +145,8 @@ func TestAgentOf(t *testing.T) {
 		{"Bearer " + Token, "", "ai-sdk/openai/4.0.15 ai-sdk/provider-utils/5.0.10 runtime/node.js/22", "ai-sdk"},
 		{"", TokenFor("alma"), "ai-sdk/anthropic/2.0.1", "alma"},
 		{"Bearer " + TokenFor("qoder"), "", "Bun/1.4.2", "qoder"},
+		{"Bearer " + TokenFor("pi"), "", "OpenAI/JS 6.0.0", "pi"},
+		{"", TokenFor("pi"), "", "pi"},
 		{"Bearer " + TokenFor("hanako"), "", "OpenAI/JS 6.0.0", "hanako"},
 		{"Bearer " + Token, "", "claude-cli/2.1.0 (external, cli)", "claude-cli"},
 		{"Bearer " + Token, "", "ai-sdk/openai/2.0.52", "ai-sdk"},

@@ -16,6 +16,8 @@ func TestWorkspacePresetsSingleSourceAndCrossVendor(t *testing.T) {
 		{"single-byte-plan", "flash-first", []string{"doubao-seed-2.1-lite"}, []string{"p0/doubao-seed-2.1-lite"}},
 		{"byte-flagship", "flagship-first", []string{"doubao-seed-2.1-pro"}, []string{"p0/doubao-seed-2.1-pro"}},
 		{"mixed-tier", "flash-first", []string{"glm-5.3-flash-maas", "doubao-seed-2.1-lite"}, []string{"p0/glm-5.3-flash-maas", "p1/doubao-seed-2.1-lite"}},
+		{"cib-flash", "flash-first", []string{"DeepSeek-V4-Flash-0731-AliYun"}, []string{"p0/DeepSeek-V4-Flash-0731-AliYun"}},
+		{"flash-not-flagship", "flagship-first", []string{"glm-5.3-flash-aliyun"}, nil},
 		{"unknown-flash-name", "flash-first", []string{"unknown-flash-pro"}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

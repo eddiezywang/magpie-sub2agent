@@ -248,21 +248,13 @@ func wontLoad(bun string, err error) *BunUnstartableError {
 // first (bunready.go); the plugin host asks hostBun, which waits less.
 func Bun(ctx context.Context) (string, error) {
 	if distribution.Internal {
-		if b := os.Getenv("MAGPIE_BUN"); filepath.IsAbs(b) {
-			if fi, err := os.Stat(b); err == nil && !fi.IsDir() {
-				return b, nil
-			}
-		}
-		exe, err := os.Executable()
-		if err != nil {
-			return "", err
-		}
-		bundled := filepath.Join(filepath.Dir(exe), "runtime", bunExe())
-		if fi, err := os.Stat(bundled); err == nil && !fi.IsDir() {
-			return bundled, nil
+		if p := internalBunPresent(); p != "" {
+			return p, nil
 		}
 		if embeddedBunAvailable {
-			return materializeEmbeddedBun()
+			if p, err := materializeEmbeddedBun(); err == nil {
+				return p, nil
+			}
 		}
 		return internalNPMBun(ctx)
 	}
@@ -289,24 +281,7 @@ func Bun(ctx context.Context) (string, error) {
 // HasBun is whether a Bun is at hand without a download.
 func HasBun() bool {
 	if distribution.Internal {
-		if embeddedBunAvailable {
-			return true
-		}
-		if b := os.Getenv("MAGPIE_BUN"); filepath.IsAbs(b) {
-			if fi, err := os.Stat(b); err == nil && !fi.IsDir() {
-				return true
-			}
-		}
-		exe, err := os.Executable()
-		if err != nil {
-			return false
-		}
-		fi, err := os.Stat(filepath.Join(filepath.Dir(exe), "runtime", bunExe()))
-		if err == nil && !fi.IsDir() {
-			return true
-		}
-		fi, err = os.Stat(internalBunCache())
-		return err == nil && fi.Mode().IsRegular()
+		return embeddedBunAvailable || internalBunPresent() != ""
 	}
 
 	if os.Getenv("MAGPIE_BUN") != "" {
@@ -318,6 +293,9 @@ func HasBun() bool {
 }
 
 func downloadBun(ctx context.Context, version, exe string) error {
+	if distribution.Internal {
+		return downloadInternalBun(ctx, version, exe)
+	}
 	target, err := bunTarget()
 	if err != nil {
 		return err
@@ -380,6 +358,27 @@ func downloadBun(ctx context.Context, version, exe string) error {
 		return os.Rename(tmp, exe)
 	}
 	return fmt.Errorf("%s.zip has no %s", target, bunExe())
+}
+
+// downloadInternalBun fills exe with the pinned Bun an internal build
+// runs plugins on: the embedded archive when there is one, else the
+// enterprise mirror (both digest-pinned, a bad cache fetched again).
+// Never GitHub: public downloads are refused (distribution.AssetURL),
+// which is how a host start used to fail (beta.11's 502).
+func downloadInternalBun(ctx context.Context, version, exe string) error {
+	if version != BunVersion {
+		return fmt.Errorf("企业镜像只提供 Bun %s，没有 %s", BunVersion, version)
+	}
+	if embeddedBunAvailable {
+		if p, err := materializeEmbeddedBun(); err == nil {
+			return copyBun(p, exe)
+		}
+	}
+	b, err := internalNPMBun(ctx)
+	if err != nil {
+		return err
+	}
+	return copyBun(b, exe)
 }
 
 func getURL(ctx context.Context, url string, limit int64) ([]byte, error) {

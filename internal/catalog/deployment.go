@@ -1,9 +1,21 @@
 package catalog
 
 import (
-	"github.com/yetone/magpie/internal/distribution"
 	"strings"
+
+	"github.com/yetone/magpie/internal/distribution"
 )
+
+// LongestModelPrefix checks a bare model ID and its prefixes, longest first.
+// Model identities and deployment IDs stay separate.
+func LongestModelPrefix(id string, known func(string) bool) string {
+	for id = bareID(strings.TrimSpace(id)); id != ""; id = id[:len(id)-1] {
+		if known(id) {
+			return id
+		}
+	}
+	return ""
+}
 
 // DeploymentModel strips only managed deployment suffixes, never arbitrary
 // words after a model prefix. Request IDs are not rewritten by the catalog.
