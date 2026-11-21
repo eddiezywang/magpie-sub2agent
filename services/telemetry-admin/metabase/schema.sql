@@ -128,5 +128,11 @@ WHERE a.app_events > 0
   AND NOT EXISTS (SELECT 1 FROM analytics.daily_usage u WHERE u.username = a.username)
 GROUP BY a.username, c.client_version, c.version_group;
 
+CREATE OR REPLACE VIEW analytics.new_series_roster AS
+SELECT c.username, f.day AS first_day, c.day AS last_day, c.client_version AS last_version
+FROM analytics.user_first_seen f
+JOIN analytics.user_version_cohort c USING (username)
+WHERE c.version_group = '1.0.0 系列及以上';
+
 GRANT SELECT ON analytics.user_growth, analytics.installation_versions, analytics.user_version_cohort,
-  analytics.active_without_usage TO analytics_reader;
+  analytics.active_without_usage, analytics.new_series_roster TO analytics_reader;

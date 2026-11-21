@@ -35,7 +35,7 @@ def provision(config):
         tables = {item["name"]: item for item in metadata["tables"]}
         required = {"user_daily_usage": {"source"}, "user_daily_activity": {"source", "version_group"},
                     "user_growth": set(), "installation_versions": set(), "user_version_cohort": set(),
-                    "active_without_usage": set()}
+                    "active_without_usage": set(), "new_series_roster": set()}
         if all(required[name] <= {f["name"] for f in tables.get(name, {}).get("fields") or []}
                for name in required):
             break
@@ -46,6 +46,7 @@ def provision(config):
     installs = tables["installation_versions"]
     cohorts = tables["user_version_cohort"]
     without_usage = tables["active_without_usage"]
+    ns_roster = tables["new_series_roster"]
 
     def field(table, name, options=None):
         column = next(item for item in table["fields"] if item["name"] == name)
@@ -161,6 +162,10 @@ def provision(config):
         "filter": ["=", field(installs, "version_group"), "1.0.0 系列以前"],
         "order-by": [["desc", field(installs, "day")], ["asc", field(installs, "username")]],
     }, description="按安装列出旧版。用户另一台设备即使已升级，旧版安装仍会列出。")
+    roster = card("roster", "新版用户名单 · 1.0.0 系列及以上", ns_roster, "table", {
+        "fields": [field(ns_roster, name) for name in ("username", "first_day", "last_day", "last_version")],
+        "order-by": [["desc", field(ns_roster, "first_day")], ["asc", field(ns_roster, "username")]],
+    }, description="每个 1.0.0 系列及以上（含 beta 预发布）用户名的首次使用日期，按首次使用时间倒序。版本按用户名最近一次上报的安装分组；首次使用时间为该用户名在埋点历史中首次出现的日期（北京时间），滚动窗口结束后仍保留。")
     filters = [
         ("date", "日期", "date/all-options", "day", "day"),
         ("username", "用户名", "string/=", "username", "username"),
@@ -174,7 +179,7 @@ def provision(config):
         "name": "Sub2Agent 用户用量分析", "collection_id": collection, "parameters": params,
         "description": "按北京时间统计最近 90 天。用户名来自客户端操作系统，安装编号可区分重名或未上报的安装。",
     })
-    if state.get("layout_version") != 8:
+    if state.get("layout_version") != 9:
         for table in (usage, activity, growth, installs, cohorts, without_usage):
             for column in table["fields"]:
                 if column["name"] in {"day", "last_seen", "version_seen", "first_day", "last_day"}:
@@ -215,6 +220,7 @@ def provision(config):
             (user_online, activity, 0, 59, 24, 7), (versions, activity, 0, 66, 24, 7),
             (breakdowns[0], usage, 0, 73, 24, 7), (breakdowns[1], usage, 0, 80, 24, 7),
             (breakdowns[2], usage, 0, 87, 24, 7),
+            (roster, ns_roster, 0, 94, 24, 7),
         ]):
             mappings = []
             for key, _, _, usage_col, activity_col in filters:
@@ -228,6 +234,8 @@ def provision(config):
                     column = {"date": "day", "username": "username"}.get(key)
                 elif table is without_usage:
                     column = {"date": "last_day", "username": "username", "version": "last_version"}.get(key)
+                elif table is ns_roster:
+                    column = {"date": "first_day", "username": "username"}.get(key)
                 else:
                     column = "username" if key == "username" else None
                 if column:
@@ -236,10 +244,10 @@ def provision(config):
             cards.append({"id": existing.get(card_id, -i-1), "card_id": card_id, "col": col, "row": row,
                           "size_x": width, "size_y": height, "parameter_mappings": mappings})
         api(f"dashboard/{dashboard}/cards", {"cards": cards}, "PUT")
-        state["layout_version"] = 8
+        state["layout_version"] = 9
         path.write_text(json.dumps(state) + "\n")
     result = api(f"dashboard/{dashboard}")
-    assert len(result["dashcards"]) == 19
+    assert len(result["dashcards"]) == 20
     print(f"dashboard /dashboard/{dashboard}")
 
 
