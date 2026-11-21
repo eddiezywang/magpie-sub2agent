@@ -22,7 +22,7 @@ document.addEventListener('click', e => { if (!e.target.closest('.platform, #pri
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); } });
 
 const base = '/wemail/sub2agent/';
-const windowsDownload = 'http://172.21.0.177:18989/sub2agent/releases/latest/windows-amd64';
+const windowsDownload = base + 'releases/latest/windows-amd64';
 const os = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent;
 const mac = /mac/i.test(os);
 const windows = document.querySelector('[data-platform="windows"]');
