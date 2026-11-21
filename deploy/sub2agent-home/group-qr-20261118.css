@@ -1,0 +1,4 @@
+.group-qr{display:flex;flex-direction:column;align-items:center;gap:12px;width:max-content;max-width:100%;margin:28px 0 0}
+.group-qr img{display:block;width:200px;height:200px;max-width:100%;object-fit:contain;background:white;border:2px solid var(--ink);box-shadow:4px 4px 0 var(--ink);box-sizing:content-box}
+.group-qr figcaption{font-size:12px;font-weight:650;color:var(--muted)}
+@media(max-width:800px){.group-qr{margin-top:24px}}
